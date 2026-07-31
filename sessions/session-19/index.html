@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Session 19 — Capstone: CD to Local Kubernetes</title>
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="stylesheet" href="../../notes-widget.css" />
+  <link rel="stylesheet" href="../../bookmark-widget.css" />
+  <link rel="stylesheet" href="../../quiz-explain-modal.css" />
+  <style>
+    .quiz-option{display:block;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:8px;cursor:pointer;font-size:14px;transition:border-color .15s,background .15s;user-select:none;}
+    .quiz-option:hover{border-color:var(--accent);background:var(--surface);}
+    .quiz-option.selected{border-color:var(--accent);background:rgba(255,92,168,.1);}
+    .quiz-option.correct{border-color:var(--green);background:rgba(63,185,80,.1);}
+    .quiz-option.wrong{border-color:var(--red);background:rgba(248,81,73,.1);}
+    .quiz-question{margin-bottom:28px;}
+    .quiz-question p{font-weight:600;margin-bottom:10px;font-size:15px;}
+    .question-num{color:var(--text-muted);font-size:12px;font-weight:400;margin-bottom:4px;}
+    .quiz-result{display:none;padding:16px 20px;border-radius:var(--radius);margin-top:16px;font-size:15px;font-weight:600;}
+    .quiz-result.pass{background:rgba(63,185,80,.12);border:1px solid var(--green);color:var(--green);}
+    .quiz-result.fail{background:rgba(248,81,73,.12);border:1px solid var(--red);color:var(--red);}
+    .explanation{display:none;font-size:13px;color:var(--text-muted);margin-top:6px;padding:8px 12px;background:var(--surface-2);border-radius:var(--radius);border-left:2px solid var(--border);}
+    .submit-btn{background:var(--accent);color:#0d1117;border:none;border-radius:var(--radius);padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;}
+    .submit-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .step{display:flex;gap:16px;margin-bottom:20px;}
+    .step-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#0d1117;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:2px;}
+    .step-body{flex:1;}
+    .step-body p{margin-bottom:6px;}
+    .section-divider{border:none;border-top:2px solid var(--border);margin:40px 0;}
+    .checklist-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;}
+    .checklist-item input[type="checkbox"]{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;}
+
+    /* Comic-panel concept grid — image teaches first, caption only reinforces */
+    .concept-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0;}
+    @media (max-width:760px){.concept-grid{grid-template-columns:repeat(2,1fr);}}
+    .concept-card{background:#111111;border:1px solid #2a2a2a;border-radius:8px;padding:8px 8px 10px;}
+    .concept-card svg{display:block;width:100%;height:auto;}
+    .concept-card figcaption{margin-top:6px;font-family:monospace;font-size:10.5px;line-height:1.3;color:#c9c9c9;text-align:center;}
+    .concept-card figcaption b{color:#ff5ca8;}
+    .concept-explanation-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin-top:10px;padding:7px 8px;border:1px solid #3a3a3a;border-radius:5px;background:#1a1a1a;color:#ff5ca8;font-family:monospace;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;}
+    .concept-explanation-toggle:hover,.concept-explanation-toggle:focus-visible{border-color:#ff5ca8;outline:none;}
+    .concept-explanation-hint{color:#8b949e;font-size:8px;font-weight:400;letter-spacing:0;text-transform:none;}
+    .concept-explanation-text{margin:7px 2px 0;font-size:11px;line-height:1.45;color:#d8d8d8;filter:blur(4px);user-select:none;transition:filter .2s ease;}
+    .concept-card.explanation-revealed .concept-explanation-text{filter:none;user-select:text;}
+    .concept-card.explanation-revealed .concept-explanation-hint{color:#3fb950;}
+    .anchor{color:#ff5ca8;font-weight:700;}
+    .objectives-list{list-style:none;padding-left:0;}
+    .objectives-list li{display:flex;gap:12px;align-items:baseline;margin-bottom:12px;font-size:15px;}
+    .obj-num{flex-shrink:0;min-width:34px;color:#ff5ca8;font-family:monospace;font-weight:700;font-size:12px;background:rgba(255,92,168,.1);border:1px solid rgba(255,92,168,.4);border-radius:10px;padding:2px 6px;text-align:center;}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="../../index.html" class="brand">⚙ DevOps Learning</a>
+    <a href="../../syllabus/index.html">Syllabus</a>
+    <a href="../../sessions/index.html" class="active">Sessions</a>
+    <a href="../../quizzes/index.html">Quizzes</a>
+    <a href="../../labs/index.html">Labs</a>
+  </div>
+</nav>
+
+<main>
+  <div class="container">
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+      <span class="badge badge-layer">Layer 7</span>
+      <span class="badge badge-current">Session 19</span>
+      <span style="color:var(--text-muted);font-size:13px;">Capstone: Ship a Real App</span>
+    </div>
+    <h1>Capstone: CD to Local Kubernetes</h1>
+    <p class="subtitle">
+      Session 18 finished with a completed CI build automatically redeploying
+      the Text Masker containers on plain local Docker — a workflow that
+      worked, but that treats each container as a single, unmanaged process
+      with no restart policy, no scaling story, and no clean way to watch a
+      rollout in progress. Today the deployment target changes from raw
+      <code>docker run</code> to a real, local Kubernetes cluster: a
+      <code>Deployment</code> for each component, a <code>Service</code> that
+      exposes them on a stable port, an image-pull secret so the cluster can
+      authenticate to a private registry, and a rollout you can watch — and
+      roll back — on command.
+    </p>
+    <div class="alert alert-info">Estimated time: 45–55 minutes</div>
+    <p style="color:var(--text-muted);font-size:13px;">Flow: Pre-quiz → Concept → Lab → Commit → Post-quiz</p>
+
+    <!-- Comic-panel concept grid: image teaches first, caption only reinforces -->
+    <div class="concept-grid">
+
+      <!-- 1. Namespace: fenced-off area on the cluster -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="14" width="140" height="110" rx="4" fill="none" stroke="#555" stroke-width="1.5"/>
+          <rect x="28" y="34" width="104" height="70" rx="5" fill="none" stroke="#ff5ca8" stroke-width="2.4" stroke-dasharray="6,4" transform="rotate(-1,80,69)"/>
+          <text x="80" y="30" fill="#ff5ca8" font-family="monospace" font-size="9" text-anchor="middle" font-weight="bold">masker-lab</text>
+          <rect x="42" y="52" width="30" height="22" rx="3" fill="none" stroke="white" stroke-width="1.8"/>
+          <rect x="88" y="52" width="30" height="22" rx="3" fill="none" stroke="white" stroke-width="1.8"/>
+          <text x="57" y="66" fill="white" font-family="monospace" font-size="7" text-anchor="middle">pod</text>
+          <text x="103" y="66" fill="white" font-family="monospace" font-size="7" text-anchor="middle">pod</text>
+          <line x1="150" y1="14" x2="132" y2="34" stroke="#666" stroke-width="1.2"/>
+          <text x="145" y="112" fill="#666" font-family="monospace" font-size="7" text-anchor="middle">other</text>
+          <text x="145" y="121" fill="#666" font-family="monospace" font-size="7" text-anchor="middle">stuff</text>
+          <text x="80" y="140" fill="white" font-family="monospace" font-size="9" text-anchor="middle">a fenced-off area</text>
+        </svg>
+        <figcaption><b>namespace</b> isolates workloads</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A namespace draws a boundary around a set of resources inside one cluster. Everything created with <code>-n masker-lab</code> lives inside that fence, separate from whatever else is running on the same cluster.</p>
+      </figure>
+
+      <!-- 2. imagePullSecret: keycard authenticating to a private registry -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="46" width="52" height="34" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2" transform="rotate(-4,40,63)"/>
+          <circle cx="26" cy="63" r="5" fill="none" stroke="#ff5ca8" stroke-width="1.6" transform="rotate(-4,40,63)"/>
+          <line x1="36" y1="59" x2="58" y2="59" stroke="#ff5ca8" stroke-width="1.6" transform="rotate(-4,40,63)"/>
+          <line x1="36" y1="67" x2="52" y2="67" stroke="#ff5ca8" stroke-width="1.6" transform="rotate(-4,40,63)"/>
+          <path d="M70,63 H104" stroke="white" stroke-width="2.2" marker-end="url(#arrK1)"/>
+          <defs><marker id="arrK1" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="white"/></marker></defs>
+          <rect x="108" y="38" width="38" height="50" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <path d="M119,52 v-6 a8,8 0 1 1 16,0 v6" fill="none" stroke="white" stroke-width="1.8"/>
+          <rect x="115" y="52" width="24" height="18" rx="2" fill="none" stroke="#3fb950" stroke-width="1.8"/>
+          <text x="80" y="112" fill="white" font-family="monospace" font-size="9" text-anchor="middle">docker-registry secret</text>
+          <text x="80" y="132" fill="white" font-family="monospace" font-size="9" text-anchor="middle">unlocks a private image</text>
+        </svg>
+        <figcaption><b>imagePullSecret</b> is a keycard</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A cluster has no reason to know your registry credentials by default. A docker-registry secret hands the cluster a keycard it can present when pulling a private image, so the pull doesn't get rejected.</p>
+      </figure>
+
+      <!-- 3. Deployment vs Pod: blueprint stamping out pods -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="18" y="16" width="60" height="40" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2" transform="rotate(-2,48,36)"/>
+          <line x1="26" y1="28" x2="70" y2="28" stroke="#ff5ca8" stroke-width="1.2" transform="rotate(-2,48,36)"/>
+          <line x1="26" y1="36" x2="62" y2="36" stroke="#ff5ca8" stroke-width="1.2" transform="rotate(-2,48,36)"/>
+          <line x1="26" y1="44" x2="66" y2="44" stroke="#ff5ca8" stroke-width="1.2" transform="rotate(-2,48,36)"/>
+          <text x="48" y="66" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle">Deployment</text>
+          <path d="M48,72 V88" stroke="white" stroke-width="2" marker-end="url(#arrD1)"/>
+          <defs><marker id="arrD1" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="white"/></marker></defs>
+          <rect x="18" y="92" width="26" height="24" rx="6" fill="none" stroke="#3fb950" stroke-width="1.8"/>
+          <rect x="22" y="96" width="18" height="16" rx="3" fill="none" stroke="#3fb950" stroke-width="1.2"/>
+          <rect x="60" y="92" width="26" height="24" rx="6" fill="none" stroke="#3fb950" stroke-width="1.8"/>
+          <rect x="64" y="96" width="18" height="16" rx="3" fill="none" stroke="#3fb950" stroke-width="1.2"/>
+          <text x="52" y="134" fill="white" font-family="monospace" font-size="8" text-anchor="middle">Pods (stamped copies)</text>
+          <text x="122" y="70" fill="#666" font-family="monospace" font-size="18" text-anchor="middle">?</text>
+          <text x="122" y="130" fill="white" font-family="monospace" font-size="7" text-anchor="middle">a lone Pod has no</text>
+          <text x="122" y="140" fill="white" font-family="monospace" font-size="7" text-anchor="middle">one watching it</text>
+        </svg>
+        <figcaption><b>Deployment</b> is the blueprint</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A Pod is one running instance of your container. A Deployment describes the desired state — which image, how many replicas — and keeps stamping out or replacing Pods until reality matches that description.</p>
+      </figure>
+
+      <!-- 4. Service (NodePort) exposing pods on a stable port -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="20" y="60" width="24" height="22" rx="5" fill="none" stroke="#3fb950" stroke-width="1.6"/>
+          <rect x="56" y="60" width="24" height="22" rx="5" fill="none" stroke="#3fb950" stroke-width="1.6"/>
+          <path d="M32,60 V44" stroke="#666" stroke-width="1.4" stroke-dasharray="2,2"/>
+          <path d="M68,60 V44" stroke="#666" stroke-width="1.4" stroke-dasharray="2,2"/>
+          <rect x="14" y="20" width="86" height="24" rx="12" fill="none" stroke="#ff5ca8" stroke-width="2.2"/>
+          <text x="57" y="36" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle">Service :30081</text>
+          <path d="M100,32 H132" stroke="white" stroke-width="2.2" marker-end="url(#arrS1)"/>
+          <defs><marker id="arrS1" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="white"/></marker></defs>
+          <g transform="translate(140,20)">
+            <circle cx="0" cy="0" r="7" fill="none" stroke="white" stroke-width="1.6"/>
+            <line x1="0" y1="7" x2="0" y2="24" stroke="white" stroke-width="1.6"/>
+            <line x1="0" y1="12" x2="-7" y2="18" stroke="white" stroke-width="1.6"/>
+            <line x1="0" y1="12" x2="7" y2="18" stroke="white" stroke-width="1.6"/>
+          </g>
+          <text x="80" y="112" fill="white" font-family="monospace" font-size="9" text-anchor="middle">one stable port,</text>
+          <text x="80" y="126" fill="white" font-family="monospace" font-size="9" text-anchor="middle">even if pods change</text>
+        </svg>
+        <figcaption><b>NodePort Service</b> is the front door</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Pods come and go as rollouts happen, and each gets a new internal address. A Service gives callers one fixed port that always routes to whichever pods are currently healthy behind it.</p>
+      </figure>
+
+      <!-- 5. kubectl set image + rollout status: the minimal CD loop -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="20" width="60" height="24" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="40" y="36" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">set image</text>
+          <path d="M70,32 H96" stroke="white" stroke-width="2.2" marker-end="url(#arrC1)"/>
+          <defs><marker id="arrC1" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="white"/></marker></defs>
+          <rect x="98" y="20" width="52" height="24" rx="4" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <text x="124" y="36" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">rollout status</text>
+          <path d="M124,44 V64" stroke="white" stroke-width="2" marker-end="url(#arrC2)"/>
+          <defs><marker id="arrC2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="white"/></marker></defs>
+          <circle cx="124" cy="86" r="18" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <path d="M116,86 l6,7 12,-15" fill="none" stroke="#3fb950" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <text x="40" y="60" fill="white" font-family="monospace" font-size="8" text-anchor="middle">swap</text>
+          <text x="40" y="72" fill="white" font-family="monospace" font-size="8" text-anchor="middle">image tag</text>
+          <text x="80" y="126" fill="white" font-family="monospace" font-size="9" text-anchor="middle">swap → watch → done</text>
+        </svg>
+        <figcaption>the minimal <b>CD loop</b></figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">kubectl set image changes which image tag a Deployment should be running. kubectl rollout status blocks until every replica has actually finished switching over, turning a fire-and-forget command into a verified deploy.</p>
+      </figure>
+
+      <!-- 6. Rolling update: old pod fading out, new pod fading in -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="50" width="44" height="34" rx="6" fill="none" stroke="#f85149" stroke-width="1.8" opacity="0.4"/>
+          <rect x="18" y="54" width="28" height="24" rx="3" fill="none" stroke="#f85149" stroke-width="1.3" opacity="0.4"/>
+          <text x="36" y="98" fill="#f85149" font-family="monospace" font-size="7" text-anchor="middle" opacity="0.6">old v1</text>
+          <path d="M62,66 H98" stroke="white" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arrR1)"/>
+          <defs><marker id="arrR1" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="white"/></marker></defs>
+          <rect x="102" y="50" width="44" height="34" rx="6" fill="none" stroke="#3fb950" stroke-width="2.2"/>
+          <rect x="106" y="54" width="28" height="24" rx="3" fill="none" stroke="#3fb950" stroke-width="1.6"/>
+          <text x="124" y="98" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle" font-weight="bold">new v2</text>
+          <text x="80" y="24" fill="white" font-family="monospace" font-size="9" text-anchor="middle">one replica at a time</text>
+          <text x="80" y="126" fill="white" font-family="monospace" font-size="9" text-anchor="middle">traffic never fully drops</text>
+        </svg>
+        <figcaption><b>rolling update</b> in progress</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A Deployment replaces old pods with new ones gradually rather than all at once, keeping some capacity serving traffic the whole time — that gradual swap is exactly what rollout status is watching.</p>
+      </figure>
+
+      <!-- 7. Full pipeline diagram (converted from overview-ascii.txt) -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="4" width="70" height="18" rx="3" fill="none" stroke="#ff5ca8" stroke-width="1.6"/>
+          <text x="45" y="16" fill="#ff5ca8" font-family="monospace" font-size="6.5" text-anchor="middle">CI build/push</text>
+          <path d="M45,22 V32" stroke="white" stroke-width="1.6" marker-end="url(#arrP1)"/>
+          <defs><marker id="arrP1" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto"><polygon points="0,0 7,3.5 0,7" fill="white"/></marker></defs>
+          <text x="55" y="30" fill="#666" font-family="monospace" font-size="5.5">workflow_run</text>
+          <rect x="10" y="34" width="70" height="18" rx="3" fill="none" stroke="white" stroke-width="1.6"/>
+          <text x="45" y="46" fill="white" font-family="monospace" font-size="6.5" text-anchor="middle">self-hosted runner</text>
+          <path d="M45,52 V62" stroke="white" stroke-width="1.6" marker-end="url(#arrP2)"/>
+          <defs><marker id="arrP2" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto"><polygon points="0,0 7,3.5 0,7" fill="white"/></marker></defs>
+          <text x="60" y="60" fill="#666" font-family="monospace" font-size="5">kubectl apply</text>
+          <rect x="4" y="64" width="90" height="50" rx="4" fill="none" stroke="#3fb950" stroke-width="1.8" stroke-dasharray="4,3"/>
+          <text x="49" y="74" fill="#3fb950" font-family="monospace" font-size="6" text-anchor="middle">masker-lab</text>
+          <rect x="12" y="80" width="34" height="16" rx="3" fill="none" stroke="white" stroke-width="1.4"/>
+          <rect x="15" y="83" width="22" height="10" rx="2" fill="none" stroke="white" stroke-width="1"/>
+          <rect x="52" y="80" width="34" height="16" rx="3" fill="none" stroke="white" stroke-width="1.4"/>
+          <rect x="55" y="83" width="22" height="10" rx="2" fill="none" stroke="white" stroke-width="1"/>
+          <text x="49" y="106" fill="#c9c9c9" font-family="monospace" font-size="5.5" text-anchor="middle">server pod / client pod</text>
+          <path d="M49,114 V124" stroke="white" stroke-width="1.6" marker-end="url(#arrP3)"/>
+          <defs><marker id="arrP3" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto"><polygon points="0,0 7,3.5 0,7" fill="white"/></marker></defs>
+          <text x="49" y="134" fill="white" font-family="monospace" font-size="6" text-anchor="middle">:30080 → browser</text>
+          <g transform="translate(126,90)">
+            <circle cx="0" cy="0" r="7" fill="none" stroke="#666" stroke-width="1.2"/>
+            <path d="M-3,4 h6 v6 h-6 z" fill="none" stroke="#666" stroke-width="1"/>
+          </g>
+        </svg>
+        <figcaption>build → deploy → <b>browser</b></figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">CI builds and pushes images, a workflow_run trigger fires a second workflow on a self-hosted runner, that runner runs kubectl against the local cluster, and the resulting pods answer requests on localhost:30080.</p>
+      </figure>
+
+      <!-- 8. Next session teaser -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="58" width="46" height="34" rx="4" fill="none" stroke="#666" stroke-width="1.8" transform="rotate(-2,37,75)"/>
+          <text x="37" y="79" fill="#666" font-family="monospace" font-size="10" text-anchor="middle">19</text>
+          <path d="M64,75 H108" stroke="#ff5ca8" stroke-width="2.5" stroke-dasharray="5,4" marker-end="url(#arrN1)"/>
+          <defs><marker id="arrN1" markerWidth="9" markerHeight="9" refX="4" refY="4" orient="auto"><polygon points="0,0 9,4 0,9" fill="#ff5ca8"/></marker></defs>
+          <rect x="112" y="52" width="42" height="46" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2" transform="rotate(2,133,75)"/>
+          <text x="133" y="80" fill="#ff5ca8" font-family="monospace" font-size="14" text-anchor="middle" font-weight="bold">20</text>
+          <ellipse cx="133" cy="34" rx="16" ry="7" fill="none" stroke="white" stroke-width="1.3"/>
+          <path d="M117,34 a16,7 0 0 0 32,0" fill="none" stroke="white" stroke-width="1.3"/>
+          <text x="80" y="128" fill="white" font-family="monospace" font-size="9" text-anchor="middle">same cluster, cloud-hosted</text>
+        </svg>
+        <figcaption>next: <b>cloud</b> Kubernetes</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Session 20 takes this same Deployment, Service, and rollout workflow and points it at a cloud-hosted cluster instead of the machine sitting on your desk.</p>
+      </figure>
+
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>1. Learning Objectives</h2>
+    <div class="card">
+      <ol class="objectives-list">
+        <li><span class="obj-num">1/5</span><span>Explain what a <span class="anchor">namespace</span> isolates and why <span class="anchor">masker-lab</span> keeps this lab's resources fenced off</span></li>
+        <li><span class="obj-num">2/5</span><span>Create an <span class="anchor">imagePullSecret</span> and reference it from a Pod spec to authenticate to a <span class="anchor">private registry</span></span></li>
+        <li><span class="obj-num">3/5</span><span>Distinguish a <span class="anchor">Deployment</span> (the blueprint) from a <span class="anchor">Pod</span> (a running instance it stamps out)</span></li>
+        <li><span class="obj-num">4/5</span><span>Write a <span class="anchor">NodePort Service</span> that exposes both Text Masker components on a stable port</span></li>
+        <li><span class="obj-num">5/5</span><span>Wire <span class="anchor">kubectl set image</span> and <span class="anchor">rollout status</span> into a self-hosted <span class="anchor">workflow_run</span> pipeline</span></li>
+      </ol>
+    </div>
+
+    <h2>2. Pre-Coding Quiz</h2>
+    <p>Answer before reading the concept. Need 4/5 to proceed.</p>
+
+    <div id="pre-quiz">
+      <div class="quiz-question" data-question="0" data-answer="b">
+        <div class="question-num">Question 1 of 5</div>
+        <p>What does a Kubernetes namespace primarily do?</p>
+        <label class="quiz-option" data-val="a">Renames the cluster</label>
+        <label class="quiz-option" data-val="b">Isolates a group of resources inside one cluster</label>
+        <label class="quiz-option" data-val="c">Encrypts traffic between pods</label>
+        <label class="quiz-option" data-val="d">Speeds up image pulls</label>
+        <div class="explanation">A namespace is a logical boundary. Resources created inside it are grouped together and kept separate from resources in other namespaces on the same cluster.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="c">
+        <div class="question-num">Question 2 of 5</div>
+        <p>Why does a Deployment need an <code>imagePullSecret</code> when pulling from a private Docker Hub repository?</p>
+        <label class="quiz-option" data-val="a">It isn't needed for NodePort services</label>
+        <label class="quiz-option" data-val="b">It compresses the image before download</label>
+        <label class="quiz-option" data-val="c">The cluster has no credentials for the registry otherwise</label>
+        <label class="quiz-option" data-val="d">It only matters for public images</label>
+        <div class="explanation">Without a docker-registry secret referenced in the pod spec, the cluster has no way to authenticate to a private registry, and the image pull fails.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="a">
+        <div class="question-num">Question 3 of 5</div>
+        <p>What is the core difference between a Deployment and a Pod?</p>
+        <label class="quiz-option" data-val="a">A Deployment describes desired state; a Pod is a running instance</label>
+        <label class="quiz-option" data-val="b">A Pod always outlives its Deployment</label>
+        <label class="quiz-option" data-val="c">They are two names for the exact same object</label>
+        <label class="quiz-option" data-val="d">A Deployment only exists inside a Service</label>
+        <div class="explanation">The Deployment is the blueprint — image, replica count, labels. Pods are the actual running containers it creates and replaces to match that blueprint.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="d">
+        <div class="question-num">Question 4 of 5</div>
+        <p>What does a NodePort Service do?</p>
+        <label class="quiz-option" data-val="a">Deletes pods that fail health checks</label>
+        <label class="quiz-option" data-val="b">Builds the container image</label>
+        <label class="quiz-option" data-val="c">Stores secrets for the namespace</label>
+        <label class="quiz-option" data-val="d">Exposes pods on a fixed port reachable from the node</label>
+        <div class="explanation">A NodePort Service opens a consistent port on the cluster's node that routes to whichever healthy pods currently match its selector.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="b">
+        <div class="question-num">Question 5 of 5</div>
+        <p>What is <code>kubectl rollout status</code> waiting for?</p>
+        <label class="quiz-option" data-val="a">A DNS record to propagate</label>
+        <label class="quiz-option" data-val="b">Every replica to finish updating to the new image</label>
+        <label class="quiz-option" data-val="c">A GitHub Actions job to be queued</label>
+        <label class="quiz-option" data-val="d">A Docker Hub token to expire</label>
+        <div class="explanation">rollout status blocks the terminal until the Deployment reports that all its replicas are updated, available, and ready — the point a rollout can be called complete.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Pre-Quiz</button>
+      <div class="quiz-result" id="pre-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>3. The Concept — From docker run to a Managed Cluster</h2>
+
+    <h3>CD to Docker vs CD to Kubernetes</h3>
+    <p>
+      Session 18's deploy step amounted to stopping an old container and
+      starting a new one with <code>docker run</code>. That works for a
+      single machine with one process each, but it has no concept of desired
+      replica counts, no built-in restart-with-backoff behavior, and no
+      structured way to confirm a rollout actually finished. Kubernetes
+      replaces that ad-hoc script with three durable objects — a
+      <span class="anchor">Deployment</span> per component, a
+      <span class="anchor">Service</span> in front of it, and a
+      <span class="anchor">namespace</span> that keeps the whole lab
+      contained — plus a couple of commands that can prove a rollout
+      succeeded instead of hoping it did.
+    </p>
+
+    <h3>Verifying a local cluster</h3>
+    <p>
+      Before deploying anything, confirm a cluster is actually reachable and
+      that it has at least one node ready to schedule work:
+    </p>
+    <pre><code>kubectl cluster-info
+kubectl get nodes</code></pre>
+    <p>
+      Either command failing before any manifest is written means the
+      problem is the cluster itself (Docker Desktop's Kubernetes not
+      enabled, minikube not started), not anything in this lab's YAML.
+    </p>
+
+    <h3>Namespaces and image-pull secrets</h3>
+    <p>
+      Everything in this lab lives inside one namespace, created once:
+    </p>
+    <pre><code>kubectl create namespace masker-lab</code></pre>
+    <p>
+      Because the Text Masker images are pushed to a private Docker Hub
+      repository, the cluster also needs a way to authenticate when pulling
+      them. A <code>docker-registry</code> secret packages a username and
+      access token into a form the cluster can present to the registry:
+    </p>
+    <pre><code>kubectl create secret docker-registry dockerhub-secret `
+  --docker-username=$env:DOCKERHUB_USERNAME `
+  --docker-password=$env:DOCKERHUB_TOKEN `
+  --docker-server=https://index.docker.io/v1/ `
+  -n masker-lab</code></pre>
+    <p>
+      That secret does nothing on its own — a Pod spec has to reference it
+      by name under <code>imagePullSecrets</code> before the cluster will
+      actually use it during a pull.
+    </p>
+
+    <h3>The Deployment and Service manifest</h3>
+    <p>
+      <code>k8s/deployment-server.yaml</code> defines one Deployment and one
+      NodePort Service for the server component; <code>deployment-client.yaml</code>
+      follows the same shape for the client:
+    </p>
+    <pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: masker-server
+  namespace: masker-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: masker-server
+  template:
+    metadata:
+      labels:
+        app: masker-server
+    spec:
+      imagePullSecrets:
+        - name: dockerhub-secret
+      containers:
+        - name: masker-server
+          image: &lt;your-dockerhub-username&gt;/masker-server:latest
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: masker-server
+  namespace: masker-lab
+spec:
+  type: NodePort
+  selector:
+    app: masker-server
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30081</code></pre>
+    <p>
+      Note where <code>imagePullSecrets</code> lives: inside the Pod
+      <code>template.spec</code>, not at the top level of the Deployment or
+      only in the namespace. That placement matters — it is discussed
+      further in the post-quiz.
+    </p>
+
+    <h3>The deployment script — deploy_k8s.ps1</h3>
+    <p>
+      Applying manifests gets the objects created once. Rolling out a new
+      image after every build is a repeatable job better handled by a small
+      script than typed by hand each time:
+    </p>
+    <pre><code>param(
+  [string]$DockerUser,
+  [string]$Namespace = 'masker-lab'
+)
+
+$ErrorActionPreference = 'Stop'
+
+Write-Host 'Starting rollout for Masker components...'
+
+kubectl set image deployment/masker-server masker-server=$DockerUser/masker-server:latest -n $Namespace
+kubectl rollout status deployment/masker-server -n $Namespace
+
+kubectl set image deployment/masker-client masker-client=$DockerUser/masker-client:latest -n $Namespace
+kubectl rollout status deployment/masker-client -n $Namespace
+
+Write-Host 'Rollout complete. Validating pods...'
+kubectl get pods -n $Namespace</code></pre>
+    <p>
+      Each component gets its own <code>set image</code> followed
+      immediately by its own <code>rollout status</code> — that pairing is
+      what turns "I told Kubernetes to update" into "Kubernetes confirms the
+      update finished," one component at a time.
+    </p>
+
+    <h3>The workflow — deploy_k8s.yml</h3>
+    <p>
+      A GitHub Actions workflow ties the deploy script to the CI build from
+      Session 18, firing only after that build workflow reports success:
+    </p>
+    <pre><code>name: Deploy to Local Kubernetes
+
+on:
+  workflow_run:
+    workflows: ["Build and Push Masker Images"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Local Kubernetes
+        run: |
+          pwsh .\deploy_k8s.ps1 -DockerUser $env:DOCKERHUB_USERNAME
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}</code></pre>
+    <p>
+      Two details are load-bearing here. First, <code>workflow_run</code>
+      names the upstream CI workflow exactly, so this job only fires once
+      that build has actually finished. Second, <code>runs-on: self-hosted</code>
+      means this job runs on hardware that can reach the local cluster —
+      a hosted GitHub runner has no route to a machine's local Docker
+      Desktop or minikube instance.
+    </p>
+
+    <h3>The full pipeline, end to end</h3>
+    <p>
+      Put together: the CI workflow builds and pushes both images, that
+      completion fires the <code>workflow_run</code> trigger, a self-hosted
+      runner picks up the deploy job and runs <code>deploy_k8s.ps1</code>,
+      that script issues <code>kubectl set image</code> and
+      <code>kubectl rollout status</code> against the local cluster's
+      <code>masker-lab</code> namespace, and the resulting server and client
+      pods answer requests behind the NodePort Service at
+      <code>localhost:30080</code> in a browser.
+    </p>
+
+    <hr class="section-divider" />
+
+    <h2>4. Lab</h2>
+    <div class="alert alert-success">
+      <strong>Lab objective:</strong> Stand up the Text Masker app on a local
+      Kubernetes cluster with a real Deployment, Service, and image-pull
+      secret, then automate rollouts through a self-hosted GitHub Actions
+      workflow triggered by the existing CI build.
+    </div>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <p><strong>Verify the local cluster is reachable</strong></p>
+        <pre><code>kubectl cluster-info
+kubectl get nodes</code></pre>
+        <p>Confirm at least one node shows <code>Ready</code> before continuing.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <p><strong>Create the namespace and image-pull secret</strong></p>
+        <pre><code>kubectl create namespace masker-lab
+kubectl create secret docker-registry dockerhub-secret `
+  --docker-username=$env:DOCKERHUB_USERNAME `
+  --docker-password=$env:DOCKERHUB_TOKEN `
+  --docker-server=https://index.docker.io/v1/ `
+  -n masker-lab</code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <p><strong>Write the manifests and apply them</strong></p>
+        <p>Create <code>k8s/deployment-server.yaml</code> and <code>k8s/deployment-client.yaml</code> following the shape shown in Section 3, then apply the whole directory into the namespace:</p>
+        <pre><code>kubectl apply -f .\k8s\ -n masker-lab</code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <p><strong>Verify everything came up</strong></p>
+        <pre><code>kubectl get all -n masker-lab
+kubectl get svc -n masker-lab</code></pre>
+        <p>You should see one Deployment, one running Pod, and one Service per component.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <p><strong>Create deploy_k8s.ps1</strong></p>
+        <p>Write the deploy script shown in Section 3 — <code>set image</code> followed by <code>rollout status</code> for the server, then the same pair for the client, finishing with a <code>get pods</code> summary.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <p><strong>Create .github/workflows/deploy_k8s.yml</strong></p>
+        <p>Write the workflow shown in Section 3, triggered by <code>workflow_run</code> on the CI build workflow, running on <code>self-hosted</code>, calling <code>deploy_k8s.ps1</code>.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">7</div>
+      <div class="step-body">
+        <p><strong>Predict, then trigger, then observe</strong></p>
+        <p>Before pushing anything: predict how many replicas <code>kubectl rollout status</code> will report for each component, and roughly how long the rollout will take. Then push a commit that fires the CI build, let <code>workflow_run</code> chain into the deploy job, and watch the Actions log to see whether your prediction held.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">8</div>
+      <div class="step-body">
+        <p><strong>Smoke test</strong></p>
+        <pre><code>kubectl get pods -n masker-lab
+kubectl port-forward svc/masker-client -n masker-lab 30080:80
+start http://localhost:30080</code></pre>
+        <p>Confirm the app loads in a browser through the forwarded port before considering the lab complete.</p>
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>5. Expected Files Changed</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Action</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><code>k8s/deployment-server.yaml</code></td><td>Added</td><td>Deployment + NodePort Service for the server component</td></tr>
+          <tr><td><code>k8s/deployment-client.yaml</code></td><td>Added</td><td>Deployment + NodePort Service for the client component</td></tr>
+          <tr><td><code>deploy_k8s.ps1</code></td><td>Added</td><td>Sets the new image and waits on rollout status for both components</td></tr>
+          <tr><td><code>.github/workflows/deploy_k8s.yml</code></td><td>Added</td><td>Chains a self-hosted deploy job onto the existing CI build via workflow_run</td></tr>
+          <tr><td><code>sessions/session-19/index.html</code></td><td>Added</td><td>This session document</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>6. Commit Checkpoint</h2>
+    <pre><code>git add k8s/ deploy_k8s.ps1 .github/workflows/deploy_k8s.yml
+git commit -m "session-19: deploy Text Masker to local Kubernetes with automated rollout"</code></pre>
+
+    <h2>7. Code Review Checklist</h2>
+    <div class="card">
+      <div class="checklist-item"><input type="checkbox" id="c1"/><label for="c1">Both Deployment manifests reference <code>dockerhub-secret</code> under <code>imagePullSecrets</code> in the pod template spec</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c2"/><label for="c2">Both Services are type NodePort with a distinct nodePort value</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c3"/><label for="c3">deploy_k8s.ps1 runs set image immediately followed by rollout status for each component, not just one</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c4"/><label for="c4">deploy_k8s.yml triggers on workflow_run for the correct upstream CI workflow name and runs on self-hosted</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c5"/><label for="c5">I ran the smoke test and confirmed the app loads through the port-forwarded NodePort Service</label></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>8. Post-Coding Quiz</h2>
+    <div id="post-quiz" data-pass-post="Proceed to Session 20 (CD to Cloud Kubernetes) after ≥ 80%.">
+      <div class="quiz-question" data-question="0" data-answer="c">
+        <div class="question-num">Question 1 of 5</div>
+        <p>Why is <code>imagePullSecrets</code> placed inside the Pod template's <code>spec</code>, rather than only existing once at the namespace level?</p>
+        <label class="quiz-option" data-val="a">YAML syntax requires it there</label>
+        <label class="quiz-option" data-val="b">Namespaces cannot hold secrets at all</label>
+        <label class="quiz-option" data-val="c">The kubelet pulling the image needs that reference on the pod spec itself</label>
+        <label class="quiz-option" data-val="d">It only matters for NodePort services</label>
+        <div class="explanation">Creating a secret in a namespace doesn't automatically wire it to every pod. Each pod spec that needs it must list it explicitly under imagePullSecrets, or the pull attempt has nothing to authenticate with.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="d">
+        <div class="question-num">Question 2 of 5</div>
+        <p>What happens if <code>kubectl rollout status</code> times out before every replica finishes updating?</p>
+        <label class="quiz-option" data-val="a">The old pods are deleted anyway</label>
+        <label class="quiz-option" data-val="b">Nothing — it always succeeds eventually</label>
+        <label class="quiz-option" data-val="c">The image tag reverts automatically</label>
+        <label class="quiz-option" data-val="d">The command exits with an error, signaling the rollout is stuck</label>
+        <div class="explanation">A timeout means rollout status could not confirm every replica became ready in time. It reports failure rather than silently continuing, which is exactly the signal a CD script should surface.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="b">
+        <div class="question-num">Question 3 of 5</div>
+        <p>How do a namespace and a secret together isolate this lab's workloads?</p>
+        <label class="quiz-option" data-val="a">They encrypt all pod-to-pod traffic</label>
+        <label class="quiz-option" data-val="b">The namespace scopes the resources, the secret scopes registry access within it</label>
+        <label class="quiz-option" data-val="c">They replace the need for a Service entirely</label>
+        <label class="quiz-option" data-val="d">They automatically limit CPU usage per pod</label>
+        <div class="explanation">The namespace keeps masker-lab's Deployments and Services separate from anything else on the cluster, while the secret scoped to that namespace controls which credentials pods inside it can use to pull images.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="a">
+        <div class="question-num">Question 4 of 5</div>
+        <p>What is the minimal CD loop this lab automates?</p>
+        <label class="quiz-option" data-val="a">Set the new image, then wait for rollout status to confirm it</label>
+        <label class="quiz-option" data-val="b">Delete the namespace and recreate everything from scratch</label>
+        <label class="quiz-option" data-val="c">Manually edit the YAML file on the cluster each time</label>
+        <label class="quiz-option" data-val="d">Restart the self-hosted runner after every commit</label>
+        <div class="explanation">set image plus rollout status, repeated per component, is the entire deploy_k8s.ps1 script — a small, auditable loop rather than a full manifest reapply on every push.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="c">
+        <div class="question-num">Question 5 of 5</div>
+        <p>Session 20 will change this workflow by:</p>
+        <label class="quiz-option" data-val="a">Removing the Service entirely</label>
+        <label class="quiz-option" data-val="b">Switching the app from client-server to a single container</label>
+        <label class="quiz-option" data-val="c">Pointing the same rollout workflow at a cloud-hosted cluster</label>
+        <label class="quiz-option" data-val="d">Dropping the imagePullSecret requirement</label>
+        <div class="explanation">Session 20 keeps the Deployment, Service, and rollout mechanics from this session and retargets them at a cluster that lives in the cloud instead of on the local machine.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Post-Quiz</button>
+      <div class="quiz-result" id="post-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>9. Reflection Questions</h2>
+    <div class="card">
+      <ol>
+        <li>Before running the rollout, did you correctly predict the replica count and rough timing you saw in the Actions log?</li>
+        <li>Why is a self-hosted runner required for this workflow instead of a standard GitHub-hosted one?</li>
+        <li>What would you check first if <code>kubectl rollout status</code> hung indefinitely on a real deploy?</li>
+      </ol>
+    </div>
+
+    <h2>10. What Breaks If This Knowledge Is Missing?</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Skip the imagePullSecret:</strong> Pods sit in <code>ImagePullBackOff</code> forever — the Deployment looks created, but nothing ever actually starts running.</li>
+        <li><strong>Skip rollout status after set image:</strong> The script reports success the instant it fires the command, even if the new pods never actually become ready, hiding a broken deploy behind a green checkmark.</li>
+        <li><strong>Confuse Deployment with Pod:</strong> Deleting a Pod by hand looks like a fix, but the Deployment just stamps out a replacement immediately — the underlying image or config problem is still there.</li>
+      </ul>
+    </div>
+
+    <h2>11. What We Learned</h2>
+    <div class="card" style="border-color:var(--green);">
+      <p><strong>Today you learned: how a namespace and an imagePullSecret isolate and authenticate a workload, how a Deployment differs from the Pods it manages, how a NodePort Service exposes those Pods on a stable port, and how kubectl set image paired with rollout status forms a minimal, auditable CD loop chained onto CI through workflow_run.</strong></p>
+      <p><strong>Next:</strong> <a href="../session-20/index.html">Session 20 — CD to Cloud Kubernetes</a>.</p>
+    </div>
+
+    <p style="margin-top:24px;"><a href="../session-18/index.html">← Session 18</a> · <a href="../../syllabus/index.html">Syllabus</a> · <a href="../session-20/index.html">Session 20 →</a></p>
+
+  </div>
+</main>
+
+<script src="../../quiz.js" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    setupQuiz('pre');
+    setupQuiz('post');
+
+    document.querySelectorAll('.concept-explanation-toggle').forEach(function (button) {
+      button.addEventListener('click', function () {
+        const card = button.closest('.concept-card');
+        const isRevealed = card.classList.toggle('explanation-revealed');
+        button.setAttribute('aria-expanded', String(isRevealed));
+        button.querySelector('.concept-explanation-hint').textContent = isRevealed
+          ? 'Click to blur'
+          : 'Click to reveal';
+      });
+    });
+  });
+</script>
+<script src="../../notes-widget.js" defer></script>
+<script src="../../bookmark-widget.js" defer></script>
+
+</body>
+</html>

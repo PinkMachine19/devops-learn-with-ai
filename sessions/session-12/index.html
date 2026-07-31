@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Session 12 — Health Probes and Autoscaling</title>
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="stylesheet" href="../../notes-widget.css" />
+  <link rel="stylesheet" href="../../bookmark-widget.css" />
+  <link rel="stylesheet" href="../../quiz-explain-modal.css" />
+  <style>
+    .quiz-option{display:block;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:8px;cursor:pointer;font-size:14px;transition:border-color .15s,background .15s;user-select:none;}
+    .quiz-option:hover{border-color:var(--accent);background:var(--surface);}
+    .quiz-option.selected{border-color:var(--accent);background:rgba(255,92,168,.1);}
+    .quiz-option.correct{border-color:var(--green);background:rgba(63,185,80,.1);}
+    .quiz-option.wrong{border-color:var(--red);background:rgba(248,81,73,.1);}
+    .quiz-question{margin-bottom:28px;}
+    .quiz-question p{font-weight:600;margin-bottom:10px;font-size:15px;}
+    .question-num{color:var(--text-muted);font-size:12px;font-weight:400;margin-bottom:4px;}
+    .quiz-result{display:none;padding:16px 20px;border-radius:var(--radius);margin-top:16px;font-size:15px;font-weight:600;}
+    .quiz-result.pass{background:rgba(63,185,80,.12);border:1px solid var(--green);color:var(--green);}
+    .quiz-result.fail{background:rgba(248,81,73,.12);border:1px solid var(--red);color:var(--red);}
+    .explanation{display:none;font-size:13px;color:var(--text-muted);margin-top:6px;padding:8px 12px;background:var(--surface-2);border-radius:var(--radius);border-left:2px solid var(--border);}
+    .submit-btn{background:var(--accent);color:#0d1117;border:none;border-radius:var(--radius);padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;}
+    .submit-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .step{display:flex;gap:16px;margin-bottom:20px;}
+    .step-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#0d1117;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:2px;}
+    .step-body{flex:1;}
+    .step-body p{margin-bottom:6px;}
+    .section-divider{border:none;border-top:2px solid var(--border);margin:40px 0;}
+    .checklist-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;}
+    .checklist-item input[type="checkbox"]{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;}
+
+    /* Comic-panel concept grid — image teaches first, caption only reinforces */
+    .concept-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0;}
+    @media (max-width:760px){.concept-grid{grid-template-columns:repeat(2,1fr);}}
+    .concept-card{background:#111111;border:1px solid #2a2a2a;border-radius:8px;padding:8px 8px 10px;}
+    .concept-card svg{display:block;width:100%;height:auto;}
+    .concept-card figcaption{margin-top:6px;font-family:monospace;font-size:10.5px;line-height:1.3;color:#c9c9c9;text-align:center;}
+    .concept-card figcaption b{color:#ff5ca8;}
+    .concept-explanation-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin-top:10px;padding:7px 8px;border:1px solid #3a3a3a;border-radius:5px;background:#1a1a1a;color:#ff5ca8;font-family:monospace;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;}
+    .concept-explanation-toggle:hover,.concept-explanation-toggle:focus-visible{border-color:#ff5ca8;outline:none;}
+    .concept-explanation-hint{color:#8b949e;font-size:8px;font-weight:400;letter-spacing:0;text-transform:none;}
+    .concept-explanation-text{margin:7px 2px 0;font-size:11px;line-height:1.45;color:#d8d8d8;filter:blur(4px);user-select:none;transition:filter .2s ease;}
+    .concept-card.explanation-revealed .concept-explanation-text{filter:none;user-select:text;}
+    .concept-card.explanation-revealed .concept-explanation-hint{color:#3fb950;}
+    .anchor{color:#ff5ca8;font-weight:700;}
+    .objectives-list{list-style:none;padding-left:0;}
+    .objectives-list li{display:flex;gap:12px;align-items:baseline;margin-bottom:12px;font-size:15px;}
+    .obj-num{flex-shrink:0;min-width:34px;color:#ff5ca8;font-family:monospace;font-weight:700;font-size:12px;background:rgba(255,92,168,.1);border:1px solid rgba(255,92,168,.4);border-radius:10px;padding:2px 6px;text-align:center;}
+    .loop-diagram{background:#111111;border:1px solid #2a2a2a;border-radius:8px;padding:16px;margin:16px 0;}
+    .loop-diagram svg{display:block;width:100%;height:auto;}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="../../index.html" class="brand">⚙ DevOps Learning</a>
+    <a href="../../syllabus/index.html">Syllabus</a>
+    <a href="../../sessions/index.html" class="active">Sessions</a>
+    <a href="../../quizzes/index.html">Quizzes</a>
+    <a href="../../labs/index.html">Labs</a>
+  </div>
+</nav>
+
+<main>
+  <div class="container">
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+      <span class="badge badge-layer">Layer 5</span>
+      <span class="badge badge-current">Session 12</span>
+      <span style="color:var(--text-muted);font-size:13px;">Release Strategies</span>
+    </div>
+    <h1>Health Probes and Autoscaling</h1>
+    <p class="subtitle">
+      Session 11 built three ways to flip traffic between a blue and a green
+      environment — but every one of those approaches quietly assumed the
+      environment you flip to is actually healthy and sized correctly for the
+      load it's about to receive. Today closes that gap: liveness, readiness,
+      and startup probes that let Kubernetes tell a broken pod from a working
+      one, and a HorizontalPodAutoscaler that keeps the right number of pods
+      running for the traffic that's actually arriving.
+    </p>
+    <div class="alert alert-info">Estimated time: 45–55 minutes</div>
+    <p style="color:var(--text-muted);font-size:13px;">Flow: Pre-quiz → Concept → Lab → Commit → Post-quiz</p>
+
+    <!-- Comic-panel concept grid: image teaches first, caption only reinforces -->
+    <div class="concept-grid">
+
+      <!-- 1. Liveness probe: heartbeat fails 3x, kubelet restarts -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="40" y="14" width="80" height="30" rx="4" fill="none" stroke="white" stroke-width="1.8"/>
+          <text x="80" y="33" fill="white" font-family="monospace" font-size="8" text-anchor="middle">GET /healthz</text>
+          <path d="M80,46 V62" stroke="#f85149" stroke-width="2" marker-end="url(#s12a1)"/>
+          <defs><marker id="s12a1" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#f85149"/></marker></defs>
+          <text x="80" y="60" fill="#f85149" font-family="monospace" font-size="8" text-anchor="middle">x x x  (3 fails)</text>
+          <rect x="46" y="66" width="68" height="26" rx="4" fill="none" stroke="#666" stroke-width="1.6"/>
+          <line x1="52" y1="72" x2="108" y2="86" stroke="#f85149" stroke-width="2.4"/>
+          <line x1="108" y1="72" x2="52" y2="86" stroke="#f85149" stroke-width="2.4"/>
+          <path d="M80,94 V108" stroke="#ff5ca8" stroke-width="2" marker-end="url(#s12a2)"/>
+          <defs><marker id="s12a2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <text x="80" y="122" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle" font-weight="bold">kubelet restarts pod</text>
+          <text x="80" y="140" fill="white" font-family="monospace" font-size="9" text-anchor="middle">liveness = am I stuck?</text>
+        </svg>
+        <figcaption><b>liveness probe</b>: fail enough, get restarted</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A liveness probe answers one question: is this container still functioning, or has it deadlocked/crashed internally? After enough consecutive failures, the kubelet kills and restarts the container.</p>
+      </figure>
+
+      <!-- 2. Readiness probe: traffic gating, no restart -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="40" y="14" width="80" height="30" rx="4" fill="none" stroke="white" stroke-width="1.8"/>
+          <text x="80" y="33" fill="white" font-family="monospace" font-size="8" text-anchor="middle">GET /readyz</text>
+          <path d="M80,46 V62" stroke="#d29922" stroke-width="2" marker-end="url(#s12a3)"/>
+          <defs><marker id="s12a3" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#d29922"/></marker></defs>
+          <text x="80" y="60" fill="#d29922" font-family="monospace" font-size="8" text-anchor="middle">fail = Not Ready</text>
+          <rect x="46" y="66" width="68" height="26" rx="4" fill="none" stroke="#d29922" stroke-width="1.8" stroke-dasharray="3,3"/>
+          <text x="80" y="83" fill="#d29922" font-family="monospace" font-size="8" text-anchor="middle">still running</text>
+          <path d="M80,94 L44,112" stroke="#666" stroke-width="2" stroke-dasharray="3,3"/>
+          <text x="30" y="122" fill="#666" font-family="monospace" font-size="8">no traffic</text>
+          <text x="80" y="140" fill="white" font-family="monospace" font-size="9" text-anchor="middle">readiness = am I able to serve?</text>
+        </svg>
+        <figcaption><b>readiness probe</b>: no restart, just no traffic</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A readiness probe answers a different question: can this pod handle a request right now? Failing it removes the pod from the Service's endpoints without touching the container at all — it stays running, just off the traffic list.</p>
+      </figure>
+
+      <!-- 3. Startup probe: grace period before liveness counts -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <text x="80" y="14" fill="white" font-family="monospace" font-size="9" text-anchor="middle">slow boot</text>
+          <rect x="20" y="20" width="120" height="18" rx="3" fill="none" stroke="#3fb950" stroke-width="1.8"/>
+          <text x="80" y="33" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">startupProbe: grace window</text>
+          <path d="M20,44 H140" stroke="#666" stroke-width="1.3" stroke-dasharray="2,2"/>
+          <text x="80" y="58" fill="#666" font-family="monospace" font-size="7" text-anchor="middle">liveness/readiness paused until this passes</text>
+          <path d="M80,64 V80" stroke="#ff5ca8" stroke-width="2" marker-end="url(#s12a4)"/>
+          <defs><marker id="s12a4" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <rect x="46" y="84" width="68" height="26" rx="4" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <path d="M52,97 l6,6 12,-14" fill="none" stroke="#3fb950" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <text x="90" y="99" fill="#3fb950" font-family="monospace" font-size="8">ready</text>
+          <text x="80" y="128" fill="white" font-family="monospace" font-size="8" text-anchor="middle">then liveness takes over</text>
+          <text x="80" y="142" fill="white" font-family="monospace" font-size="9" text-anchor="middle">no premature restarts</text>
+        </svg>
+        <figcaption><b>startup probe</b>: patience for slow boots</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Slow-starting apps can look "stuck" to a liveness probe during normal startup. A startup probe suspends liveness and readiness checks until it succeeds once, avoiding restart loops during a long boot.</p>
+      </figure>
+
+      <!-- 4. Metrics server feeds HPA -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="20" y="16" width="50" height="26" rx="4" fill="none" stroke="white" stroke-width="1.6"/>
+          <text x="45" y="33" fill="white" font-family="monospace" font-size="7" text-anchor="middle">kubelet</text>
+          <path d="M70,29 H92" stroke="white" stroke-width="2" marker-end="url(#s12a5)"/>
+          <defs><marker id="s12a5" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="white"/></marker></defs>
+          <rect x="94" y="16" width="46" height="26" rx="4" fill="none" stroke="#3fb950" stroke-width="1.8"/>
+          <text x="117" y="33" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">metrics</text>
+          <path d="M100,44 Q80,64 60,80" fill="none" stroke="#ff5ca8" stroke-width="2.2" marker-end="url(#s12a6)"/>
+          <defs><marker id="s12a6" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <rect x="18" y="82" width="84" height="28" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="60" y="99" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle" font-weight="bold">HPA</text>
+          <text x="80" y="128" fill="white" font-family="monospace" font-size="8" text-anchor="middle">CPU/memory usage</text>
+          <text x="80" y="142" fill="white" font-family="monospace" font-size="9" text-anchor="middle">feeds the scaling decision</text>
+        </svg>
+        <figcaption>metrics-server: <b>eyes</b> for the HPA</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">The HPA doesn't measure CPU itself. The metrics-server add-on collects CPU and memory usage from every kubelet and exposes it through the metrics API, which the HPA reads on a fixed interval.</p>
+      </figure>
+
+      <!-- 5. HPA scale up/down -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="16" y="20" width="128" height="20" rx="4" fill="none" stroke="white" stroke-width="1.6"/>
+          <text x="80" y="34" fill="white" font-family="monospace" font-size="8" text-anchor="middle">target: 50% CPU</text>
+          <text x="14" y="56" fill="#f85149" font-family="monospace" font-size="8">CPU 82% ↑</text>
+          <rect x="10" y="62" width="20" height="20" rx="2" fill="none" stroke="#3fb950" stroke-width="1.6"/>
+          <rect x="34" y="62" width="20" height="20" rx="2" fill="none" stroke="#3fb950" stroke-width="1.6"/>
+          <rect x="58" y="62" width="20" height="20" rx="2" fill="none" stroke="#3fb950" stroke-width="1.6" stroke-dasharray="2,2"/>
+          <text x="68" y="76" fill="#3fb950" font-family="monospace" font-size="10" text-anchor="middle">+</text>
+          <text x="100" y="76" fill="white" font-family="monospace" font-size="8">min 1 / max 5</text>
+          <path d="M20,88 V104" stroke="#666" stroke-width="1.6" marker-end="url(#s12a7)"/>
+          <defs><marker id="s12a7" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#666"/></marker></defs>
+          <text x="14" y="118" fill="#666" font-family="monospace" font-size="8">CPU 20% ↓</text>
+          <rect x="10" y="122" width="20" height="16" rx="2" fill="none" stroke="#666" stroke-width="1.4"/>
+          <text x="80" y="132" fill="white" font-family="monospace" font-size="9" text-anchor="middle">scale down again</text>
+        </svg>
+        <figcaption><b>HPA</b>: pod count follows demand</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">When average CPU utilization across pods rises above the target, the HPA adds replicas up to the configured maximum. When it drops back down, replicas are removed again, never below the configured minimum.</p>
+      </figure>
+
+      <!-- 6. Load generator -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="30" y="16" width="100" height="30" rx="4" fill="none" stroke="#ff5ca8" stroke-width="1.8"/>
+          <text x="80" y="32" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">while true; do wget svc</text>
+          <text x="80" y="42" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">done</text>
+          <path d="M80,48 V64" stroke="white" stroke-width="2" marker-end="url(#s12a8)"/>
+          <defs><marker id="s12a8" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="white"/></marker></defs>
+          <path d="M40,72 L60,66 L80,80 L100,60 L120,74" fill="none" stroke="#f85149" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <text x="80" y="98" fill="#f85149" font-family="monospace" font-size="8" text-anchor="middle">CPU climbing</text>
+          <path d="M80,104 V118" stroke="#3fb950" stroke-width="2" marker-end="url(#s12a9)"/>
+          <defs><marker id="s12a9" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker></defs>
+          <text x="80" y="132" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="middle" font-weight="bold">HPA reacts, scales up</text>
+        </svg>
+        <figcaption>synthetic <b>load</b> proves the loop works</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A small pod that hammers the service in a tight loop is the easiest way to manufacture real CPU load on demand, so you can watch the HPA respond instead of taking the scaling math on faith.</p>
+      </figure>
+
+      <!-- 7. Next session -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="58" width="46" height="34" rx="4" fill="none" stroke="#666" stroke-width="1.8" transform="rotate(-2,37,75)"/>
+          <text x="37" y="79" fill="#666" font-family="monospace" font-size="10" text-anchor="middle">12</text>
+          <path d="M64,75 H108" stroke="#ff5ca8" stroke-width="2.5" stroke-dasharray="5,4" marker-end="url(#s12a10)"/>
+          <defs><marker id="s12a10" markerWidth="9" markerHeight="9" refX="4" refY="4" orient="auto"><polygon points="0,0 9,4 0,9" fill="#ff5ca8"/></marker></defs>
+          <rect x="112" y="52" width="42" height="46" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2" transform="rotate(2,133,75)"/>
+          <text x="133" y="80" fill="#ff5ca8" font-family="monospace" font-size="14" text-anchor="middle" font-weight="bold">13</text>
+          <path d="M118,110 L128,118 L148,100" fill="none" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <text x="80" y="132" fill="white" font-family="monospace" font-size="9" text-anchor="middle">10% traffic, then 100%</text>
+        </svg>
+        <figcaption>next: canary deployments</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Session 13 uses the same "prove it's healthy before it gets full traffic" instinct from today, but shifts traffic gradually by percentage instead of flipping all at once.</p>
+      </figure>
+
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>1. Learning Objectives</h2>
+    <div class="card">
+      <ol class="objectives-list">
+        <li><span class="obj-num">1/5</span><span>Distinguish a <span class="anchor">liveness probe</span> (restarts the container) from a <span class="anchor">readiness probe</span> (gates traffic, no restart)</span></li>
+        <li><span class="obj-num">2/5</span><span>Explain when a <span class="anchor">startup probe</span> is needed for slow-booting applications</span></li>
+        <li><span class="obj-num">3/5</span><span>Configure all three probes on a Deployment and <span class="anchor">simulate a failure</span> to observe Kubernetes react</span></li>
+        <li><span class="obj-num">4/5</span><span>Explain how the <span class="anchor">metrics-server</span> feeds CPU/memory data to a <span class="anchor">HorizontalPodAutoscaler</span></span></li>
+        <li><span class="obj-num">5/5</span><span>Apply an HPA, generate real <span class="anchor">load</span>, and observe <span class="anchor">scale-up</span> and <span class="anchor">scale-down</span> in action</span></li>
+      </ol>
+    </div>
+
+    <h2>2. Pre-Coding Quiz</h2>
+    <p>Answer before reading the concept. Need 4/5 to proceed.</p>
+
+    <div id="pre-quiz">
+      <div class="quiz-question" data-question="0" data-answer="c">
+        <div class="question-num">Question 1 of 5</div>
+        <p>What is the core difference between a liveness probe and a readiness probe?</p>
+        <label class="quiz-option" data-val="a">They check the exact same thing, just on different ports</label>
+        <label class="quiz-option" data-val="b">Readiness probes restart containers; liveness probes only log warnings</label>
+        <label class="quiz-option" data-val="c">Liveness failures restart the container; readiness failures only remove it from traffic</label>
+        <label class="quiz-option" data-val="d">Liveness probes run once at pod creation and never again</label>
+        <div class="explanation">Liveness answers "is this container stuck?" and triggers a restart on repeated failure. Readiness answers "can this pod serve a request right now?" and only affects Service endpoints.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="b">
+        <div class="question-num">Question 2 of 5</div>
+        <p>After a liveness probe fails three times in a row, what happens?</p>
+        <label class="quiz-option" data-val="a">Nothing, until a human intervenes manually</label>
+        <label class="quiz-option" data-val="b">The kubelet kills the container and starts a new one</label>
+        <label class="quiz-option" data-val="c">The entire node is cordoned and drained</label>
+        <label class="quiz-option" data-val="d">The pod is deleted and never recreated</label>
+        <div class="explanation">The kubelet, running on the node, is responsible for acting on liveness probe failures — it restarts just the container, not the whole pod's identity or the node.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="a">
+        <div class="question-num">Question 3 of 5</div>
+        <p>A pod's readiness probe starts failing, but its liveness probe still passes. What happens?</p>
+        <label class="quiz-option" data-val="a">The pod stays running but is removed from the Service's endpoints</label>
+        <label class="quiz-option" data-val="b">The container restarts immediately</label>
+        <label class="quiz-option" data-val="c">The whole Deployment is rolled back automatically</label>
+        <label class="quiz-option" data-val="d">Nothing changes — only liveness probes have any effect</label>
+        <div class="explanation">Readiness and liveness are independent signals. A pod can be alive but not ready — Kubernetes stops routing traffic to it without restarting anything.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="d">
+        <div class="question-num">Question 4 of 5</div>
+        <p>What does the metrics-server provide to the cluster?</p>
+        <label class="quiz-option" data-val="a">A visual dashboard for viewing pod logs</label>
+        <label class="quiz-option" data-val="b">DNS resolution for Service names</label>
+        <label class="quiz-option" data-val="c">Automatic image vulnerability scanning</label>
+        <label class="quiz-option" data-val="d">CPU and memory usage data collected from every kubelet</label>
+        <div class="explanation">metrics-server is the add-on that makes kubectl top and the HorizontalPodAutoscaler possible — it aggregates resource usage from kubelets into an API other components can query.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="a">
+        <div class="question-num">Question 5 of 5</div>
+        <p>What does an HPA's <code>targetCPUUtilizationPercentage: 50</code> control?</p>
+        <label class="quiz-option" data-val="a">The average CPU usage threshold that triggers scaling up or down</label>
+        <label class="quiz-option" data-val="b">The exact number of pods to run at all times</label>
+        <label class="quiz-option" data-val="c">How much CPU each individual container is allowed to use, hard-capped</label>
+        <label class="quiz-option" data-val="d">The percentage of nodes that must be healthy before scaling</label>
+        <div class="explanation">The HPA compares actual average CPU utilization across pods against this target and adjusts replica count to move toward it, within the configured min/max bounds.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Pre-Quiz</button>
+      <div class="quiz-result" id="pre-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>3. The Concept — Kubernetes That Watches Itself</h2>
+    <p>
+      Blue-green deployments give you a way to switch versions safely, but
+      the switch itself has no opinion about whether what you're switching
+      to is actually working, or whether there's enough of it running to
+      handle the traffic. Probes and autoscaling are what supply those two
+      opinions automatically, without a human watching a dashboard.
+    </p>
+
+    <h3>Liveness probes: is the container stuck?</h3>
+    <p>
+      A liveness probe checks whether a running container is still
+      functioning — not whether it can serve traffic well, just whether
+      it's alive at all. A common check is a lightweight HTTP endpoint the
+      app exposes for this purpose:
+    </p>
+    <pre><code>livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 8080
+  periodSeconds: 10
+  failureThreshold: 3</code></pre>
+    <p>
+      Every 10 seconds, the kubelet requests <code>/healthz</code>. After
+      three consecutive failures, it concludes the container is stuck —
+      deadlocked, out of memory, wedged in a bad internal state — and kills
+      and restarts it. This is the mechanism that turns "the app hung" from
+      a page-someone-at-2am incident into something that self-corrects.
+    </p>
+
+    <h3>Readiness probes: can this pod take a request right now?</h3>
+    <p>
+      A readiness probe asks a narrower question and has a much gentler
+      consequence for failing it:
+    </p>
+    <pre><code>readinessProbe:
+  httpGet:
+    path: /readyz
+    port: 8080
+  periodSeconds: 5
+  failureThreshold: 2</code></pre>
+    <p>
+      When this fails, the pod is marked <strong>Not Ready</strong> and the
+      Service stops sending it traffic — but nothing gets restarted. This
+      matters for cases where the container is fine but temporarily
+      shouldn't receive requests: a downstream dependency it needs is
+      briefly unreachable, or it's mid-way through loading a large cache
+      into memory. Restarting wouldn't fix either situation; removing the
+      pod from rotation until it's ready again does.
+    </p>
+
+    <h3>Startup probes: patience for slow boots</h3>
+    <p>
+      Some applications take a long time to become ready the first time —
+      loading large datasets, warming caches, running migrations. Without a
+      startup probe, a liveness probe with a short <code>periodSeconds</code>
+      can mistake normal slow startup for a hang and restart the container
+      before it ever finishes booting, which can loop forever.
+    </p>
+    <pre><code>startupProbe:
+  httpGet:
+    path: /healthz
+    port: 8080
+  failureThreshold: 30
+  periodSeconds: 5   # up to 150s grace period before liveness takes over</code></pre>
+    <p>
+      While a startup probe is defined, liveness and readiness checks are
+      suspended until it succeeds once. Only after that does the regular
+      liveness/readiness cycle begin — giving a slow-booting app room to
+      finish starting without being punished for it.
+    </p>
+
+    <h3>The self-healing feedback loop</h3>
+    <p>
+      Probes and the HorizontalPodAutoscaler solve two different halves of
+      the same problem — one keeps each individual pod honest, the other
+      keeps the right number of pods running — and together they form a
+      loop that runs continuously without anyone watching it:
+    </p>
+
+    <div class="loop-diagram">
+      <svg viewBox="0 0 700 340" xmlns="http://www.w3.org/2000/svg">
+        <!-- center: application pods -->
+        <rect x="270" y="150" width="160" height="50" rx="6" fill="none" stroke="white" stroke-width="2"/>
+        <text x="350" y="180" fill="white" font-family="monospace" font-size="13" text-anchor="middle" font-weight="bold">Application Pods</text>
+
+        <!-- left: liveness -->
+        <rect x="30" y="40" width="160" height="46" rx="6" fill="none" stroke="#f85149" stroke-width="2"/>
+        <text x="110" y="60" fill="#f85149" font-family="monospace" font-size="11" text-anchor="middle" font-weight="bold">Liveness Probe</text>
+        <text x="110" y="76" fill="#f85149" font-family="monospace" font-size="9" text-anchor="middle">restart bad pods</text>
+        <path d="M110,86 Q110,120 260,158" fill="none" stroke="#f85149" stroke-width="2" marker-end="url(#loopA)"/>
+        <defs><marker id="loopA" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#f85149"/></marker></defs>
+        <text x="150" y="120" fill="#f85149" font-family="monospace" font-size="8">HTTP /healthz</text>
+
+        <!-- left-bottom: readiness -->
+        <rect x="30" y="250" width="160" height="46" rx="6" fill="none" stroke="#d29922" stroke-width="2"/>
+        <text x="110" y="270" fill="#d29922" font-family="monospace" font-size="11" text-anchor="middle" font-weight="bold">Readiness Probe</text>
+        <text x="110" y="286" fill="#d29922" font-family="monospace" font-size="9" text-anchor="middle">gate traffic</text>
+        <path d="M260,192 Q140,230 110,250" fill="none" stroke="#d29922" stroke-width="2" marker-end="url(#loopB)"/>
+        <defs><marker id="loopB" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#d29922"/></marker></defs>
+        <text x="150" y="228" fill="#d29922" font-family="monospace" font-size="8">HTTP /readyz</text>
+
+        <!-- right: metrics server -->
+        <rect x="510" y="40" width="160" height="46" rx="6" fill="none" stroke="#3fb950" stroke-width="2"/>
+        <text x="590" y="60" fill="#3fb950" font-family="monospace" font-size="11" text-anchor="middle" font-weight="bold">Metrics Server</text>
+        <text x="590" y="76" fill="#3fb950" font-family="monospace" font-size="9" text-anchor="middle">collects CPU / memory</text>
+        <path d="M440,158 Q470,110 520,86" fill="none" stroke="#3fb950" stroke-width="2" marker-end="url(#loopC)"/>
+        <defs><marker id="loopC" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker></defs>
+        <text x="480" y="115" fill="#3fb950" font-family="monospace" font-size="8">usage stats</text>
+
+        <!-- right-bottom: HPA -->
+        <rect x="510" y="250" width="160" height="46" rx="6" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+        <text x="590" y="270" fill="#ff5ca8" font-family="monospace" font-size="11" text-anchor="middle" font-weight="bold">HPA</text>
+        <text x="590" y="286" fill="#ff5ca8" font-family="monospace" font-size="9" text-anchor="middle">scales replicas up/down</text>
+        <path d="M590,86 V244" fill="none" stroke="#ff5ca8" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#loopD)"/>
+        <defs><marker id="loopD" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+        <text x="605" y="170" fill="#ff5ca8" font-family="monospace" font-size="8">reads metrics</text>
+        <path d="M510,268 Q440,220 430,196" fill="none" stroke="#ff5ca8" stroke-width="2" marker-end="url(#loopE)"/>
+        <defs><marker id="loopE" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+        <text x="450" y="238" fill="#ff5ca8" font-family="monospace" font-size="8">adjusts replica count</text>
+
+        <text x="350" y="325" fill="white" font-family="monospace" font-size="11" text-anchor="middle">probes keep each pod honest — HPA keeps enough of them running</text>
+      </svg>
+    </div>
+    <p>
+      Neither half of this loop knows the other exists. The liveness probe
+      doesn't know an HPA is running; the HPA doesn't know or care why a
+      given pod is unhealthy. Each does one narrow job continuously, and
+      the combination is what people mean when they call Kubernetes
+      "self-healing" — it isn't one clever mechanism, it's several boring,
+      independent ones running on a loop.
+    </p>
+
+    <h3>HorizontalPodAutoscaler: matching pod count to load</h3>
+    <pre><code>apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: myapp-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: myapp
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50</code></pre>
+    <p>
+      The HPA controller reconciles roughly every 15 seconds: it reads the
+      current average CPU utilization across the Deployment's pods from the
+      metrics API, compares it to the 50% target, and adjusts
+      <code>replicas</code> up or down — never going below
+      <code>minReplicas</code> or above <code>maxReplicas</code>. Scaling
+      happens gradually, not instantly, to avoid overreacting to a single
+      noisy spike.
+    </p>
+
+    <hr class="section-divider" />
+
+    <h2>4. Lab</h2>
+    <div class="alert alert-success">
+      <strong>Lab objective:</strong> Add all three probe types to a
+      Deployment, force a liveness failure and watch Kubernetes restart the
+      pod, force a readiness failure and watch it drop out of traffic
+      without restarting, then apply an HPA and prove it reacts to real
+      CPU load.
+    </div>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <p><strong>Add liveness, readiness, and startup probes</strong></p>
+        <pre><code>containers:
+  - name: myapp
+    image: myapp:1.0
+    ports:
+      - containerPort: 8080
+    startupProbe:
+      httpGet: { path: /healthz, port: 8080 }
+      failureThreshold: 30
+      periodSeconds: 5
+    livenessProbe:
+      httpGet: { path: /healthz, port: 8080 }
+      periodSeconds: 10
+      failureThreshold: 3
+    readinessProbe:
+      httpGet: { path: /readyz, port: 8080 }
+      periodSeconds: 5
+      failureThreshold: 2</code></pre>
+        <p>Apply the updated Deployment and confirm with <code>kubectl get pods</code>
+        that the pod reaches <code>1/1 Running</code>.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <p><strong>Predict, then simulate a liveness failure</strong></p>
+        <p>Before you do anything: write down what you expect
+        <code>kubectl get pods</code> to show while the liveness probe is
+        failing, and what you expect it to show a minute later.</p>
+        <p>Exec into the pod and make <code>/healthz</code> start failing (for
+        example, by stopping the process it depends on, or toggling a test
+        flag the app exposes for this purpose). Watch
+        <code>kubectl get pods -w</code> and <code>kubectl describe pod
+        &lt;name&gt;</code> — you should see the restart count increase and an
+        Event describing the liveness failure.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <p><strong>Simulate a readiness failure and compare</strong></p>
+        <p>Now make <code>/readyz</code> fail instead, leaving
+        <code>/healthz</code> passing. Watch <code>kubectl get pods</code> —
+        the pod should show <code>0/1</code> in the READY column but stay
+        <code>Running</code>, with no restart count increase. Confirm with
+        <code>kubectl get endpoints myapp-svc</code> that the pod's IP has
+        been removed from the Service.</p>
+        <p><strong>Stop and think:</strong> why is it correct that this pod's
+        restart count doesn't change here, when it did in step 2?</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <p><strong>Confirm metrics-server is available</strong></p>
+        <p>Run <code>kubectl top pods</code>. If it errors, install
+        metrics-server for your cluster type before continuing — the HPA
+        cannot function without it. Re-run <code>kubectl top pods</code>
+        until it returns real CPU and memory numbers.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <p><strong>Apply the HorizontalPodAutoscaler</strong></p>
+        <p>Apply an HPA targeting <code>myapp</code> with
+        <code>minReplicas: 1</code>, <code>maxReplicas: 5</code>, and a CPU
+        target of 50%. Confirm with <code>kubectl get hpa</code> — it should
+        show a current CPU percentage and a replica count of 1.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <p><strong>Predict, then generate load and watch it scale</strong></p>
+        <p>Before running the load generator: predict roughly how many
+        replicas you expect once CPU stays above 50% for a sustained
+        period.</p>
+        <p>Run a small pod that loops <code>wget</code> requests against the
+        service continuously, and watch <code>kubectl get hpa -w</code> in a
+        second terminal. You should see the CPU percentage climb and
+        <code>REPLICAS</code> increase over the next couple of reconcile
+        cycles, up to but not past <code>maxReplicas</code>.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">7</div>
+      <div class="step-body">
+        <p><strong>Stop the load and watch it scale back down</strong></p>
+        <p>Delete the load generator pod. Keep watching
+        <code>kubectl get hpa -w</code> — CPU usage should fall, and after a
+        cooldown period the HPA should reduce replicas back toward
+        <code>minReplicas</code>. Note roughly how long the scale-down took
+        compared to how fast the scale-up happened.</p>
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>5. Expected Files Changed</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Action</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><code>k8s/myapp-deployment.yaml</code></td><td>Updated</td><td>Added startup, liveness, and readiness probes to the container spec</td></tr>
+          <tr><td><code>k8s/myapp-hpa.yaml</code></td><td>Added</td><td>HorizontalPodAutoscaler targeting 50% CPU, min 1 / max 5 replicas</td></tr>
+          <tr><td><code>k8s/load-generator.yaml</code></td><td>Added</td><td>Disposable pod used to manufacture CPU load for testing the HPA</td></tr>
+          <tr><td><code>sessions/session-12/index.html</code></td><td>Updated</td><td>This session document</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>6. Commit Checkpoint</h2>
+    <pre><code>git add k8s/myapp-deployment.yaml k8s/myapp-hpa.yaml k8s/load-generator.yaml sessions/session-12/index.html
+git commit -m "session-12: add liveness/readiness/startup probes and a CPU-based HPA"</code></pre>
+
+    <h2>7. Code Review Checklist</h2>
+    <div class="card">
+      <div class="checklist-item"><input type="checkbox" id="c1"/><label for="c1">All three probes (startup, liveness, readiness) are defined with distinct, appropriate paths</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c2"/><label for="c2">I forced a liveness failure and confirmed the restart count increased</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c3"/><label for="c3">I forced a readiness failure and confirmed the pod stayed Running but left the Service's endpoints</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c4"/><label for="c4"><code>kubectl top pods</code> returns real numbers before the HPA was applied</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c5"/><label for="c5">The HPA has both a minReplicas and a maxReplicas set, not just a target percentage</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c6"/><label for="c6">I watched both a scale-up and a scale-down happen, not just one direction</label></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>8. Post-Coding Quiz</h2>
+    <div id="post-quiz" data-pass-post="Proceed to Session 13 (Canary Deployments) after ≥ 80%.">
+      <div class="quiz-question" data-question="0" data-answer="b">
+        <div class="question-num">Question 1 of 5</div>
+        <p>A pod shows <code>1/1 Running</code> but <code>0/1</code> ready. What's the most likely explanation?</p>
+        <label class="quiz-option" data-val="a">The node it's scheduled on is out of disk space</label>
+        <label class="quiz-option" data-val="b">Its readiness probe is failing while its liveness probe still passes</label>
+        <label class="quiz-option" data-val="c">Kubernetes is in the middle of restarting the container</label>
+        <label class="quiz-option" data-val="d">The Deployment's replica count was just reduced to zero</label>
+        <div class="explanation">Running plus not-ready is exactly the readiness-without-liveness-failure case from step 3 of the lab — the container is fine, it just isn't receiving traffic right now.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="d">
+        <div class="question-num">Question 2 of 5</div>
+        <p>Why give a slow-starting app its own startup probe instead of just relaxing the liveness probe's timing?</p>
+        <label class="quiz-option" data-val="a">Startup probes and liveness probes are actually the same feature under different names</label>
+        <label class="quiz-option" data-val="b">Kubernetes requires a startup probe for every container by default</label>
+        <label class="quiz-option" data-val="c">It reduces the container image size</label>
+        <label class="quiz-option" data-val="d">It gives a one-time grace period for startup without permanently loosening how fast liveness reacts to a real hang later</label>
+        <div class="explanation">Loosening the liveness probe's own thresholds would make it slower to catch a real post-startup hang too. A separate startup probe keeps that fast liveness response while still tolerating a slow boot.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="a">
+        <div class="question-num">Question 3 of 5</div>
+        <p>What typically causes the HPA to scale a Deployment back down?</p>
+        <label class="quiz-option" data-val="a">Average CPU utilization drops back below the target for a sustained period</label>
+        <label class="quiz-option" data-val="b">A human manually edits the replica count to a lower number</label>
+        <label class="quiz-option" data-val="c">The Deployment reaches its maxReplicas limit</label>
+        <label class="quiz-option" data-val="d">The readiness probe starts failing on all pods at once</label>
+        <div class="explanation">The HPA continuously compares current utilization to its target; once usage has been below target for long enough, it reduces replicas — the same mechanism that scaled up, running in reverse.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="c">
+        <div class="question-num">Question 4 of 5</div>
+        <p>Why is "self-healing" in Kubernetes usually the combination of probes and an HPA, rather than one single feature?</p>
+        <label class="quiz-option" data-val="a">Because Kubernetes has no single feature named "self-healing" in its API</label>
+        <label class="quiz-option" data-val="b">Because only one of the two actually exists in current Kubernetes versions</label>
+        <label class="quiz-option" data-val="c">Because probes and the HPA solve two independent problems — pod health and pod count — that only look like one system together</label>
+        <label class="quiz-option" data-val="d">Because the HPA directly calls the liveness probe's HTTP endpoint itself</label>
+        <div class="explanation">Probes keep individual pods honest; the HPA keeps enough of them running. Neither component is aware the other exists — the "self-healing" behavior emerges from both running continuously at once.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="b">
+        <div class="question-num">Question 5 of 5</div>
+        <p>Session 13 will focus on:</p>
+        <label class="quiz-option" data-val="a">Setting up a full CI pipeline with GitHub Actions</label>
+        <label class="quiz-option" data-val="b">Canary deployments: shifting traffic gradually by percentage</label>
+        <label class="quiz-option" data-val="c">Writing Terraform modules for reusable infrastructure</label>
+        <label class="quiz-option" data-val="d">Configuring network policies between namespaces</label>
+        <div class="explanation">Session 13 builds on the same "verify before it gets full traffic" idea from blue-green and probes, but shifts a percentage of traffic at a time instead of switching all at once.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Post-Quiz</button>
+      <div class="quiz-result" id="post-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>9. Reflection Questions</h2>
+    <div class="card">
+      <ol>
+        <li>Before simulating the liveness and readiness failures, did you correctly predict which one would trigger a restart? What was your reasoning?</li>
+        <li>Why might it be dangerous to point a liveness probe at an endpoint that itself depends on a slow external service?</li>
+        <li>If your app's normal CPU usage is spiky by nature (bursts every few minutes), how might that affect your choice of HPA target percentage and min/max replicas?</li>
+      </ol>
+    </div>
+
+    <h2>10. What Breaks If This Knowledge Is Missing?</h2>
+    <div class="card">
+      <ul>
+        <li><strong>No liveness probe:</strong> a container that deadlocks or wedges internally just sits there forever, reported as Running, silently serving nothing or serving errors, until a human notices and restarts it manually.</li>
+        <li><strong>No readiness probe:</strong> a pod that's still warming up (or briefly can't reach a dependency) keeps receiving live traffic anyway, since Kubernetes has no signal telling it not to route requests there.</li>
+        <li><strong>Liveness probe pointed at the wrong endpoint, or with no startup probe for a slow app:</strong> the container gets killed and restarted repeatedly during normal startup, a self-inflicted crash loop that looks like an outage but is actually the probe configuration itself.</li>
+        <li><strong>No HPA:</strong> a fixed replica count means either overpaying for capacity that sits idle most of the time, or under-provisioning and getting overwhelmed the moment real traffic arrives.</li>
+      </ul>
+    </div>
+
+    <h2>11. What We Learned</h2>
+    <div class="card" style="border-color:var(--green);">
+      <p><strong>Today you learned: liveness probes restart stuck containers, readiness probes gate traffic without restarting anything, startup probes give slow-booting apps a grace period, and a HorizontalPodAutoscaler reads metrics-server data to keep pod count matched to real CPU load — together forming the self-healing loop that makes it safe to trust an environment before flipping traffic to it.</strong></p>
+      <p><strong>Next:</strong> <a href="../session-13/index.html">Session 13 — Canary Deployments (Raw Kubernetes, Helm, and Terraform)</a>.</p>
+    </div>
+
+    <p style="margin-top:24px;"><a href="../session-11/index.html">← Session 11</a> · <a href="../../syllabus/index.html">Syllabus</a> · <a href="../session-13/index.html">Session 13 →</a></p>
+
+  </div>
+</main>
+
+<script src="../../quiz.js" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    setupQuiz('pre');
+    setupQuiz('post');
+
+    document.querySelectorAll('.concept-explanation-toggle').forEach(function (button) {
+      button.addEventListener('click', function () {
+        const card = button.closest('.concept-card');
+        const isRevealed = card.classList.toggle('explanation-revealed');
+        button.setAttribute('aria-expanded', String(isRevealed));
+        button.querySelector('.concept-explanation-hint').textContent = isRevealed
+          ? 'Click to blur'
+          : 'Click to reveal';
+      });
+    });
+  });
+</script>
+<script src="../../notes-widget.js" defer></script>
+<script src="../../bookmark-widget.js" defer></script>
+
+</body>
+</html>

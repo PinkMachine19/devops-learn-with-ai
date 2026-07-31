@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Syllabus — DevOps Learning</title>
+  <link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="../index.html" class="brand">⚙ DevOps Learning</a>
+    <a href="../syllabus/index.html" class="active">Syllabus</a>
+    <a href="../sessions/index.html">Sessions</a>
+    <a href="../quizzes/index.html">Quizzes</a>
+    <a href="../labs/index.html">Labs</a>
+  </div>
+</nav>
+
+<main>
+  <div class="container">
+
+    <h1>22-Session Curriculum</h1>
+    <p class="subtitle">
+      Sessions must be completed in order. Each layer unlocks only after the previous layer's
+      final quiz scores ≥ 80%. A session is not complete until the commit is made and reviewed.
+    </p>
+
+    <div class="alert alert-info">
+      <strong>All sessions are open.</strong> Browse any session from the
+      <a href="../sessions/index.html">Sessions</a> page. Layer gate quizzes remain
+      recommended self-checks before advancing the lab track.
+    </div>
+
+    <!-- ── LAYER 1 ─────────────────────────────────────────────── -->
+    <div class="layer-header">
+      <span class="badge badge-current">Active</span>
+      <span class="layer-title">Layer 1 — Docker Foundations</span>
+    </div>
+    <p class="layer-desc">
+      Every later layer assumes fluency with containers. We start with the container
+      lifecycle and storage model before touching orchestration of any kind.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Title</th><th>Core Concept</th><th>Project Milestone</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a href="../sessions/session-01/index.html">01</a></td>
+            <td>Container Lifecycle, Bind Mounts, Volumes, and Networks</td>
+            <td>Images vs containers, run/stop/rm, bind mounts vs named volumes, bridge networks</td>
+            <td>Run, inspect, and persist data through a single container</td>
+            <td><span class="badge badge-current">Current</span></td>
+          </tr>
+          <tr>
+            <td><a href="../sessions/session-02/index.html">02</a></td>
+            <td>Multi-Container Apps with Docker Compose</td>
+            <td>Compose services, networks, volumes, environment variables, service discovery by name</td>
+            <td>Run a PHP + MySQL app with one <code>docker compose up</code></td>
+            <td><span class="badge badge-gate">Gate</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alert alert-info">
+      <strong>Layer 1 Gate:</strong> Recommended self-check — score ≥ 80% on Session 02's quiz before starting Layer 2.
+    </div>
+
+    <!-- ── LAYER 2 ─────────────────────────────────────────────── -->
+    <div class="layer-header">
+      <span class="badge badge-current">Open</span>
+      <span class="layer-title">Layer 2 — Kubernetes Basics</span>
+    </div>
+    <p class="layer-desc">
+      Kubernetes automates what Compose does by hand on one host, across many. We build a
+      first Deployment before layering on namespaces, quotas, and configuration objects.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Title</th><th>Core Concept</th><th>Project Milestone</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a href="../sessions/session-03/index.html">03</a></td>
+            <td>Deployments, Services, Scaling, Rolling Updates, and Rollback</td>
+            <td>Deployment/ReplicaSet/Pod hierarchy, Services, scaling, rolling updates, undo</td>
+            <td>Deploy, scale, update, and roll back one app on a local cluster</td>
+            <td><span class="badge badge-current">Available</span></td>
+          </tr>
+          <tr>
+            <td><a href="../sessions/session-04/index.html">04</a></td>
+            <td>Namespaces and Resource Quotas</td>
+            <td>Logical isolation, ResourceQuota, LimitRange, per-namespace defaults</td>
+            <td>Split workloads across namespaces with enforced quotas</td>
+            <td><span class="badge badge-current">Available</span></td>
+          </tr>
+          <tr>
+            <td><a href="../sessions/session-05/index.html">05</a></td>
+            <td>ConfigMaps and Secrets</td>
+            <td>Externalizing config, env injection vs volume mounts, Secret encoding vs encryption</td>
+            <td>Move hardcoded config and credentials out of a Deployment</td>
+            <td><span class="badge badge-gate">Gate</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alert alert-info">
+      <strong>Layer 2 Gate:</strong> Recommended self-check — score ≥ 80% on Session 05's quiz before starting Layer 3.
+    </div>
+
+    <!-- ── LAYER 3 ─────────────────────────────────────────────── -->
+    <div class="layer-header">
+      <span class="badge badge-current">Open</span>
+      <span class="layer-title">Layer 3 — Packaging &amp; Infrastructure as Code</span>
+    </div>
+    <p class="layer-desc">
+      Raw manifests don't scale to real teams. Helm packages Kubernetes YAML; Terraform
+      packages infrastructure itself, including the cluster resources Helm deploys into.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Title</th><th>Core Concept</th><th>Project Milestone</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a href="../sessions/session-06/index.html">06</a></td>
+            <td>Packaging Applications with Helm</td>
+            <td>Charts, values.yaml, templating, releases, upgrade/rollback</td>
+            <td>Convert the raw manifests from Layer 2 into a Helm chart</td>
+            <td><span class="badge badge-current">Available</span></td>
+          </tr>
+          <tr>
+            <td><a href="../sessions/session-07/index.html">07</a></td>
+            <td>Terraform Fundamentals</td>
+            <td>Providers, resources, state, plan/apply, declarative vs imperative</td>
+            <td>Provision a local resource set with a Terraform plan and apply</td>
+            <td><span class="badge badge-current">Available</span></td>
+          </tr>
+          <tr>
+            <td><a href="../sessions/session-08/index.html">08</a></td>
+            <td>Terraform with Kubernetes and Helm Providers</td>
+            <td>kubernetes and helm Terraform providers, managing releases as code</td>
+            <td>Deploy the Session 06 Helm chart entirely from Terraform</td>
+            <td><span class="badge badge-gate">Gate</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alert alert-info">
+      <strong>Layer 3 Gate:</strong> Recommended self-check — score ≥ 80% on Session 08's quiz before starting Layer 4.
+    </div>
+
+    <!-- ── LAYER 4 ─────────────────────────────────────────────── -->
+    <div class="layer-header">
+      <span class="badge badge-current">Open</span>
+      <span class="layer-title">Layer 4 — Ingress &amp; TLS</span>
+    </div>
+    <p class="layer-desc">
+      Services alone don't give you clean external URLs or HTTPS. Ingress and cert-manager
+      solve routing and certificates the same way regardless of which packaging tool wrote them.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Title</th><th>Core Concept</th><th>Project Milestone</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a href="../sessions/session-09/index.html">09</a></td>
+            <td>Ingress Routing (Raw Kubernetes, Helm, and Terraform)</td>
+            <td>Ingress controller vs Ingress resource, host/path rules, the same routing expressed three ways</td>
+            <td>Route one hostname to the app using raw YAML, then Helm, then Terraform</td>
+            <td><span class="badge badge-current">Available</span></td>
+          </tr>
+          <tr>
+            <td><a href="../sessions/session-10/index.html">10</a></td>
+            <td>TLS with cert-manager</td>
+            <td>Certificate issuers, ClusterIssuer, automatic renewal, TLS secrets</td>
+            <td>Serve the app over HTTPS with a cert-manager-issued certificate</td>
+            <td><span class="badge badge-gate">Gate</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alert alert-info">
+      <strong>Layer 4 Gate:</strong> Recommended self-check — score ≥ 80% on Session 10's quiz before starting Layer 5.
+    </div>
+
+    <!-- ── LAYER 5 ─────────────────────────────────────────────── -->
+    <div class="layer-header">
+      <span class="badge badge-current">Open</span>
+      <span class="layer-title">Layer 5 — Release Strategies</span>
+    </div>
+    <p class="layer-desc">
+      Shipping new code safely is its own discipline. We cover blue-green and canary
+      releases, plus the health checks and autoscaling that make either strategy safe.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Title</th><th>Core Concept</th><th>Project Milestone</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a href="../sessions/session-11/index.html">11</a></td>
+            <td>Blue-Green Deployments (Raw Kubernetes, Helm, and Terraform)</td>
+            <td>Parallel environments, instant traffic cutover, instant rollback</td>
+            <td>Cut traffic between a blue and green version with zero downtime</td>
+            <td><span class="badge badge-current">Available</span></td>
+          </tr>
+          <tr>
+            <td><a href="../sessions/session-12/index.html">12</a></td>
+            <td>Health Probes and Autoscaling</td>
+            <td>Liveness/readiness/startup probes, HorizontalPodAutoscaler, self-healing feedback loops</td>
+            <td>Add probes and an HPA that reacts to load automatically</td>
+            <td><span class="badge badge-current">Available</span></td>
+          </tr>
+          <tr>
+            <td><a href="../sessions/session-13/index.html">13</a></td>
+            <td>Canary Deployments (Raw Kubernetes, Helm, and Terraform)</td>
+            <td>Gradual traffic shifting, weighted routing, blast-radius reduction</td>
+            <td>Shift 10% then 100% of traffic to a new version safely</td>
+            <td><span class="badge badge-gate">Gate</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alert alert-info">
+      <strong>Layer 5 Gate:</strong> Recommended self-check — score ≥ 80% on Session 13's quiz before starting Layer 6.
+    </div>
+
+    <!-- ── LAYER 6 ─────────────────────────────────────────────── -->
+    <div class="layer-header">
+      <span class="badge badge-current">Open</span>
+      <span class="layer-title">Layer 6 — Observability &amp; Landscape</span>
+    </div>
+    <p class="layer-desc">
+      You cannot operate what you cannot see. We add metrics and dashboards, then step back
+      for a discussion-only session mapping the wider DevOps tool landscape.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Title</th><th>Core Concept</th><th>Project Milestone</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a href="../sessions/session-14/index.html">14</a></td>
+            <td>Observability with Prometheus and Grafana</td>
+            <td>Metrics scraping, PromQL basics, dashboards, alerting fundamentals</td>
+            <td>Install Prometheus + Grafana and build one dashboard for the app</td>
+            <td><span class="badge badge-current">Available</span></td>
+          </tr>
+          <tr>
+            <td><a href="../sessions/session-15/index.html">15</a></td>
+            <td>The DevOps Language Landscape</td>
+            <td>Where each tool sits (build, package, provision, deploy, observe), how they compare</td>
+            <td>Discussion only — no lab, no commit</td>
+            <td><span class="badge badge-gate">Gate</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alert alert-info">
+      <strong>Layer 6 Gate:</strong> Recommended self-check — score ≥ 80% on Session 15's quiz before starting the Capstone.
+    </div>
+
+    <!-- ── LAYER 7 ─────────────────────────────────────────────── -->
+    <div class="layer-header">
+      <span class="badge badge-current">Open</span>
+      <span class="layer-title">Layer 7 — Capstone: Ship a Real App</span>
+    </div>
+    <p class="layer-desc">
+      Every earlier layer was a rehearsal. Now we build one real application — the Text
+      Masker — and carry it through CI, CD to Docker, CD to Kubernetes, CD to the cloud,
+      and both release strategies from Layer 5, for real.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Title</th><th>Core Concept</th><th>Project Milestone</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a href="../sessions/session-16/index.html">16</a></td>
+            <td>Capstone: Building the Text Masker App</td>
+            <td>App architecture, containerizing a real service, Dockerfile design</td>
+            <td>A running Text Masker app with a Dockerfile</td>
+            <td><span class="badge badge-current">Available</span></td>
+          </tr>
+          <tr>
+            <td><a href="../sessions/session-17/index.html">17</a></td>
+            <td>Capstone: CI Pipeline with GitHub Actions</td>
+            <td>Workflow triggers, jobs/steps, build + test automation</td>
+            <td>A GitHub Actions workflow that builds and tests on every push</td>
+            <td><span class="badge badge-current">Available</span></td>
+          </tr>
+          <tr>
+            <td><a href="../sessions/session-18/index.html">18</a></td>
+            <td>Capstone: CD to Local Docker</td>
+            <td>Continuous delivery to a local Docker target, image publishing</td>
+            <td>Pipeline deploys the built image to a local Docker host</td>
+            <td><span class="badge badge-current">Available</span></td>
+          </tr>
+          <tr>
+            <td><a href="../sessions/session-19/index.html">19</a></td>
+            <td>Capstone: CD to Local Kubernetes</td>
+            <td>Deploying pipeline artifacts into a local cluster</td>
+            <td>Pipeline deploys the app to a local Kubernetes cluster</td>
+            <td><span class="badge badge-current">Available</span></td>
+          </tr>
+          <tr>
+            <td><a href="../sessions/session-20/index.html">20</a></td>
+            <td>Capstone: CD to Cloud Kubernetes</td>
+            <td>Cloud-managed Kubernetes (AKS/EKS/GKE), cluster credentials in CI</td>
+            <td>Pipeline deploys the app to a managed cloud cluster</td>
+            <td><span class="badge badge-current">Available</span></td>
+          </tr>
+          <tr>
+            <td><a href="../sessions/session-21/index.html">21</a></td>
+            <td>Capstone: Blue-Green Deployment for the Real App</td>
+            <td>Applying Layer 5's blue-green pattern to a real pipeline</td>
+            <td>Blue-green cutover for the Text Masker app in the cloud</td>
+            <td><span class="badge badge-current">Available</span></td>
+          </tr>
+          <tr>
+            <td><a href="../sessions/session-22/index.html">22</a></td>
+            <td>Capstone: Canary Deployment for the Real App</td>
+            <td>Applying Layer 5's canary pattern to a real pipeline</td>
+            <td>Weighted canary rollout for the Text Masker app in the cloud</td>
+            <td><span class="badge badge-gate">Capstone</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alert alert-success">
+      <strong>Capstone complete:</strong> By Session 22 one real application has been built, containerized,
+      tested, deployed to local Docker, local Kubernetes, and a cloud cluster, then released twice —
+      once blue-green, once canary — using the exact same tools taught in Layers 1–6.
+    </div>
+
+    <!-- Dependency Map -->
+    <h2>Dependency Ordering</h2>
+    <p>Each row depends on everything above it. Nothing skips a level.</p>
+    <pre><code>Container Lifecycle → Docker Compose
+              ↓
+      Deployments/Services → Namespaces/Quotas → ConfigMaps/Secrets
+                        ↓
+                    Helm → Terraform → Terraform+Helm provider
+                                  ↓
+                          Ingress (raw/Helm/TF) → TLS/cert-manager
+                                            ↓
+                              Blue-Green → Health Probes/HPA → Canary
+                                                    ↓
+                                        Prometheus/Grafana → Landscape discussion
+                                                        ↓
+                            Build app → CI → CD-Docker → CD-K8s → CD-cloud → Blue-Green (real) → Canary (real)</code></pre>
+
+  </div>
+</main>
+
+</body>
+</html>

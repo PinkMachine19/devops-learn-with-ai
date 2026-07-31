@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Session 20 — Capstone: CD to Cloud Kubernetes</title>
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="stylesheet" href="../../notes-widget.css" />
+  <link rel="stylesheet" href="../../bookmark-widget.css" />
+  <link rel="stylesheet" href="../../quiz-explain-modal.css" />
+  <style>
+    .quiz-option{display:block;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:8px;cursor:pointer;font-size:14px;transition:border-color .15s,background .15s;user-select:none;}
+    .quiz-option:hover{border-color:var(--accent);background:var(--surface);}
+    .quiz-option.selected{border-color:var(--accent);background:rgba(88,166,255,.1);}
+    .quiz-option.correct{border-color:var(--green);background:rgba(63,185,80,.1);}
+    .quiz-option.wrong{border-color:var(--red);background:rgba(248,81,73,.1);}
+    .quiz-question{margin-bottom:28px;}
+    .quiz-question p{font-weight:600;margin-bottom:10px;font-size:15px;}
+    .question-num{color:var(--text-muted);font-size:12px;font-weight:400;margin-bottom:4px;}
+    .quiz-result{display:none;padding:16px 20px;border-radius:var(--radius);margin-top:16px;font-size:15px;font-weight:600;}
+    .quiz-result.pass{background:rgba(63,185,80,.12);border:1px solid var(--green);color:var(--green);}
+    .quiz-result.fail{background:rgba(248,81,73,.12);border:1px solid var(--red);color:var(--red);}
+    .explanation{display:none;font-size:13px;color:var(--text-muted);margin-top:6px;padding:8px 12px;background:var(--surface-2);border-radius:var(--radius);border-left:2px solid var(--border);}
+    .submit-btn{background:var(--accent);color:#0d1117;border:none;border-radius:var(--radius);padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;}
+    .submit-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .step{display:flex;gap:16px;margin-bottom:20px;}
+    .step-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#0d1117;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:2px;}
+    .step-body{flex:1;}
+    .step-body p{margin-bottom:6px;}
+    .section-divider{border:none;border-top:2px solid var(--border);margin:40px 0;}
+    .checklist-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;}
+    .checklist-item input[type="checkbox"]{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;}
+
+    /* Comic-panel concept grid — image teaches first, caption only reinforces */
+    .concept-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0;}
+    @media (max-width:760px){.concept-grid{grid-template-columns:repeat(2,1fr);}}
+    .concept-card{background:#111111;border:1px solid #2a2a2a;border-radius:8px;padding:8px 8px 10px;}
+    .concept-card svg{display:block;width:100%;height:auto;}
+    .concept-card figcaption{margin-top:6px;font-family:monospace;font-size:10.5px;line-height:1.3;color:#c9c9c9;text-align:center;}
+    .concept-card figcaption b{color:#ff5ca8;}
+    .concept-explanation-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin-top:10px;padding:7px 8px;border:1px solid #3a3a3a;border-radius:5px;background:#1a1a1a;color:#ff5ca8;font-family:monospace;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;}
+    .concept-explanation-toggle:hover,.concept-explanation-toggle:focus-visible{border-color:#ff5ca8;outline:none;}
+    .concept-explanation-hint{color:#8b949e;font-size:8px;font-weight:400;letter-spacing:0;text-transform:none;}
+    .concept-explanation-text{margin:7px 2px 0;font-size:11px;line-height:1.45;color:#d8d8d8;filter:blur(4px);user-select:none;transition:filter .2s ease;}
+    .concept-card.explanation-revealed .concept-explanation-text{filter:none;user-select:text;}
+    .concept-card.explanation-revealed .concept-explanation-hint{color:#3fb950;}
+    .anchor{color:#ff5ca8;font-weight:700;}
+    .objectives-list{list-style:none;padding-left:0;}
+    .objectives-list li{display:flex;gap:12px;align-items:baseline;margin-bottom:12px;font-size:15px;}
+    .obj-num{flex-shrink:0;min-width:34px;color:#ff5ca8;font-family:monospace;font-weight:700;font-size:12px;background:rgba(255,92,168,.1);border:1px solid rgba(255,92,168,.4);border-radius:10px;padding:2px 6px;text-align:center;}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="../../index.html" class="brand">⚙ DevOps Learning</a>
+    <a href="../../syllabus/index.html">Syllabus</a>
+    <a href="../../sessions/index.html" class="active">Sessions</a>
+    <a href="../../quizzes/index.html">Quizzes</a>
+    <a href="../../labs/index.html">Labs</a>
+  </div>
+</nav>
+
+<main>
+  <div class="container">
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+      <span class="badge badge-layer">Layer 7</span>
+      <span class="badge badge-current">Session 20</span>
+      <span style="color:var(--text-muted);font-size:13px;">Capstone — Ship a Real App</span>
+    </div>
+    <h1>Capstone: CD to Cloud Kubernetes</h1>
+    <p class="subtitle">
+      Session 19 wired continuous deployment to a local Kubernetes cluster —
+      kind or minikube, running on the same machine as everything else. Today
+      the exact same GitHub Actions pipeline pattern gets retargeted at a real
+      managed cloud cluster (AKS, GKE, or EKS — pick one), which means real
+      authentication, a real public IP address, and real production stakes.
+    </p>
+    <div class="alert alert-info">Estimated time: 40–50 minutes</div>
+    <p style="color:var(--text-muted);font-size:13px;">Flow: Pre-quiz → Concept → Lab → Commit → Post-quiz</p>
+
+    <!-- Comic-panel concept grid: image teaches first, caption only reinforces -->
+    <div class="concept-grid">
+
+      <!-- 1. Cloud vs local cluster -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="30" width="50" height="38" rx="4" fill="none" stroke="#666" stroke-width="1.8" transform="rotate(-2,35,49)"/>
+          <text x="35" y="53" fill="#666" font-family="monospace" font-size="9" text-anchor="middle">kind</text>
+          <text x="35" y="20" fill="#666" font-family="monospace" font-size="8" text-anchor="middle">laptop</text>
+          <path d="M64,49 H98" stroke="#ff5ca8" stroke-width="2.5" stroke-dasharray="5,4" marker-end="url(#arrc1)"/>
+          <defs><marker id="arrc1" markerWidth="9" markerHeight="9" refX="4" refY="4" orient="auto"><polygon points="0,0 9,4 0,9" fill="#ff5ca8"/></marker></defs>
+          <ellipse cx="128" cy="46" rx="30" ry="16" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <ellipse cx="112" cy="52" rx="16" ry="10" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="128" y="50" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle">AKS/GKE/EKS</text>
+          <line x1="30" y1="100" x2="130" y2="100" stroke="#333" stroke-width="1"/>
+          <text x="30" y="115" fill="#8b949e" font-family="monospace" font-size="8" text-anchor="middle">1 machine</text>
+          <text x="128" y="115" fill="#8b949e" font-family="monospace" font-size="8" text-anchor="middle">many nodes</text>
+          <text x="80" y="136" fill="white" font-family="monospace" font-size="9" text-anchor="middle">same kubectl, real cluster</text>
+        </svg>
+        <figcaption>local cluster → <b>cloud</b> cluster</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">kind and minikube run a single-node Kubernetes cluster inside a container or VM on your own laptop. AKS, GKE, and EKS are managed services that run real nodes in a cloud provider's data centers — same kubectl commands, but now talking to infrastructure you don't own and traffic that reaches the public internet.</p>
+      </figure>
+
+      <!-- 2. kubeconfig as the credential -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="50" y="16" width="60" height="40" rx="4" fill="none" stroke="white" stroke-width="2" transform="rotate(-1,80,36)"/>
+          <text x="80" y="32" fill="white" font-family="monospace" font-size="8" text-anchor="middle">~/.kube/</text>
+          <text x="80" y="46" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle" font-weight="bold">config</text>
+          <path d="M80,58 V80" stroke="#ff5ca8" stroke-width="2.5" marker-end="url(#arrc2)"/>
+          <defs><marker id="arrc2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <g transform="translate(80,100)">
+            <circle cx="0" cy="-10" r="9" fill="none" stroke="white" stroke-width="1.8"/>
+            <line x1="0" y1="-1" x2="0" y2="18" stroke="white" stroke-width="1.8"/>
+            <line x1="0" y1="4" x2="-9" y2="10" stroke="white" stroke-width="1.8"/>
+            <line x1="0" y1="4" x2="9" y2="10" stroke="white" stroke-width="1.8"/>
+          </g>
+          <text x="80" y="130" fill="white" font-family="monospace" font-size="8" text-anchor="middle">kubectl trusts</text>
+          <text x="80" y="141" fill="white" font-family="monospace" font-size="8" text-anchor="middle">whoever holds this file</text>
+        </svg>
+        <figcaption><b>kubeconfig</b> is the credential</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">kubeconfig is not a config file in the harmless sense — it embeds cluster address plus authentication material. Anyone holding a valid kubeconfig can run kubectl against that cluster as if they were you, which is exactly why it has to be handled like any other secret.</p>
+      </figure>
+
+      <!-- 3. Image pull secret -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="20" y="20" width="46" height="56" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <circle cx="43" cy="40" r="8" fill="none" stroke="white" stroke-width="1.6"/>
+          <path d="M35,60 h16 M35,66 h16" stroke="white" stroke-width="1.6"/>
+          <text x="43" y="12" fill="#8b949e" font-family="monospace" font-size="7" text-anchor="middle">private repo</text>
+          <path d="M70,48 H100" stroke="#f85149" stroke-width="2" marker-end="url(#arrc3x)"/>
+          <line x1="80" y1="38" x2="92" y2="58" stroke="#f85149" stroke-width="2.4"/>
+          <line x1="92" y1="38" x2="80" y2="58" stroke="#f85149" stroke-width="2.4"/>
+          <defs><marker id="arrc3x" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#f85149"/></marker></defs>
+          <rect x="108" y="22" width="40" height="52" rx="4" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <text x="128" y="44" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">dockerhub-</text>
+          <text x="128" y="54" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">secret</text>
+          <path d="M128,74 V90" stroke="#3fb950" stroke-width="2" stroke-dasharray="3,3"/>
+          <text x="80" y="130" fill="white" font-family="monospace" font-size="8" text-anchor="middle">imagePullSecrets</text>
+          <text x="80" y="141" fill="white" font-family="monospace" font-size="8" text-anchor="middle">lets the pod pull</text>
+        </svg>
+        <figcaption><b>pull secret</b> unlocks the registry</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A private Docker Hub image can't just be pulled anonymously. A Kubernetes secret of type docker-registry stores the registry credentials, and the pod spec references it under imagePullSecrets so the kubelet can authenticate on your behalf before it pulls.</p>
+      </figure>
+
+      <!-- 4. LoadBalancer public IP -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="50" width="40" height="30" rx="3" fill="none" stroke="white" stroke-width="1.8"/>
+          <text x="30" y="68" fill="white" font-family="monospace" font-size="7" text-anchor="middle">client</text>
+          <path d="M52,65 H86" stroke="#ff5ca8" stroke-width="2" marker-end="url(#arrc4)"/>
+          <defs><marker id="arrc4" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <ellipse cx="112" cy="65" rx="26" ry="18" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="112" y="62" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">cloud LB</text>
+          <text x="112" y="72" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle" font-weight="bold">1.2.3.4</text>
+          <path d="M112,84 V102" stroke="white" stroke-width="1.6" marker-end="url(#arrc5)"/>
+          <defs><marker id="arrc5" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="white"/></marker></defs>
+          <rect x="94" y="104" width="36" height="22" rx="3" fill="none" stroke="white" stroke-width="1.6"/>
+          <text x="112" y="118" fill="white" font-family="monospace" font-size="6.5" text-anchor="middle">pods</text>
+          <text x="80" y="141" fill="white" font-family="monospace" font-size="8" text-anchor="middle">type: LoadBalancer</text>
+        </svg>
+        <figcaption>Service type gets a <b>public IP</b></figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A Service of type LoadBalancer asks the cloud provider to provision an external load balancer with a public IP (or hostname). EXTERNAL-IP shows &lt;pending&gt; until the provider finishes provisioning it, which can take a couple of minutes.</p>
+      </figure>
+
+      <!-- 5. Readiness/liveness probes -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="56" y="16" width="48" height="34" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <text x="80" y="37" fill="white" font-family="monospace" font-size="8" text-anchor="middle">pod</text>
+          <path d="M56,60 q24,-6 48,0" fill="none" stroke="#666" stroke-width="1.3" stroke-dasharray="3,3"/>
+          <text x="30" y="66" fill="#8b949e" font-family="monospace" font-size="7">GET</text>
+          <text x="30" y="76" fill="#8b949e" font-family="monospace" font-size="7">/health</text>
+          <circle cx="46" cy="90" r="14" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <path d="M40,90 l4,4 8,-9" fill="none" stroke="#3fb950" stroke-width="2" stroke-linecap="round"/>
+          <text x="46" y="112" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">readiness</text>
+          <circle cx="114" cy="90" r="14" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <path d="M108,90 h12 M114,84 v12" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="114" y="112" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">liveness</text>
+          <text x="80" y="136" fill="white" font-family="monospace" font-size="8" text-anchor="middle">route traffic only when ready</text>
+        </svg>
+        <figcaption>probes gate <b>real traffic</b></figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">readinessProbe controls whether a pod receives traffic at all — fail it and the pod is pulled from the Service's endpoints until it passes again. livenessProbe controls whether the pod gets restarted — fail it repeatedly and Kubernetes kills and recreates the container.</p>
+      </figure>
+
+      <!-- 6. kubeconfig as base64 GitHub secret -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="18" width="46" height="30" rx="3" fill="none" stroke="white" stroke-width="1.8"/>
+          <text x="37" y="37" fill="white" font-family="monospace" font-size="7" text-anchor="middle">config</text>
+          <path d="M62,33 H92" stroke="#ff5ca8" stroke-width="2" marker-end="url(#arrc6)"/>
+          <defs><marker id="arrc6" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <text x="77" y="26" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">base64</text>
+          <rect x="96" y="14" width="50" height="38" rx="5" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="121" y="30" fill="#ff5ca8" font-family="monospace" font-size="6.5" text-anchor="middle">KUBECONFIG</text>
+          <text x="121" y="40" fill="#ff5ca8" font-family="monospace" font-size="6.5" text-anchor="middle">_B64</text>
+          <path d="M96,60 h50" stroke="#666" stroke-width="1"/>
+          <text x="121" y="72" fill="#8b949e" font-family="monospace" font-size="7" text-anchor="middle">Actions secret</text>
+          <path d="M121,52 V86" stroke="white" stroke-width="1.8" marker-end="url(#arrc7)"/>
+          <defs><marker id="arrc7" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="white"/></marker></defs>
+          <rect x="90" y="90" width="62" height="26" rx="3" fill="none" stroke="white" stroke-width="1.6"/>
+          <text x="121" y="107" fill="white" font-family="monospace" font-size="7" text-anchor="middle">deploy job</text>
+          <text x="60" y="136" fill="white" font-family="monospace" font-size="8" text-anchor="middle">CI never sees a real IP</text>
+        </svg>
+        <figcaption>kubeconfig, <b>base64</b>, as a secret</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">GitHub secrets store plain text, and kubeconfig YAML can contain characters that don't survive that round trip cleanly, so it gets base64-encoded before being pasted in. The deploy job reverses that in one step: decode the secret back into a real ~/.kube/config file.</p>
+      </figure>
+
+      <!-- 7. workflow_run chaining CI -> CD -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="6" y="30" width="60" height="34" rx="4" fill="none" stroke="white" stroke-width="1.8"/>
+          <text x="36" y="45" fill="white" font-family="monospace" font-size="7" text-anchor="middle">Build &amp;</text>
+          <text x="36" y="55" fill="white" font-family="monospace" font-size="7" text-anchor="middle">Push (CI)</text>
+          <path d="M68,47 H92" stroke="#3fb950" stroke-width="2.5" marker-end="url(#arrc8)"/>
+          <defs><marker id="arrc8" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker></defs>
+          <text x="80" y="38" fill="#3fb950" font-family="monospace" font-size="6.5" text-anchor="middle">success</text>
+          <rect x="94" y="30" width="60" height="34" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="124" y="45" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">Deploy to</text>
+          <text x="124" y="55" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">Cloud (CD)</text>
+          <text x="80" y="86" fill="#8b949e" font-family="monospace" font-size="7" text-anchor="middle">on: workflow_run</text>
+          <text x="80" y="98" fill="#8b949e" font-family="monospace" font-size="7" text-anchor="middle">types: [completed]</text>
+          <text x="80" y="130" fill="white" font-family="monospace" font-size="8" text-anchor="middle">deploy gated on a green build</text>
+        </svg>
+        <figcaption><b>workflow_run</b> chains the two</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">The CD workflow triggers on workflow_run of the build workflow, filtered to conclusion == 'success'. That's what stops a broken image build from ever reaching the deploy step — no separate polling or manual trigger needed.</p>
+      </figure>
+
+      <!-- 8. Next session -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="58" width="46" height="34" rx="4" fill="none" stroke="#666" stroke-width="1.8" transform="rotate(-2,37,75)"/>
+          <text x="37" y="79" fill="#666" font-family="monospace" font-size="10" text-anchor="middle">20</text>
+          <path d="M64,75 H108" stroke="#ff5ca8" stroke-width="2.5" stroke-dasharray="5,4" marker-end="url(#arrc9)"/>
+          <defs><marker id="arrc9" markerWidth="9" markerHeight="9" refX="4" refY="4" orient="auto"><polygon points="0,0 9,4 0,9" fill="#ff5ca8"/></marker></defs>
+          <rect x="112" y="52" width="42" height="46" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2" transform="rotate(2,133,75)"/>
+          <text x="133" y="80" fill="#ff5ca8" font-family="monospace" font-size="14" text-anchor="middle" font-weight="bold">21</text>
+          <rect x="118" y="62" width="14" height="8" fill="#3fb950" transform="rotate(2,133,75)"/>
+          <rect x="136" y="62" width="14" height="8" fill="#0d6efd" transform="rotate(2,133,75)"/>
+          <text x="80" y="128" fill="white" font-family="monospace" font-size="9" text-anchor="middle">green live, blue standing by</text>
+        </svg>
+        <figcaption>next: blue-green for the real app</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Session 21 takes this same cloud cluster and public endpoint and adds a blue-green rollout on top of it, so a bad release can be switched away from instantly instead of leaving the one and only version broken for everyone.</p>
+      </figure>
+
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>1. Learning Objectives</h2>
+    <div class="card">
+      <ol class="objectives-list">
+        <li><span class="obj-num">1/5</span><span>Authenticate CLI tooling to a managed cloud cluster and fetch a working <span class="anchor">kubeconfig</span></span></li>
+        <li><span class="obj-num">2/5</span><span>Create a namespace and an <span class="anchor">image pull secret</span> so pods can pull from a private Docker Hub registry</span></li>
+        <li><span class="obj-num">3/5</span><span>Apply Deployment and Service manifests that include <span class="anchor">readiness and liveness probes</span></span></li>
+        <li><span class="obj-num">4/5</span><span>Expose the app publicly with a <span class="anchor">LoadBalancer</span> Service and confirm a real external IP</span></li>
+        <li><span class="obj-num">5/5</span><span>Wire GitHub Actions CD with a <span class="anchor">base64-encoded kubeconfig secret</span>, chained off CI with <span class="anchor">workflow_run</span></span></li>
+      </ol>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>2. Pre-Coding Quiz</h2>
+    <p>Answer before reading the concept. Need 4/5 to proceed.</p>
+
+    <div id="pre-quiz">
+      <div class="quiz-question" data-question="0" data-answer="b">
+        <div class="question-num">Question 1 of 5</div>
+        <p>What does a managed cloud Kubernetes cluster (AKS/GKE/EKS) actually add compared to kind or minikube?</p>
+        <label class="quiz-option" data-val="a">A different version of the kubectl command</label>
+        <label class="quiz-option" data-val="b">Real nodes in the provider's data centers, reachable from the public internet</label>
+        <label class="quiz-option" data-val="c">A requirement to write YAML in a new format</label>
+        <label class="quiz-option" data-val="d">Nothing — it behaves identically in every way</label>
+        <div class="explanation">kubectl and the manifest format stay the same. What changes is that the cluster is real infrastructure you don't own, with authentication and a real public IP in play.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="c">
+        <div class="question-num">Question 2 of 5</div>
+        <p>What is kubeconfig, functionally?</p>
+        <label class="quiz-option" data-val="a">A YAML file that only sets kubectl's default namespace</label>
+        <label class="quiz-option" data-val="b">A log of past kubectl commands</label>
+        <label class="quiz-option" data-val="c">The credential that lets kubectl authenticate to a specific cluster</label>
+        <label class="quiz-option" data-val="d">A Kubernetes object stored inside the cluster itself</label>
+        <div class="explanation">kubeconfig bundles the cluster address with authentication material. Anyone holding a valid one can run kubectl against that cluster as that identity.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="a">
+        <div class="question-num">Question 3 of 5</div>
+        <p>Why does a pod need an imagePullSecret to run masker-server from a private Docker Hub repo?</p>
+        <label class="quiz-option" data-val="a">The kubelet needs registry credentials before it can pull a private image</label>
+        <label class="quiz-option" data-val="b">Kubernetes refuses to run any image not hosted on Docker Hub</label>
+        <label class="quiz-option" data-val="c">It's required for every image, public or private, with no exceptions</label>
+        <label class="quiz-option" data-val="d">It replaces the need for a Deployment manifest entirely</label>
+        <div class="explanation">Public images pull anonymously. A private repo requires the kubelet to authenticate first, and imagePullSecrets is how the pod spec supplies that credential.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="d">
+        <div class="question-num">Question 4 of 5</div>
+        <p>You run <code>kubectl get svc masker-client -n masker-prod</code> right after applying it. What should EXTERNAL-IP show?</p>
+        <label class="quiz-option" data-val="a">The cluster's internal ClusterIP address</label>
+        <label class="quiz-option" data-val="b">An error, because Services can't have external IPs</label>
+        <label class="quiz-option" data-val="c">127.0.0.1, same as running it locally</label>
+        <label class="quiz-option" data-val="d">&lt;pending&gt;, until the cloud provider finishes provisioning the load balancer</label>
+        <div class="explanation">A LoadBalancer Service asks the provider to provision real infrastructure, which takes time. &lt;pending&gt; is expected right after apply, not a failure.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="b">
+        <div class="question-num">Question 5 of 5</div>
+        <p>Why does the CD workflow encode kubeconfig as base64 before storing it as a GitHub secret?</p>
+        <label class="quiz-option" data-val="a">Base64 encryption keeps the credential safe from anyone</label>
+        <label class="quiz-option" data-val="b">It lets multi-line YAML with special characters survive being pasted into a single secret value</label>
+        <label class="quiz-option" data-val="c">GitHub Actions cannot read YAML files at all</label>
+        <label class="quiz-option" data-val="d">It shrinks the file so it fits under GitHub's secret size limit</label>
+        <div class="explanation">Base64 is encoding, not encryption — the secret itself is what protects the value. Encoding just makes an arbitrary multi-line YAML blob safe to paste as one secret string, and the workflow decodes it back before use.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Pre-Quiz</button>
+      <div class="quiz-result" id="pre-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>3. The Concept</h2>
+
+    <h3>What actually changes moving from local to cloud</h3>
+    <p>
+      Session 19's kind or minikube cluster ran on one machine, with no real
+      authentication story and no real external network boundary — anything
+      exposed was only ever reachable from that same machine. Every
+      <code>kubectl</code> command and every manifest from that session still
+      applies unchanged today. What's new is that the cluster now lives in a
+      cloud provider's infrastructure, so getting <code>kubectl</code>
+      pointed at it requires proving who you are, and exposing a Service to
+      the outside world now means a real, routable public IP address.
+    </p>
+
+    <h3>Authenticating and fetching kubeconfig</h3>
+    <p>
+      Each cloud provider has its own CLI for logging in and its own command
+      for writing cluster credentials into <code>~/.kube/config</code>. The
+      lab presents all three because the pattern is identical — pick whichever
+      provider the cluster actually runs on:
+    </p>
+    <pre><code># Azure (AKS)
+az login
+az account set --subscription "&lt;subscription-id&gt;"
+az aks get-credentials -g &lt;resource-group&gt; -n &lt;aks-cluster-name&gt;
+
+# Google Cloud (GKE)
+gcloud auth login
+gcloud config set project &lt;gcp-project-id&gt;
+gcloud container clusters get-credentials &lt;gke-cluster-name&gt; --region &lt;region&gt;
+
+# AWS (EKS)
+aws configure
+eksctl utils write-kubeconfig --cluster &lt;eks-cluster-name&gt; --region &lt;region&gt;
+
+# Verify, regardless of provider
+kubectl config current-context
+kubectl get nodes</code></pre>
+    <p>
+      Once <code>kubectl get nodes</code> lists real nodes, <code>kubectl</code>
+      is fully authenticated to the cloud cluster — every command from this
+      point on behaves exactly like it did against kind, just against
+      different infrastructure.
+    </p>
+
+    <h3>Image pull secrets for a private registry</h3>
+    <pre><code>kubectl create namespace masker-prod
+
+kubectl create secret docker-registry dockerhub-secret \
+  --docker-server=https://index.docker.io/v1/ \
+  --docker-username=$DOCKERHUB_USERNAME \
+  --docker-password=$DOCKERHUB_TOKEN \
+  -n masker-prod
+
+kubectl get secrets -n masker-prod</code></pre>
+    <p>
+      The Deployment then references that secret name under
+      <code>imagePullSecrets</code>, so the kubelet on whichever node schedules
+      the pod can authenticate to Docker Hub before pulling
+      <code>masker-server</code> or <code>masker-client</code>.
+    </p>
+
+    <h3>Deployment and Service manifests, with probes</h3>
+    <p>
+      <code>k8s-cloud/masker-server-deploy.yaml</code> deploys the API with
+      both a readiness and a liveness probe against its health endpoint:
+    </p>
+    <pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: masker-server
+  namespace: masker-prod
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: masker-server
+  template:
+    metadata:
+      labels:
+        app: masker-server
+    spec:
+      imagePullSecrets:
+        - name: dockerhub-secret
+      containers:
+        - name: server
+          image: "${DOCKERHUB_USERNAME}/masker-server:latest"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: masker-server
+  namespace: masker-prod
+spec:
+  selector:
+    app: masker-server
+  ports:
+    - port: 8080
+      targetPort: 8080
+  type: ClusterIP</code></pre>
+    <p>
+      <code>readinessProbe</code> decides whether a pod is added to (or
+      removed from) the Service's routable endpoints — a pod that fails it
+      simply stops receiving traffic until it passes again.
+      <code>livenessProbe</code> is more drastic: repeated failures cause
+      Kubernetes to kill and restart the container. The server's Service
+      stays <code>ClusterIP</code> — internal only, since only the client
+      needs to be reachable from outside.
+    </p>
+
+    <h3>LoadBalancer: the public-facing Service</h3>
+    <pre><code>apiVersion: v1
+kind: Service
+metadata:
+  name: masker-client
+  namespace: masker-prod
+spec:
+  selector:
+    app: masker-client
+  ports:
+    - port: 80
+      targetPort: 80
+  type: LoadBalancer</code></pre>
+    <p>
+      Setting <code>type: LoadBalancer</code> tells the cloud provider's
+      Kubernetes integration to provision a real external load balancer and
+      point it at this Service. That provisioning takes real time —
+      typically under a couple of minutes, but it is not instant.
+    </p>
+
+    <!-- overview-ascii.txt converted to a pictogram-style architecture diagram -->
+    <figure class="concept-card" style="max-width:480px;">
+      <svg viewBox="0 0 480 260" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="10" width="180" height="40" rx="5" fill="none" stroke="white" stroke-width="1.8"/>
+        <text x="100" y="27" fill="white" font-family="monospace" font-size="9" text-anchor="middle">GitHub Actions (CI)</text>
+        <text x="100" y="40" fill="#8b949e" font-family="monospace" font-size="8" text-anchor="middle">build &amp; push images</text>
+        <path d="M100,50 V72" stroke="#3fb950" stroke-width="2.2" marker-end="url(#ov1)"/>
+        <defs><marker id="ov1" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker></defs>
+        <text x="112" y="64" fill="#3fb950" font-family="monospace" font-size="7">workflow_run</text>
+        <rect x="10" y="74" width="180" height="40" rx="5" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+        <text x="100" y="91" fill="#ff5ca8" font-family="monospace" font-size="9" text-anchor="middle">GitHub Actions (CD)</text>
+        <text x="100" y="104" fill="#8b949e" font-family="monospace" font-size="8" text-anchor="middle">deploy to cloud cluster</text>
+        <path d="M190,94 H230" stroke="#ff5ca8" stroke-width="2.2" marker-end="url(#ov2)"/>
+        <defs><marker id="ov2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+        <text x="210" y="86" fill="#ff5ca8" font-family="monospace" font-size="6.5" text-anchor="middle">kubeconfig</text>
+        <rect x="234" y="46" width="230" height="130" rx="6" fill="none" stroke="white" stroke-width="1.8"/>
+        <text x="349" y="62" fill="white" font-family="monospace" font-size="9" text-anchor="middle">Managed K8s (AKS / GKE / EKS)</text>
+        <text x="349" y="75" fill="#8b949e" font-family="monospace" font-size="7.5" text-anchor="middle">namespace: masker-prod</text>
+        <rect x="250" y="84" width="90" height="26" rx="3" fill="none" stroke="#8b949e" stroke-width="1.4"/>
+        <text x="295" y="101" fill="#8b949e" font-family="monospace" font-size="7" text-anchor="middle">pull secret</text>
+        <rect x="250" y="116" width="90" height="26" rx="3" fill="none" stroke="white" stroke-width="1.6"/>
+        <text x="295" y="133" fill="white" font-family="monospace" font-size="7" text-anchor="middle">server + client</text>
+        <rect x="356" y="116" width="90" height="26" rx="3" fill="none" stroke="#3fb950" stroke-width="1.8"/>
+        <text x="401" y="133" fill="#3fb950" font-family="monospace" font-size="6.5" text-anchor="middle">Service: LoadBalancer</text>
+        <path d="M401,142 V166" stroke="#3fb950" stroke-width="2.2" marker-end="url(#ov3)"/>
+        <defs><marker id="ov3" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker></defs>
+        <text x="349" y="200" fill="#3fb950" font-family="monospace" font-size="9" text-anchor="middle" font-weight="bold">EXTERNAL-IP → http://&lt;public-endpoint&gt;/</text>
+      </svg>
+      <figcaption>CI builds → CD applies → cluster serves a <b>public IP</b></figcaption>
+    </figure>
+
+    <h3>The CD workflow: kubeconfig as a base64 GitHub secret</h3>
+    <p>
+      The workflow triggers off the successful completion of the build
+      workflow, decodes the kubeconfig secret to a real file, then applies
+      the manifests in <code>k8s-cloud/</code>:
+    </p>
+    <pre><code>name: Deploy to Cloud Kubernetes
+
+on:
+  workflow_run:
+    workflows: ["Build and Push Masker Images"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      NAMESPACE: masker-prod
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write kubeconfig from secret
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "${KUBECONFIG_B64}" | base64 -d > "$HOME/.kube/config"
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+
+      - name: Ensure namespace exists
+        run: kubectl get ns "$NAMESPACE" || kubectl create ns "$NAMESPACE"
+
+      - name: Create or update Docker Hub pull secret
+        run: |
+          kubectl -n "$NAMESPACE" create secret docker-registry dockerhub-secret \
+            --docker-server=https://index.docker.io/v1/ \
+            --docker-username="$DOCKERHUB_USERNAME" \
+            --docker-password="$DOCKERHUB_TOKEN" \
+            --dry-run=client -o yaml | kubectl apply -f -
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Apply manifests
+        run: |
+          kubectl -n "$NAMESPACE" apply -f k8s-cloud/
+          kubectl -n "$NAMESPACE" rollout status deploy/masker-server --timeout=120s
+          kubectl -n "$NAMESPACE" rollout status deploy/masker-client --timeout=120s</code></pre>
+    <p>
+      Encoding as base64 isn't encryption — it's just what makes a
+      multi-line YAML file with arbitrary special characters safe to paste
+      into a single-line GitHub secret value. The secret storage itself is
+      what actually protects it; the deploy job's first step reverses the
+      encoding to get a usable file back.
+    </p>
+
+    <div class="alert alert-warning">
+      <strong>Where this evolves next:</strong> a long-lived kubeconfig
+      sitting in a GitHub secret is a real credential with broad access,
+      stored indefinitely. The safer production pattern replaces it with
+      OIDC workload identity federation — GitHub issues a short-lived,
+      per-run token that the cloud provider's IAM exchanges for scoped,
+      temporary cluster access, so there is no standing credential to leak
+      or rotate. Today's lab uses the kubeconfig-secret approach because
+      it's simpler to stand up first; treat OIDC as the next hardening step,
+      not something to skip permanently.
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>4. Lab</h2>
+    <div class="alert alert-success">
+      <strong>Lab objective:</strong> Authenticate to a chosen cloud
+      provider's Kubernetes cluster, deploy the Text Masker app into it with
+      a private-registry pull secret and health probes, expose it publicly,
+      and wire GitHub Actions to redeploy automatically after a successful
+      build.
+    </div>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <p><strong>Authenticate and fetch kubeconfig</strong></p>
+        <p>Pick one provider (AKS, GKE, or EKS) and log in, then pull cluster
+        credentials into <code>~/.kube/config</code> using that provider's
+        command from the Concept section above. Confirm with:</p>
+        <pre><code>kubectl config current-context
+kubectl get nodes</code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <p><strong>Create the namespace and pull secret</strong></p>
+        <pre><code>kubectl create namespace masker-prod
+
+kubectl create secret docker-registry dockerhub-secret \
+  --docker-server=https://index.docker.io/v1/ \
+  --docker-username=$DOCKERHUB_USERNAME \
+  --docker-password=$DOCKERHUB_TOKEN \
+  -n masker-prod</code></pre>
+        <p>Confirm it exists with <code>kubectl get secrets -n masker-prod</code> before moving on — a missing or misnamed pull secret is the most common reason pods sit in <code>ImagePullBackOff</code> later.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <p><strong>Apply the manifests in <code>k8s-cloud/</code></strong></p>
+        <p>Create <code>k8s-cloud/masker-server-deploy.yaml</code>,
+        <code>k8s-cloud/masker-client-deploy.yaml</code>, and
+        <code>k8s-cloud/masker-client-service.yaml</code> following the
+        Concept section's manifests, then apply the whole folder:</p>
+        <pre><code>kubectl apply -f k8s-cloud/
+kubectl get pods -n masker-prod -w</code></pre>
+        <p>Watch pods move from <code>ContainerCreating</code> to
+        <code>Running</code>, and confirm <code>READY</code> shows both
+        containers passing their readiness probe before continuing.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <p><strong>Predict, then observe: the external IP</strong></p>
+        <p>Before running the next command, write down what you expect
+        <code>EXTERNAL-IP</code> to show in the first few seconds after the
+        client Service is applied — pending, an address, or an error.</p>
+        <pre><code>kubectl get svc masker-client -n masker-prod -w</code></pre>
+        <p>Watch it transition from <code>&lt;pending&gt;</code> to a real IP
+        or hostname. Was your prediction right about how long the wait was?
+        Once it resolves, open <code>http://&lt;external-ip&gt;/</code> in a
+        browser and confirm the Text Masker client loads.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <p><strong>Wire the CD workflow</strong></p>
+        <p>Base64-encode the working kubeconfig and store it as a GitHub
+        Actions secret named <code>KUBECONFIG_B64</code>:</p>
+        <pre><code>cat ~/.kube/config | base64 -w0</code></pre>
+        <p>Paste the output into a new repository secret. Then add
+        <code>.github/workflows/deploy_cloud.yml</code> using the workflow
+        from the Concept section, triggered by <code>workflow_run</code> off
+        the existing build-and-push workflow. Push a small, harmless change
+        that triggers the build workflow and confirm the deploy job runs
+        automatically afterward, without a manual trigger.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <p><strong>Predict, then observe: a broken build</strong></p>
+        <p>Before testing this, predict what happens to the deploy job if
+        the build workflow fails. Push a change that intentionally breaks
+        the build (a syntax error is enough), and confirm in the Actions tab
+        that the deploy job never runs — <code>workflow_run</code> filtered
+        to <code>conclusion == 'success'</code> is what enforces that gate.
+        Revert the intentional break afterward.</p>
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>5. Expected Files Changed</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Action</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><code>k8s-cloud/masker-server-deploy.yaml</code></td><td>Added</td><td>Server Deployment + ClusterIP Service, with imagePullSecrets and both probes</td></tr>
+          <tr><td><code>k8s-cloud/masker-client-deploy.yaml</code></td><td>Added</td><td>Client Deployment, with imagePullSecrets and both probes</td></tr>
+          <tr><td><code>k8s-cloud/masker-client-service.yaml</code></td><td>Added</td><td>Client Service, type LoadBalancer, for the public endpoint</td></tr>
+          <tr><td><code>.github/workflows/deploy_cloud.yml</code></td><td>Added</td><td>CD workflow: decodes kubeconfig, applies manifests, chained off the build workflow via workflow_run</td></tr>
+          <tr><td><code>sessions/session-20/index.html</code></td><td>Added</td><td>This session document</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>6. Commit Checkpoint</h2>
+    <pre><code>git add k8s-cloud/ .github/workflows/deploy_cloud.yml sessions/session-20/index.html
+git commit -m "session-20: deploy Text Masker to a managed cloud Kubernetes cluster via CD"</code></pre>
+
+    <h2>7. Code Review Checklist</h2>
+    <div class="card">
+      <div class="checklist-item"><input type="checkbox" id="c1"/><label for="c1">kubectl get nodes lists real cloud nodes before any manifests are applied</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c2"/><label for="c2">Both Deployments reference dockerhub-secret under imagePullSecrets</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c3"/><label for="c3">Both Deployments define a readinessProbe and a livenessProbe against a real endpoint</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c4"/><label for="c4">masker-client's Service is type LoadBalancer and resolved to a real external IP that loads the app</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c5"/><label for="c5">KUBECONFIG_B64 is stored only as a GitHub secret, never committed in plain text anywhere in the repo</label></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>8. Post-Coding Quiz</h2>
+    <div id="post-quiz" data-pass-post="Proceed to Session 21 (Blue-Green Deployment) after ≥ 80%.">
+      <div class="quiz-question" data-question="0" data-answer="a">
+        <div class="question-num">Question 1 of 5</div>
+        <p>masker-server's Service is type ClusterIP while masker-client's is type LoadBalancer. Why the difference?</p>
+        <label class="quiz-option" data-val="a">Only the client needs to be reachable from outside the cluster</label>
+        <label class="quiz-option" data-val="b">ClusterIP is required for every backend regardless of exposure needs</label>
+        <label class="quiz-option" data-val="c">LoadBalancer only works for services with a readinessProbe</label>
+        <label class="quiz-option" data-val="d">It's arbitrary — either type works identically for both</label>
+        <div class="explanation">The API only needs to be reached by the client inside the cluster, so ClusterIP (internal-only) is sufficient and keeps it off the public internet. The client is the public-facing piece, so it gets the LoadBalancer.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="c">
+        <div class="question-num">Question 2 of 5</div>
+        <p>A pod is stuck showing ImagePullBackOff after applying the manifests. What's the most likely cause given today's setup?</p>
+        <label class="quiz-option" data-val="a">The readinessProbe path is wrong</label>
+        <label class="quiz-option" data-val="b">The namespace was never created</label>
+        <label class="quiz-option" data-val="c">dockerhub-secret is missing, misnamed, or has the wrong credentials</label>
+        <label class="quiz-option" data-val="d">The LoadBalancer hasn't finished provisioning yet</label>
+        <div class="explanation">ImagePullBackOff specifically means the kubelet couldn't authenticate to pull the image, which points straight at the imagePullSecrets reference and the secret's contents.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="d">
+        <div class="question-num">Question 3 of 5</div>
+        <p>The deploy workflow triggers on <code>workflow_run</code> filtered to <code>conclusion == 'success'</code>. What happens if the build workflow fails?</p>
+        <label class="quiz-option" data-val="a">The deploy job runs anyway, using the last successful image</label>
+        <label class="quiz-option" data-val="b">GitHub Actions retries the build automatically before deploying</label>
+        <label class="quiz-option" data-val="c">The deploy job runs but fails immediately with an error</label>
+        <label class="quiz-option" data-val="d">The deploy job never runs at all</label>
+        <div class="explanation">The if condition on the job gates it entirely on a successful build conclusion — a failed build simply never triggers a deploy attempt.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="b">
+        <div class="question-num">Question 4 of 5</div>
+        <p>Why is a long-lived kubeconfig stored as a GitHub secret considered less safe than OIDC workload identity, even though both work?</p>
+        <label class="quiz-option" data-val="a">Kubeconfig secrets are always publicly visible in workflow logs</label>
+        <label class="quiz-option" data-val="b">It's a standing credential with broad access that persists until manually rotated</label>
+        <label class="quiz-option" data-val="c">GitHub Actions cannot decode base64 reliably</label>
+        <label class="quiz-option" data-val="d">OIDC is required for LoadBalancer Services to provision an IP</label>
+        <div class="explanation">OIDC exchanges a short-lived, per-run token for scoped temporary access, so there's no long-lived credential sitting in secrets storage waiting to be leaked or forgotten.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="c">
+        <div class="question-num">Question 5 of 5</div>
+        <p>Session 21 will focus on:</p>
+        <label class="quiz-option" data-val="a">Writing the first unit tests for masker-server</label>
+        <label class="quiz-option" data-val="b">Migrating from Docker Hub to a different registry</label>
+        <label class="quiz-option" data-val="c">Blue-green deployment on top of this same cloud cluster</label>
+        <label class="quiz-option" data-val="d">Replacing Kubernetes with a serverless platform</label>
+        <div class="explanation">Session 21 builds directly on today's cloud deployment, adding a blue-green rollout so a bad release can be switched away from instantly.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Post-Quiz</button>
+      <div class="quiz-result" id="post-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>9. Reflection Questions</h2>
+    <div class="card">
+      <ol>
+        <li>Before watching <code>kubectl get svc -w</code>, did you correctly predict how long EXTERNAL-IP would stay pending? What made you expect that?</li>
+        <li>Why does gating the deploy workflow on <code>workflow_run</code> success matter more once the target is a real public cluster than it did against a local kind cluster?</li>
+        <li>What would have to change in the CD workflow to move from a kubeconfig secret to OIDC workload identity, at a high level?</li>
+      </ol>
+    </div>
+
+    <h2>10. What Breaks If This Knowledge Is Missing?</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Skip the image pull secret:</strong> Every pod sits in ImagePullBackOff forever, and the failure looks generic unless you already know to check imagePullSecrets first.</li>
+        <li><strong>Skip the readiness probe:</strong> A pod that's still starting up gets traffic routed to it immediately, so real users hit connection errors during every rollout instead of the Service waiting for it to actually be ready.</li>
+        <li><strong>Treat kubeconfig casually (commit it, share it in chat, leave it in a script):</strong> It's a working credential with full cluster access — leaking it is equivalent to leaking a cloud admin password, not a minor config mistake.</li>
+        <li><strong>Skip the workflow_run success gate:</strong> A broken image build gets deployed straight to the public cluster, taking the real endpoint down for actual users instead of just failing quietly in CI.</li>
+      </ul>
+    </div>
+
+    <h2>11. What We Learned</h2>
+    <div class="card" style="border-color:var(--green);">
+      <p><strong>Today you learned: how to authenticate to a managed cloud Kubernetes cluster and fetch a working kubeconfig, how an image pull secret authorizes pulling from a private Docker Hub registry, how readiness and liveness probes gate real traffic and restarts, how a LoadBalancer Service earns a real public IP, and how to wire GitHub Actions CD to that cluster using a base64-encoded kubeconfig secret chained off a successful build via workflow_run — plus why OIDC workload identity is the safer evolution beyond a standing kubeconfig secret.</strong></p>
+      <p><strong>Next:</strong> <a href="../session-21/index.html">Session 21 — Blue-Green Deployment for the Real App</a>.</p>
+    </div>
+
+    <p style="margin-top:24px;"><a href="../session-19/index.html">← Session 19</a> · <a href="../../syllabus/index.html">Syllabus</a> · <a href="../session-21/index.html">Session 21 →</a></p>
+
+  </div>
+</main>
+
+<script src="../../quiz.js" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    setupQuiz('pre');
+    setupQuiz('post');
+
+    document.querySelectorAll('.concept-explanation-toggle').forEach(function (button) {
+      button.addEventListener('click', function () {
+        const card = button.closest('.concept-card');
+        const isRevealed = card.classList.toggle('explanation-revealed');
+        button.setAttribute('aria-expanded', String(isRevealed));
+        button.querySelector('.concept-explanation-hint').textContent = isRevealed
+          ? 'Click to blur'
+          : 'Click to reveal';
+      });
+    });
+  });
+</script>
+<script src="../../notes-widget.js" defer></script>
+<script src="../../bookmark-widget.js" defer></script>
+
+</body>
+</html>

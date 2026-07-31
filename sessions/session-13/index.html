@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Session 13 — Canary Deployments (Raw Kubernetes, Helm, and Terraform)</title>
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="stylesheet" href="../../notes-widget.css" />
+  <link rel="stylesheet" href="../../bookmark-widget.css" />
+  <link rel="stylesheet" href="../../quiz-explain-modal.css" />
+  <style>
+    .quiz-option{display:block;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:8px;cursor:pointer;font-size:14px;transition:border-color .15s,background .15s;user-select:none;}
+    .quiz-option:hover{border-color:var(--accent);background:var(--surface);}
+    .quiz-option.selected{border-color:var(--accent);background:rgba(255,92,168,.1);}
+    .quiz-option.correct{border-color:var(--green);background:rgba(63,185,80,.1);}
+    .quiz-option.wrong{border-color:var(--red);background:rgba(248,81,73,.1);}
+    .quiz-question{margin-bottom:28px;}
+    .quiz-question p{font-weight:600;margin-bottom:10px;font-size:15px;}
+    .question-num{color:var(--text-muted);font-size:12px;font-weight:400;margin-bottom:4px;}
+    .quiz-result{display:none;padding:16px 20px;border-radius:var(--radius);margin-top:16px;font-size:15px;font-weight:600;}
+    .quiz-result.pass{background:rgba(63,185,80,.12);border:1px solid var(--green);color:var(--green);}
+    .quiz-result.fail{background:rgba(248,81,73,.12);border:1px solid var(--red);color:var(--red);}
+    .explanation{display:none;font-size:13px;color:var(--text-muted);margin-top:6px;padding:8px 12px;background:var(--surface-2);border-radius:var(--radius);border-left:2px solid var(--border);}
+    .submit-btn{background:var(--accent);color:#0d1117;border:none;border-radius:var(--radius);padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;}
+    .submit-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .step{display:flex;gap:16px;margin-bottom:20px;}
+    .step-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#0d1117;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:2px;}
+    .step-body{flex:1;}
+    .step-body p{margin-bottom:6px;}
+    .section-divider{border:none;border-top:2px solid var(--border);margin:40px 0;}
+    .checklist-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;}
+    .checklist-item input[type="checkbox"]{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;}
+
+    /* Comic-panel concept grid — image teaches first, caption only reinforces */
+    .concept-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0;}
+    @media (max-width:760px){.concept-grid{grid-template-columns:repeat(2,1fr);}}
+    .concept-card{background:#111111;border:1px solid #2a2a2a;border-radius:8px;padding:8px 8px 10px;}
+    .concept-card svg{display:block;width:100%;height:auto;}
+    .concept-card figcaption{margin-top:6px;font-family:monospace;font-size:10.5px;line-height:1.3;color:#c9c9c9;text-align:center;}
+    .concept-card figcaption b{color:#ff5ca8;}
+    .concept-explanation-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin-top:10px;padding:7px 8px;border:1px solid #3a3a3a;border-radius:5px;background:#1a1a1a;color:#ff5ca8;font-family:monospace;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;}
+    .concept-explanation-toggle:hover,.concept-explanation-toggle:focus-visible{border-color:#ff5ca8;outline:none;}
+    .concept-explanation-hint{color:#8b949e;font-size:8px;font-weight:400;letter-spacing:0;text-transform:none;}
+    .concept-explanation-text{margin:7px 2px 0;font-size:11px;line-height:1.45;color:#d8d8d8;filter:blur(4px);user-select:none;transition:filter .2s ease;}
+    .concept-card.explanation-revealed .concept-explanation-text{filter:none;user-select:text;}
+    .concept-card.explanation-revealed .concept-explanation-hint{color:#3fb950;}
+    .anchor{color:#ff5ca8;font-weight:700;}
+    .objectives-list{list-style:none;padding-left:0;}
+    .objectives-list li{display:flex;gap:12px;align-items:baseline;margin-bottom:12px;font-size:15px;}
+    .obj-num{flex-shrink:0;min-width:34px;color:#ff5ca8;font-family:monospace;font-weight:700;font-size:12px;background:rgba(255,92,168,.1);border:1px solid rgba(255,92,168,.4);border-radius:10px;padding:2px 6px;text-align:center;}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="../../index.html" class="brand">⚙ DevOps Learning</a>
+    <a href="../../syllabus/index.html">Syllabus</a>
+    <a href="../../sessions/index.html" class="active">Sessions</a>
+    <a href="../../quizzes/index.html">Quizzes</a>
+    <a href="../../labs/index.html">Labs</a>
+  </div>
+</nav>
+
+<main>
+  <div class="container">
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+      <span class="badge badge-layer">Layer 5</span>
+      <span class="badge badge-current">Session 13</span>
+      <span style="color:var(--text-muted);font-size:13px;">Release Strategies — Gate</span>
+    </div>
+    <h1>Canary Deployments (Raw Kubernetes, Helm, and Terraform)</h1>
+    <p class="subtitle">
+      Session 12 added liveness, readiness, and startup probes, plus an
+      HorizontalPodAutoscaler that reacts to load on its own. Those probes did
+      more than keep pods alive — they gave the cluster an honest signal about
+      whether a pod is actually healthy. Canary deployments spend that signal:
+      instead of cutting all traffic to a new version at once like blue-green
+      did in Session 11, a canary release sends a small, deliberate slice of
+      real traffic to the new version first, and only grows that slice once
+      the probes and the numbers say it is safe. This session builds the same
+      canary rollout three times — raw Kubernetes manifests, a Helm chart
+      pair, and Terraform-orchestrated Helm — so the underlying mechanism
+      (NGINX Ingress weighted routing) stays visible under three different
+      layers of tooling.
+    </p>
+    <div class="alert alert-info">
+      Estimated time: 70–85 minutes &middot; Flow: Pre-quiz → Concept → Lab → Commit → Post-quiz
+    </div>
+
+    <!-- Comic-panel concept grid -->
+    <div class="concept-grid">
+
+      <!-- 1. Blue-green vs canary: instant cutover vs gradual slice -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="16" width="60" height="26" rx="4" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <text x="38" y="33" fill="#3fb950" font-family="monospace" font-size="9" text-anchor="middle">100% blue</text>
+          <path d="M40,44 L40,58" stroke="#666" stroke-width="2" stroke-dasharray="3,3"/>
+          <text x="40" y="70" fill="#666" font-family="monospace" font-size="16" text-anchor="middle">⇒</text>
+          <rect x="8" y="80" width="60" height="26" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="38" y="97" fill="#ff5ca8" font-family="monospace" font-size="9" text-anchor="middle">100% green</text>
+          <text x="38" y="122" fill="white" font-family="monospace" font-size="8" text-anchor="middle">blue-green: instant</text>
+          <line x1="92" y1="10" x2="92" y2="140" stroke="#333" stroke-width="1"/>
+          <rect x="100" y="16" width="52" height="10" rx="3" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <rect x="100" y="30" width="42" height="8" rx="3" fill="none" stroke="#ff5ca8" stroke-width="1.6"/>
+          <text x="126" y="24" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">90%</text>
+          <rect x="100" y="50" width="35" height="10" rx="3" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <rect x="100" y="64" width="49" height="8" rx="3" fill="none" stroke="#ff5ca8" stroke-width="1.8"/>
+          <rect x="100" y="86" width="14" height="10" rx="3" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <rect x="100" y="100" width="49" height="10" rx="3" fill="none" stroke="#ff5ca8" stroke-width="2.2"/>
+          <text x="126" y="128" fill="white" font-family="monospace" font-size="8" text-anchor="middle">canary: grows slowly</text>
+        </svg>
+        <figcaption><b>canary</b> ramps, blue-green flips</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Blue-green cuts 100% of traffic at once between two full environments. Canary keeps both versions live simultaneously and shifts a growing percentage of traffic gradually, so a bad release only ever affects a small slice of real users.</p>
+      </figure>
+
+      <!-- 2. Two Ingress objects merged by NGINX -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="20" width="60" height="30" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <text x="40" y="34" fill="white" font-family="monospace" font-size="8" text-anchor="middle">Ingress</text>
+          <text x="40" y="45" fill="white" font-family="monospace" font-size="8" text-anchor="middle">stable</text>
+          <rect x="90" y="20" width="60" height="30" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="120" y="34" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle">Ingress</text>
+          <text x="120" y="45" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle">canary:true</text>
+          <path d="M40,50 L75,78" stroke="white" stroke-width="2"/>
+          <path d="M120,50 L85,78" stroke="#ff5ca8" stroke-width="2"/>
+          <rect x="55" y="80" width="50" height="24" rx="12" fill="none" stroke="#3fb950" stroke-width="2.2"/>
+          <text x="80" y="96" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="middle" font-weight="bold">NGINX</text>
+          <path d="M80,104 V120" stroke="#3fb950" stroke-width="2" marker-end="url(#arrC13a)"/>
+          <defs><marker id="arrC13a" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker></defs>
+          <text x="80" y="136" fill="white" font-family="monospace" font-size="9" text-anchor="middle">one merged route table</text>
+        </svg>
+        <figcaption>two <b>Ingress</b> objects, same host</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A canary rollout is not one Ingress that splits traffic internally — it is two separate Ingress objects sharing the same host, one plain and one annotated canary:true, which NGINX merges into a single weighted routing table.</p>
+      </figure>
+
+      <!-- 3. Stable is implicit 100 minus canary weight -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="80" cy="60" r="46" fill="none" stroke="white" stroke-width="2"/>
+          <path d="M80,60 L80,14 A46,46 0 0 1 118,80 Z" fill="rgba(255,92,168,.25)" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="102" y="46" fill="#ff5ca8" font-family="monospace" font-size="10" font-weight="bold">20%</text>
+          <text x="55" y="66" fill="white" font-family="monospace" font-size="10" font-weight="bold">80%</text>
+          <text x="80" y="122" fill="white" font-family="monospace" font-size="9" text-anchor="middle">stable has no weight field</text>
+          <text x="80" y="136" fill="#8b949e" font-family="monospace" font-size="8" text-anchor="middle">it just gets what's left</text>
+        </svg>
+        <figcaption>stable = <b>100 − canary weight</b></figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">The stable Ingress never states a percentage. It is treated as the implicit default, and the canary Ingress's canary-weight annotation is subtracted from that whole — set weight to 20 and stable silently becomes 80.</p>
+      </figure>
+
+      <!-- 4. ConfigMap "freezer" and subPath "scoop" -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="16" y="14" width="66" height="70" rx="5" fill="none" stroke="#58a6ff" stroke-width="2"/>
+          <line x1="16" y1="46" x2="82" y2="46" stroke="#58a6ff" stroke-width="1.4"/>
+          <text x="49" y="34" fill="#58a6ff" font-family="monospace" font-size="8" text-anchor="middle">ConfigMap</text>
+          <text x="49" y="66" fill="#58a6ff" font-family="monospace" font-size="7" text-anchor="middle">index.html</text>
+          <path d="M84,50 Q104,50 106,68" stroke="#3fb950" stroke-width="2" fill="none" marker-end="url(#arrC13b)"/>
+          <defs><marker id="arrC13b" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker></defs>
+          <rect x="98" y="70" width="46" height="46" rx="5" fill="none" stroke="white" stroke-width="2"/>
+          <text x="121" y="96" fill="white" font-family="monospace" font-size="8" text-anchor="middle">pod</text>
+          <text x="80" y="136" fill="white" font-family="monospace" font-size="8" text-anchor="middle">subPath scoops one file</text>
+        </svg>
+        <figcaption><b>ConfigMap</b> freezer, <b>subPath</b> scoop</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A ConfigMap can hold many files, like a freezer holding many containers of food. Mounting with subPath is like scooping out just one item instead of dumping the whole freezer into the pod's filesystem.</p>
+      </figure>
+
+      <!-- 5. Helm: two releases, one ownership conflict avoided -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="20" width="60" height="28" rx="5" fill="none" stroke="white" stroke-width="2"/>
+          <text x="40" y="38" fill="white" font-family="monospace" font-size="8" text-anchor="middle">diner-stable</text>
+          <rect x="90" y="20" width="60" height="28" rx="5" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="120" y="38" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle">diner-canary</text>
+          <text x="80" y="70" fill="white" font-family="monospace" font-size="9" text-anchor="middle">helm install (x2)</text>
+          <rect x="30" y="86" width="100" height="24" rx="4" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <text x="80" y="102" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="middle">unique release names</text>
+          <text x="80" y="128" fill="white" font-family="monospace" font-size="8" text-anchor="middle">no ownership conflict</text>
+        </svg>
+        <figcaption><b>two Helm releases</b>, not one</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Helm tracks which release owns each object it creates. Giving stable and canary distinct chart install names and distinct Ingress metadata.name values keeps their objects from colliding, while NGINX still merges the routes because the host matches.</p>
+      </figure>
+
+      <!-- 6. Terraform variable flowing into Helm value into annotation -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="6" y="16" width="46" height="24" rx="4" fill="none" stroke="#58a6ff" stroke-width="2"/>
+          <text x="29" y="32" fill="#58a6ff" font-family="monospace" font-size="7" text-anchor="middle">canary_weight</text>
+          <path d="M52,28 H62" stroke="white" stroke-width="2" marker-end="url(#arrC13c)"/>
+          <rect x="64" y="16" width="46" height="24" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <text x="87" y="32" fill="white" font-family="monospace" font-size="7" text-anchor="middle">canaryWeight</text>
+          <path d="M110,28 H120" stroke="white" stroke-width="2" marker-end="url(#arrC13c)"/>
+          <defs><marker id="arrC13c" markerWidth="7" markerHeight="7" refX="3" refY="3" orient="auto"><polygon points="0,0 7,3 0,7" fill="white"/></marker></defs>
+          <rect x="6" y="56" width="148" height="30" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="80" y="75" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle">canary-weight: "{{ .Values.canaryWeight }}"</text>
+          <path d="M80,40 V54" stroke="#666" stroke-width="1.6" stroke-dasharray="2,2"/>
+          <text x="80" y="128" fill="white" font-family="monospace" font-size="8" text-anchor="middle">names must match exactly</text>
+        </svg>
+        <figcaption>var → value → annotation</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Terraform's canary_weight variable is injected through templatefile() into a Helm values file as canaryWeight, which the Ingress template reads as {{ .Values.canaryWeight }}. If any of those three names drift apart, the annotation silently renders empty.</p>
+      </figure>
+
+      <!-- 7. terraform apply -var= ramping weight -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12,110 L40,90 L70,72 L100,46 L140,20" fill="none" stroke="#ff5ca8" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="12" cy="110" r="3" fill="#ff5ca8"/><circle cx="40" cy="90" r="3" fill="#ff5ca8"/>
+          <circle cx="70" cy="72" r="3" fill="#ff5ca8"/><circle cx="100" cy="46" r="3" fill="#ff5ca8"/><circle cx="140" cy="20" r="3" fill="#ff5ca8"/>
+          <text x="12" y="126" fill="white" font-family="monospace" font-size="7" text-anchor="middle">10</text>
+          <text x="70" y="126" fill="white" font-family="monospace" font-size="7" text-anchor="middle">25 → 50</text>
+          <text x="140" y="14" fill="white" font-family="monospace" font-size="7" text-anchor="middle">100</text>
+          <text x="80" y="142" fill="white" font-family="monospace" font-size="8" text-anchor="middle">terraform apply -var= each step</text>
+        </svg>
+        <figcaption>declarative ramp, one variable</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Raising the canary weight with Terraform is just re-running terraform apply with a different -var value each time. Terraform diffs the desired state and updates only the Helm release that actually changed.</p>
+      </figure>
+
+      <!-- 8. Next session -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="58" width="46" height="34" rx="4" fill="none" stroke="#666" stroke-width="1.8" transform="rotate(-2,37,75)"/>
+          <text x="37" y="79" fill="#666" font-family="monospace" font-size="10" text-anchor="middle">13</text>
+          <path d="M64,75 H108" stroke="#ff5ca8" stroke-width="2.5" stroke-dasharray="5,4" marker-end="url(#arrC13d)"/>
+          <defs><marker id="arrC13d" markerWidth="9" markerHeight="9" refX="4" refY="4" orient="auto"><polygon points="0,0 9,4 0,9" fill="#ff5ca8"/></marker></defs>
+          <rect x="112" y="52" width="42" height="46" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2" transform="rotate(2,133,75)"/>
+          <text x="133" y="80" fill="#ff5ca8" font-family="monospace" font-size="14" text-anchor="middle" font-weight="bold">14</text>
+          <line x1="120" y1="105" x2="146" y2="105" stroke="white" stroke-width="1.6"/>
+          <line x1="140" y1="101" x2="146" y2="105" stroke="white" stroke-width="1.6"/>
+          <line x1="140" y1="109" x2="146" y2="105" stroke="white" stroke-width="1.6"/>
+          <text x="80" y="128" fill="white" font-family="monospace" font-size="9" text-anchor="middle">watching it with dashboards</text>
+        </svg>
+        <figcaption>next: observability</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Session 14 takes the canary traffic split you just built and adds Prometheus and Grafana so you can actually watch error rate and latency during a rollout instead of guessing.</p>
+      </figure>
+
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>1. Learning Objectives</h2>
+    <div class="card">
+      <ol class="objectives-list">
+        <li><span class="obj-num">1/6</span><span>Explain how a <span class="anchor">canary release</span> differs from the <span class="anchor">blue-green cutover</span> built in Session 11</span></li>
+        <li><span class="obj-num">2/6</span><span>Wire two Ingress objects — <span class="anchor">stable</span> and <span class="anchor">canary:true</span> — that NGINX merges into one <span class="anchor">weighted route</span></span></li>
+        <li><span class="obj-num">3/6</span><span>Build the identical canary rollout with <span class="anchor">raw Kubernetes YAML</span>, a <span class="anchor">Helm chart pair</span>, and <span class="anchor">Terraform-orchestrated Helm</span></span></li>
+        <li><span class="obj-num">4/6</span><span>Trace a <span class="anchor">canary-weight</span> value from a Terraform variable through a Helm value into an <span class="anchor">Ingress annotation</span></span></li>
+        <li><span class="obj-num">5/6</span><span>Ramp traffic from <span class="anchor">10% → 25% → 50% → 100%</span> and verify the split with real requests, not guesses</span></li>
+        <li><span class="obj-num">6/6</span><span>Roll back a canary safely by <span class="anchor">zeroing its weight</span> or removing its Ingress</span></li>
+      </ol>
+    </div>
+
+    <h2>2. Pre-Coding Quiz</h2>
+    <p>Answer before reading the concept. Need 4/5 to proceed.</p>
+
+    <div id="pre-quiz">
+      <div class="quiz-question" data-question="0" data-answer="c">
+        <div class="question-num">Question 1 of 5</div>
+        <p>What is the core difference between a blue-green cutover and a canary release?</p>
+        <label class="quiz-option" data-val="a">Blue-green uses Helm, canary always uses raw YAML</label>
+        <label class="quiz-option" data-val="b">Canary is only for databases, blue-green is for web apps</label>
+        <label class="quiz-option" data-val="c">Blue-green flips 100% of traffic at once; canary shifts a growing percentage gradually</label>
+        <label class="quiz-option" data-val="d">There is no real difference, just naming</label>
+        <div class="explanation">Blue-green keeps two full environments and cuts all traffic between them instantly. Canary keeps both versions live and grows the new version's traffic share step by step.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="b">
+        <div class="question-num">Question 2 of 5</div>
+        <p>How many Ingress objects does a typical NGINX canary setup use?</p>
+        <label class="quiz-option" data-val="a">One Ingress with a percentage field built in</label>
+        <label class="quiz-option" data-val="b">Two — a stable Ingress and a canary Ingress annotated canary:true</label>
+        <label class="quiz-option" data-val="c">Three, one per traffic tier</label>
+        <label class="quiz-option" data-val="d">Zero — canary routing happens at the Service level</label>
+        <div class="explanation">NGINX merges two separate Ingress objects that share the same host: one plain (stable) and one carrying the canary and canary-weight annotations.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="a">
+        <div class="question-num">Question 3 of 5</div>
+        <p>The canary Ingress has canary-weight set to 20. What percentage does the stable Ingress receive?</p>
+        <label class="quiz-option" data-val="a">80% — it is treated as the implicit remainder</label>
+        <label class="quiz-option" data-val="b">20%, matching the canary exactly</label>
+        <label class="quiz-option" data-val="c">100%, weights only affect the canary path</label>
+        <label class="quiz-option" data-val="d">0%, canary always wins ties</label>
+        <div class="explanation">The stable Ingress carries no weight annotation at all. NGINX treats it as the default, and canary-weight subtracts from that default.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="d">
+        <div class="question-num">Question 4 of 5</div>
+        <p>Why do the two Helm charts (diner-stable, diner-canary) need distinct release names and Ingress metadata.name values?</p>
+        <label class="quiz-option" data-val="a">Kubernetes requires alphabetical ordering of names</label>
+        <label class="quiz-option" data-val="b">NGINX cannot merge two Ingress objects with different names</label>
+        <label class="quiz-option" data-val="c">Helm charts must always be named after their namespace</label>
+        <label class="quiz-option" data-val="d">Helm tracks object ownership per release, and identical names across releases create a conflict</label>
+        <div class="explanation">Helm records which release owns which cluster objects. Two releases claiming the same object name collide, even though NGINX is happy to merge routes that share a host.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="b">
+        <div class="question-num">Question 5 of 5</div>
+        <p>In the Terraform version, canary_weight is passed through templatefile() into a Helm values file. What must stay true for the annotation to actually render?</p>
+        <label class="quiz-option" data-val="a">The Terraform state file must be committed to git</label>
+        <label class="quiz-option" data-val="b">The variable name must match exactly across Terraform, the Helm values template, and the Ingress template</label>
+        <label class="quiz-option" data-val="c">canary_weight must always be a string, never a number</label>
+        <label class="quiz-option" data-val="d">Helm and Terraform must run on the same machine</label>
+        <div class="explanation">A name mismatch between canary_weight, canaryWeight, and {{ .Values.canaryWeight }} anywhere along that chain causes the annotation to render empty, with no error raised.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Pre-Quiz</button>
+      <div class="quiz-result" id="pre-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>3. The Concept — Gradual Traffic Shifting, Three Ways</h2>
+
+    <h3>Why canary instead of blue-green every time</h3>
+    <p>
+      Blue-green answers "how do I cut over instantly and roll back instantly."
+      Canary answers a different question: "how do I limit the blast radius of
+      a bug that only shows up under real production traffic." Health probes
+      from Session 12 make canary trustworthy — readiness probes keep an
+      unhealthy canary pod out of rotation automatically, so a bad canary
+      version quietly removes itself from the traffic split rather than
+      serving errors to the users routed to it.
+    </p>
+
+    <h3>Approach 1: Raw Kubernetes</h3>
+    <p>
+      The rawest version of a canary is two Ingress objects, sharing a host,
+      differentiated by an annotation. Everything else — Deployments,
+      Services, ConfigMaps for distinct HTML per version — is identical in
+      shape to what Session 11 already built for blue-green; only the routing
+      layer changes.
+    </p>
+    <pre><code># ingress-stable.yaml — no weight, treated as the default
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: diner-ingress
+  namespace: diner-lab
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: diner.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: diner-stable-svc
+            port:
+              number: 80</code></pre>
+    <pre><code># ingress-canary.yaml — annotated, carries the weight
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: diner-ingress-canary
+  namespace: diner-lab
+  annotations:
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-weight: "10"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: diner.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: diner-canary-svc
+            port:
+              number: 80</code></pre>
+    <p>
+      Use <code>spec.ingressClassName: nginx</code> rather than the older
+      <code>kubernetes.io/ingress.class</code> annotation — the annotation
+      form is deprecated and current NGINX Ingress controllers warn loudly
+      when they see it.
+    </p>
+
+    <h3>Approach 2: Helm — two charts, one merged route</h3>
+    <p>
+      Helm packages the stable and canary Deployment/Service/Ingress trio
+      each into their own chart and installs them as two independent
+      releases. The key discipline is naming: both charts must scaffold
+      distinct chart names (<code>diner-stable</code>, <code>diner-canary</code>)
+      and their Ingress templates must set distinct
+      <code>metadata.name</code> values, even though both Ingress objects
+      point at the same <code>host: diner.local</code> so NGINX still merges
+      them.
+    </p>
+    <pre><code>helm create diner-stable
+helm create diner-canary
+# diner-stable values.yaml: replicas: 3, no canary annotations
+# diner-canary values.yaml: replicas: 1, canary: "true", canary-weight: "20"
+
+helm install diner-stable ./diner-stable -n diner-lab
+helm install diner-canary ./diner-canary -n diner-lab</code></pre>
+    <div class="alert alert-warning">
+      <strong>Common failure mode:</strong> if the stable release is deleted
+      or never installed, NGINX has only one Ingress to route to — it does
+      not "fail closed." Setting <code>canary: "false"</code> on the canary
+      Ingress does not disable routing either if the stable Ingress is
+      missing; NGINX simply routes everything to whatever backend remains.
+    </div>
+
+    <h3>Approach 3: Terraform-orchestrated Helm</h3>
+    <p>
+      Terraform does not replace Helm here — it drives it. Each Helm chart
+      install becomes a <code>helm_release</code> resource, and the canary
+      weight becomes a Terraform variable that flows through
+      <code>templatefile()</code> into a Helm values file.
+    </p>
+    <pre><code># main.tf
+terraform {
+  required_version = ">= 1.6.0"
+  required_providers {
+    kubernetes = { source = "hashicorp/kubernetes", version = "~> 2.33" }
+    helm       = { source = "hashicorp/helm",       version = "~> 2.15" }
+  }
+}
+
+provider "kubernetes" { config_path = "~/.kube/config" }
+provider "helm" {
+  kubernetes { config_path = "~/.kube/config" }
+}
+
+resource "helm_release" "diner_stable" {
+  name             = "diner-stable"
+  chart            = "./helm/diner-stable"
+  namespace        = "diner-lab"
+  create_namespace = true
+  values           = [file("values-stable.yaml")]
+}
+
+resource "helm_release" "diner_canary" {
+  name             = "diner-canary"
+  chart            = "./helm/diner-canary"
+  namespace        = "diner-lab"
+  create_namespace = true
+  values = [
+    templatefile("values-canary.tpl", {
+      canary_weight = var.canary_weight
+    })
+  ]
+}</code></pre>
+    <pre><code># variables.tf
+variable "canary_weight" {
+  type        = number
+  default     = 10
+  description = "Percentage of traffic routed to canary"
+}
+
+# values-canary.tpl
+app:
+  name: diner-canary
+  replicas: 1
+
+canaryWeight: ${canary_weight}</code></pre>
+    <p>
+      The Ingress template inside the canary chart then reads
+      <code>{{ .Values.canaryWeight }}</code>. Three names have to line up
+      exactly for this chain to work: the Terraform variable
+      <code>canary_weight</code>, the Helm value key <code>canaryWeight</code>,
+      and the template reference to that same key. A mismatch anywhere in
+      that chain renders the annotation empty with no visible error —
+      NGINX just treats the canary weight as unset.
+    </p>
+    <pre><code>terraform init
+terraform apply -var='canary_weight=10' -auto-approve
+kubectl get ingress -n diner-lab   # both diner-stable and diner-canary should appear
+
+terraform apply -var='canary_weight=25' -auto-approve
+terraform apply -var='canary_weight=50' -auto-approve
+
+# confirm Helm actually rendered the annotation
+helm get manifest diner-canary -n diner-lab | Select-String canary-weight</code></pre>
+
+    <!-- 2-col mini concept-grid: three approaches, one outcome -->
+    <div class="concept-grid" style="grid-template-columns:repeat(3,1fr);max-width:620px;">
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 120" xmlns="http://www.w3.org/2000/svg">
+          <rect x="30" y="20" width="100" height="30" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <text x="80" y="39" fill="white" font-family="monospace" font-size="9" text-anchor="middle">kubectl apply -f</text>
+          <path d="M80,52 V70" stroke="#ff5ca8" stroke-width="2" marker-end="url(#arrC13e)"/>
+          <defs><marker id="arrC13e" markerWidth="7" markerHeight="7" refX="3" refY="3" orient="auto"><polygon points="0,0 7,3 0,7" fill="#ff5ca8"/></marker></defs>
+          <text x="80" y="90" fill="#ff5ca8" font-family="monospace" font-size="9" text-anchor="middle">two YAML files</text>
+        </svg>
+        <figcaption>raw K8s: direct control</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Raw manifests give the clearest view of what NGINX actually reads — two Ingress files, no templating layer between you and the annotations.</p>
+      </figure>
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 120" xmlns="http://www.w3.org/2000/svg">
+          <rect x="30" y="20" width="100" height="30" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <text x="80" y="39" fill="white" font-family="monospace" font-size="9" text-anchor="middle">helm install x2</text>
+          <path d="M80,52 V70" stroke="#ff5ca8" stroke-width="2" marker-end="url(#arrC13f)"/>
+          <defs><marker id="arrC13f" markerWidth="7" markerHeight="7" refX="3" refY="3" orient="auto"><polygon points="0,0 7,3 0,7" fill="#ff5ca8"/></marker></defs>
+          <text x="80" y="90" fill="#ff5ca8" font-family="monospace" font-size="9" text-anchor="middle">reusable charts</text>
+        </svg>
+        <figcaption>Helm: packaged, repeatable</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Helm trades some directness for reuse — the same chart pair can be installed into any namespace or cluster with different values.</p>
+      </figure>
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 120" xmlns="http://www.w3.org/2000/svg">
+          <rect x="30" y="20" width="100" height="30" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <text x="80" y="39" fill="white" font-family="monospace" font-size="9" text-anchor="middle">terraform apply</text>
+          <path d="M80,52 V70" stroke="#ff5ca8" stroke-width="2" marker-end="url(#arrC13g)"/>
+          <defs><marker id="arrC13g" markerWidth="7" markerHeight="7" refX="3" refY="3" orient="auto"><polygon points="0,0 7,3 0,7" fill="#ff5ca8"/></marker></defs>
+          <text x="80" y="90" fill="#ff5ca8" font-family="monospace" font-size="9" text-anchor="middle">state-tracked ramp</text>
+        </svg>
+        <figcaption>Terraform: one variable, tracked</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Terraform adds a state file and a single source of truth for the current weight — changing one variable and re-applying is the entire ramp procedure.</p>
+      </figure>
+    </div>
+
+    <h3>Rollback, in all three approaches</h3>
+    <p>
+      Every approach rolls back the same way conceptually: reduce the canary
+      weight to zero, or remove the canary Ingress entirely, and full traffic
+      returns to stable without touching the stable Deployment at all.
+    </p>
+    <pre><code># raw kubernetes
+kubectl delete -f ingress-canary.yaml -n diner-lab
+
+# helm
+helm rollback diner-canary 0
+# or
+helm uninstall diner-canary
+
+# terraform
+terraform apply -var='canary_weight=0' -auto-approve
+# or
+terraform destroy -target=helm_release.diner_canary -auto-approve</code></pre>
+
+    <hr class="section-divider" />
+
+    <h2>4. Lab</h2>
+    <div class="alert alert-success">
+      <strong>Lab objective:</strong> Deploy the same canary rollout three
+      times — raw Kubernetes, Helm, and Terraform — ramp the canary weight
+      from 10% to 100%, and confirm the traffic split with real requests at
+      every stage.
+    </div>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <p><strong>Raw Kubernetes: namespace and ConfigMaps</strong></p>
+        <pre><code>mkdir phase8-canary
+cd phase8-canary
+kubectl create namespace diner-lab --dry-run=client -o yaml | kubectl apply -f -
+kubectl apply -f cm-stable.yaml
+kubectl apply -f cm-canary.yaml</code></pre>
+        <p>The two ConfigMaps hold different HTML colors (stable blue, canary green) so the traffic split is visible with the naked eye, not just in logs.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <p><strong>Deployments, Services, and both Ingress objects</strong></p>
+        <pre><code>kubectl apply -f deploy-stable.yaml
+kubectl apply -f deploy-canary.yaml
+kubectl apply -f svc.yaml
+kubectl apply -f ingress-stable.yaml
+kubectl apply -f ingress-canary.yaml
+kubectl get ingress -n diner-lab</code></pre>
+        <p><strong>Predict before running:</strong> with canary-weight set to 10, roughly what fraction of 20 requests to <code>http://diner.local</code> do you expect to hit the green (canary) version? Write your prediction down before the next step.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <p><strong>Test and observe the traffic split</strong></p>
+        <pre><code>for ($i=0; $i -lt 20; $i++) { (Invoke-WebRequest http://diner.local).Content | Select-String "blue|green" }
+kubectl logs -l version=canary -n diner-lab --tail=20</code></pre>
+        <p>Compare the actual green-response count against your prediction. NGINX's weighting is probabilistic per request, not a strict round-robin, so small sample sizes will not land on exactly 10%.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <p><strong>Ramp the raw Kubernetes canary weight</strong></p>
+        <pre><code>kubectl annotate ingress diner-ingress-canary -n diner-lab nginx.ingress.kubernetes.io/canary-weight="25" --overwrite
+kubectl annotate ingress diner-ingress-canary -n diner-lab nginx.ingress.kubernetes.io/canary-weight="50" --overwrite
+kubectl annotate ingress diner-ingress-canary -n diner-lab nginx.ingress.kubernetes.io/canary-weight="100" --overwrite</code></pre>
+        <p>Re-run the request loop after each step. At weight 100, every response should come from the canary version even though the stable Deployment is still running untouched.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <p><strong>Clean up raw Kubernetes, then repeat with Helm</strong></p>
+        <pre><code>kubectl delete -f ingress-canary.yaml -f ingress-stable.yaml -f svc.yaml -f deploy-canary.yaml -f deploy-stable.yaml -f cm-canary.yaml -f cm-stable.yaml -n diner-lab
+
+helm create diner-stable
+helm create diner-canary
+# set image, replicas, ConfigMap + Ingress templates per the Concept section
+helm install diner-stable ./diner-stable -n diner-lab
+helm install diner-canary ./diner-canary -n diner-lab
+kubectl get ingress -n diner-lab -o wide</code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <p><strong>Verify the Helm version, then roll back</strong></p>
+        <pre><code>kubectl describe ingress diner-canary -n diner-lab
+helm rollback diner-canary 0
+helm uninstall diner-stable diner-canary -n diner-lab</code></pre>
+        <p><strong>Stop and think:</strong> if <code>diner-stable</code> is uninstalled first while <code>diner-canary</code> is still weighted at 20%, what do you expect NGINX to do with the other 80% of traffic? Confirm your answer with a request loop before moving on.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">7</div>
+      <div class="step-body">
+        <p><strong>Terraform: initialize and apply at weight 10</strong></p>
+        <pre><code>mkdir terraform-canary
+cd terraform-canary
+# add main.tf, variables.tf, outputs.tf, values-stable.yaml, values-canary.tpl per the Concept section
+terraform init
+terraform apply -var='canary_weight=10' -auto-approve
+kubectl get ingress -n diner-lab</code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">8</div>
+      <div class="step-body">
+        <p><strong>Ramp with Terraform and verify the rendered annotation</strong></p>
+        <pre><code>terraform apply -var='canary_weight=25' -auto-approve
+terraform apply -var='canary_weight=50' -auto-approve
+helm get manifest diner-canary -n diner-lab | Select-String canary-weight</code></pre>
+        <p>If that command returns nothing, the variable name has drifted somewhere between Terraform, the values template, and the Ingress template — walk the chain from <code>variables.tf</code> to <code>values-canary.tpl</code> to the Ingress template and find the mismatch.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">9</div>
+      <div class="step-body">
+        <p><strong>Roll back and clean up</strong></p>
+        <pre><code>terraform apply -var='canary_weight=0' -auto-approve
+terraform destroy -auto-approve
+kubectl delete ns diner-lab</code></pre>
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>5. Expected Files Changed</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Action</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><code>k8s/canary/cm-stable.yaml</code>, <code>cm-canary.yaml</code></td><td>Added</td><td>Distinct HTML per version, mounted via ConfigMap subPath</td></tr>
+          <tr><td><code>k8s/canary/deploy-stable.yaml</code>, <code>deploy-canary.yaml</code></td><td>Added</td><td>Stable (3 replicas) and canary (1 replica) Deployments</td></tr>
+          <tr><td><code>k8s/canary/ingress-stable.yaml</code>, <code>ingress-canary.yaml</code></td><td>Added</td><td>Two merged Ingress objects driving the weighted split</td></tr>
+          <tr><td><code>helm/diner-stable/</code>, <code>helm/diner-canary/</code></td><td>Added</td><td>Helm chart pair reproducing the same rollout as reusable releases</td></tr>
+          <tr><td><code>terraform-canary/main.tf</code>, <code>variables.tf</code>, <code>outputs.tf</code></td><td>Added</td><td>Terraform orchestration of both Helm releases with a dynamic canary_weight variable</td></tr>
+          <tr><td><code>terraform-canary/values-canary.tpl</code>, <code>values-stable.yaml</code></td><td>Added</td><td>Values injected into each Helm release from Terraform</td></tr>
+          <tr><td><code>sessions/session-13/index.html</code></td><td>Updated</td><td>This session document</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>6. Commit Checkpoint</h2>
+    <pre><code>git add k8s/canary helm/diner-stable helm/diner-canary terraform-canary sessions/session-13/index.html
+git commit -m "session-13: canary deployments via raw kubernetes, helm, and terraform"</code></pre>
+
+    <h2>7. Code Review Checklist</h2>
+    <div class="card">
+      <div class="checklist-item"><input type="checkbox" id="c1"/><label for="c1">Both Ingress objects share the same host and ingressClassName so NGINX merges them</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c2"/><label for="c2">The canary Ingress carries both canary: "true" and canary-weight annotations</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c3"/><label for="c3">Helm release names and Ingress metadata.name values are unique between the stable and canary charts</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c4"/><label for="c4">The Terraform variable, Helm value key, and Ingress template reference all use the exact same name</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c5"/><label for="c5">I ramped the weight through at least 10 → 25 → 50 → 100 and verified the split with real requests each time</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c6"/><label for="c6">I rolled back at least one of the three approaches and confirmed traffic returned fully to stable</label></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>8. Post-Coding Quiz</h2>
+    <div id="post-quiz" data-pass-post="Proceed to Session 14 (Observability with Prometheus and Grafana) after ≥ 80%.">
+      <div class="quiz-question" data-question="0" data-answer="b">
+        <div class="question-num">Question 1 of 5</div>
+        <p>The stable Ingress is deleted while the canary Ingress is still weighted at 20%. What actually happens to traffic?</p>
+        <label class="quiz-option" data-val="a">NGINX blocks all traffic until stable is restored</label>
+        <label class="quiz-option" data-val="b">NGINX routes everything to the remaining canary backend, not just 20%</label>
+        <label class="quiz-option" data-val="c">Traffic is evenly split 50/50 as a safe default</label>
+        <label class="quiz-option" data-val="d">Requests return a 500 error automatically</label>
+        <div class="explanation">The weight only describes how NGINX splits between two merged Ingress objects. With only one backend left, there is nothing to split against, so it receives all traffic regardless of its stated weight.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="d">
+        <div class="question-num">Question 2 of 5</div>
+        <p>Which change is required to raise canary traffic from 10% to 25% in the raw Kubernetes approach?</p>
+        <label class="quiz-option" data-val="a">Delete and recreate the canary Deployment</label>
+        <label class="quiz-option" data-val="b">Scale the canary Deployment to more replicas</label>
+        <label class="quiz-option" data-val="c">Edit the stable Ingress's weight field to 75</label>
+        <label class="quiz-option" data-val="d">Re-annotate the canary Ingress's canary-weight to 25</label>
+        <div class="explanation">Traffic weight is purely an annotation on the canary Ingress. Replica count affects how much capacity is behind the canary, but not what share of requests NGINX routes to it.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="a">
+        <div class="question-num">Question 3 of 5</div>
+        <p>In the Terraform version, helm get manifest diner-canary | Select-String canary-weight returns nothing. What is the most likely cause?</p>
+        <label class="quiz-option" data-val="a">A variable name mismatch somewhere between Terraform, the values template, and the Ingress template</label>
+        <label class="quiz-option" data-val="b">terraform destroy was run by accident</label>
+        <label class="quiz-option" data-val="c">Kubernetes silently strips unknown annotations</label>
+        <label class="quiz-option" data-val="d">Helm charts cannot accept numeric values from Terraform</label>
+        <div class="explanation">This is the exact failure mode called out in the Concept section — canary_weight, canaryWeight, and .Values.canaryWeight all have to match exactly, and a drift anywhere renders the annotation empty with no error.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="c">
+        <div class="question-num">Question 4 of 5</div>
+        <p>Why does canary deployment specifically benefit from the health probes built in Session 12?</p>
+        <label class="quiz-option" data-val="a">Probes are required for Ingress objects to be valid YAML</label>
+        <label class="quiz-option" data-val="b">Probes automatically set the canary-weight annotation</label>
+        <label class="quiz-option" data-val="c">A failing readiness probe removes an unhealthy canary pod from rotation automatically, limiting damage</label>
+        <label class="quiz-option" data-val="d">Probes replace the need for a canary Ingress entirely</label>
+        <div class="explanation">Readiness probes are what make a small canary slice actually safe — a broken canary pod stops receiving traffic on its own rather than serving errors to whatever share of users NGINX routed to it.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="b">
+        <div class="question-num">Question 5 of 5</div>
+        <p>Session 14 will focus on:</p>
+        <label class="quiz-option" data-val="a">Writing the first end-to-end test suite</label>
+        <label class="quiz-option" data-val="b">Installing Prometheus and Grafana to watch metrics during rollouts</label>
+        <label class="quiz-option" data-val="c">Migrating the canary Ingress to a service mesh</label>
+        <label class="quiz-option" data-val="d">Building a fourth canary approach using raw shell scripts</label>
+        <div class="explanation">Session 14 adds the observability layer that lets you watch error rate and latency live while a canary ramp like this one is in progress, instead of relying on manual request loops.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Post-Quiz</button>
+      <div class="quiz-result" id="post-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>9. Reflection Questions</h2>
+    <div class="card">
+      <ol>
+        <li>Building the same rollout three times — raw, Helm, Terraform — which layer of tooling made the canary-weight mechanism clearest to you, and which one made it easiest to actually operate?</li>
+        <li>Why might a team choose to keep the raw Kubernetes version as documentation even after adopting the Terraform version for daily operations?</li>
+        <li>What would you check first if a canary release at 100% weight was still showing some stable responses after several minutes?</li>
+      </ol>
+    </div>
+
+    <h2>10. What Breaks If This Knowledge Is Missing?</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Believing one Ingress can canary itself:</strong> A team that tries to encode a percentage split inside a single Ingress object will hit a wall — NGINX's canary mechanism fundamentally requires two merged Ingress objects, not a field inside one.</li>
+        <li><strong>Skipping the naming discipline in Helm:</strong> Reusing identical Ingress metadata.name values across the stable and canary charts causes silent ownership conflicts that are confusing to debug without knowing Helm tracks object ownership per release.</li>
+        <li><strong>Ignoring the Terraform variable chain:</strong> Without understanding that canary_weight has to match exactly across three files, a team debugging "the weight isn't changing" could spend hours in the wrong place — checking NGINX logs instead of the values template.</li>
+        <li><strong>Treating stable as always-on:</strong> Deleting the stable Ingress without first zeroing the canary weight sends all traffic to an under-provisioned canary Deployment, which is the opposite of the safety canary is meant to provide.</li>
+      </ul>
+    </div>
+
+    <h2>11. What We Learned</h2>
+    <div class="card" style="border-color:var(--green);">
+      <p><strong>Today you learned: canary deployments shift a growing percentage of real traffic to a new version by merging two Ingress objects (stable and canary:true) rather than cutting over all at once, and this exact mechanism can be driven from raw Kubernetes YAML, packaged Helm charts, or Terraform-orchestrated Helm — with the underlying NGINX weighted routing staying identical underneath all three.</strong></p>
+      <p><strong>Next:</strong> <a href="../session-14/index.html">Session 14 — Observability with Prometheus and Grafana</a>.</p>
+    </div>
+
+    <p style="margin-top:24px;"><a href="../session-12/index.html">← Session 12</a> · <a href="../../syllabus/index.html">Syllabus</a> · <a href="../session-14/index.html">Session 14 →</a></p>
+
+  </div>
+</main>
+
+<script src="../../quiz.js" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    setupQuiz('pre');
+    setupQuiz('post');
+
+    document.querySelectorAll('.concept-explanation-toggle').forEach(function (button) {
+      button.addEventListener('click', function () {
+        const card = button.closest('.concept-card');
+        const isRevealed = card.classList.toggle('explanation-revealed');
+        button.setAttribute('aria-expanded', String(isRevealed));
+        button.querySelector('.concept-explanation-hint').textContent = isRevealed
+          ? 'Click to blur'
+          : 'Click to reveal';
+      });
+    });
+  });
+</script>
+<script src="../../notes-widget.js" defer></script>
+<script src="../../bookmark-widget.js" defer></script>
+
+</body>
+</html>

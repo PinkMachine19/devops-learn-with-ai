@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Session 21 — Capstone: Blue-Green Deployment for the Real App</title>
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="stylesheet" href="../../notes-widget.css" />
+  <link rel="stylesheet" href="../../bookmark-widget.css" />
+  <link rel="stylesheet" href="../../quiz-explain-modal.css" />
+  <style>
+    .quiz-option{display:block;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:8px;cursor:pointer;font-size:14px;transition:border-color .15s,background .15s;user-select:none;}
+    .quiz-option:hover{border-color:var(--accent);background:var(--surface);}
+    .quiz-option.selected{border-color:var(--accent);background:rgba(88,166,255,.1);}
+    .quiz-option.correct{border-color:var(--green);background:rgba(63,185,80,.1);}
+    .quiz-option.wrong{border-color:var(--red);background:rgba(248,81,73,.1);}
+    .quiz-question{margin-bottom:28px;}
+    .quiz-question p{font-weight:600;margin-bottom:10px;font-size:15px;}
+    .question-num{color:var(--text-muted);font-size:12px;font-weight:400;margin-bottom:4px;}
+    .quiz-result{display:none;padding:16px 20px;border-radius:var(--radius);margin-top:16px;font-size:15px;font-weight:600;}
+    .quiz-result.pass{background:rgba(63,185,80,.12);border:1px solid var(--green);color:var(--green);}
+    .quiz-result.fail{background:rgba(248,81,73,.12);border:1px solid var(--red);color:var(--red);}
+    .explanation{display:none;font-size:13px;color:var(--text-muted);margin-top:6px;padding:8px 12px;background:var(--surface-2);border-radius:var(--radius);border-left:2px solid var(--border);}
+    .submit-btn{background:var(--accent);color:#0d1117;border:none;border-radius:var(--radius);padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;}
+    .submit-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .step{display:flex;gap:16px;margin-bottom:20px;}
+    .step-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#0d1117;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:2px;}
+    .step-body{flex:1;}
+    .step-body p{margin-bottom:6px;}
+    .section-divider{border:none;border-top:2px solid var(--border);margin:40px 0;}
+    .checklist-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;}
+    .checklist-item input[type="checkbox"]{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;}
+
+    /* Comic-panel concept grid — image teaches first, caption only reinforces */
+    .concept-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0;}
+    @media (max-width:760px){.concept-grid{grid-template-columns:repeat(2,1fr);}}
+    .concept-card{background:#111111;border:1px solid #2a2a2a;border-radius:8px;padding:8px 8px 10px;}
+    .concept-card svg{display:block;width:100%;height:auto;}
+    .concept-card figcaption{margin-top:6px;font-family:monospace;font-size:10.5px;line-height:1.3;color:#c9c9c9;text-align:center;}
+    .concept-card figcaption b{color:#ff5ca8;}
+    .concept-explanation-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin-top:10px;padding:7px 8px;border:1px solid #3a3a3a;border-radius:5px;background:#1a1a1a;color:#ff5ca8;font-family:monospace;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;}
+    .concept-explanation-toggle:hover,.concept-explanation-toggle:focus-visible{border-color:#ff5ca8;outline:none;}
+    .concept-explanation-hint{color:#8b949e;font-size:8px;font-weight:400;letter-spacing:0;text-transform:none;}
+    .concept-explanation-text{margin:7px 2px 0;font-size:11px;line-height:1.45;color:#d8d8d8;filter:blur(4px);user-select:none;transition:filter .2s ease;}
+    .concept-card.explanation-revealed .concept-explanation-text{filter:none;user-select:text;}
+    .concept-card.explanation-revealed .concept-explanation-hint{color:#3fb950;}
+    .anchor{color:#ff5ca8;font-weight:700;}
+    .objectives-list{list-style:none;padding-left:0;}
+    .objectives-list li{display:flex;gap:12px;align-items:baseline;margin-bottom:12px;font-size:15px;}
+    .obj-num{flex-shrink:0;min-width:34px;color:#ff5ca8;font-family:monospace;font-weight:700;font-size:12px;background:rgba(255,92,168,.1);border:1px solid rgba(255,92,168,.4);border-radius:10px;padding:2px 6px;text-align:center;}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="../../index.html" class="brand">⚙ DevOps Learning</a>
+    <a href="../../syllabus/index.html">Syllabus</a>
+    <a href="../../sessions/index.html" class="active">Sessions</a>
+    <a href="../../quizzes/index.html">Quizzes</a>
+    <a href="../../labs/index.html">Labs</a>
+  </div>
+</nav>
+
+<main>
+  <div class="container">
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+      <span class="badge badge-layer">Layer 7</span>
+      <span class="badge badge-current">Session 21</span>
+      <span style="color:var(--text-muted);font-size:13px;">Capstone — Ship a Real App</span>
+    </div>
+    <h1>Capstone: Blue-Green Deployment for the Real App</h1>
+    <p class="subtitle">
+      Session 20 got the Text Masker app running on a real managed cloud
+      cluster with a public IP — but every deploy so far has been a straight
+      rolling update, which means a bad release is visible to real users
+      while pods cycle out one at a time. Today the blue-green pattern from
+      Session 11 gets applied for real: two live environments, one switch,
+      instant rollback.
+    </p>
+    <div class="alert alert-info">Estimated time: 40–50 minutes</div>
+    <p style="color:var(--text-muted);font-size:13px;margin-top:-6px;">Pre-quiz → Concept → Lab → Commit → Post-quiz</p>
+
+    <!-- Comic-panel concept grid: image teaches first, caption only reinforces -->
+    <div class="concept-grid">
+
+      <!-- 1. Two parallel environments -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="30" width="60" height="70" rx="5" fill="none" stroke="#58a6ff" stroke-width="2"/>
+          <text x="38" y="24" fill="#58a6ff" font-family="monospace" font-size="10" text-anchor="middle" font-weight="bold">BLUE</text>
+          <circle cx="26" cy="52" r="8" fill="none" stroke="#58a6ff" stroke-width="1.6"/>
+          <line x1="26" y1="60" x2="26" y2="76" stroke="#58a6ff" stroke-width="1.6"/>
+          <line x1="26" y1="65" x2="18" y2="72" stroke="#58a6ff" stroke-width="1.6"/>
+          <line x1="26" y1="65" x2="34" y2="72" stroke="#58a6ff" stroke-width="1.6"/>
+          <circle cx="50" cy="52" r="8" fill="none" stroke="#58a6ff" stroke-width="1.6"/>
+          <line x1="50" y1="60" x2="50" y2="76" stroke="#58a6ff" stroke-width="1.6"/>
+          <line x1="50" y1="65" x2="42" y2="72" stroke="#58a6ff" stroke-width="1.6"/>
+          <line x1="50" y1="65" x2="58" y2="72" stroke="#58a6ff" stroke-width="1.6"/>
+          <text x="38" y="92" fill="#58a6ff" font-family="monospace" font-size="8" text-anchor="middle">v1 pods</text>
+          <rect x="92" y="30" width="60" height="70" rx="5" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <text x="122" y="24" fill="#3fb950" font-family="monospace" font-size="10" text-anchor="middle" font-weight="bold">GREEN</text>
+          <circle cx="110" cy="52" r="8" fill="none" stroke="#3fb950" stroke-width="1.6"/>
+          <line x1="110" y1="60" x2="110" y2="76" stroke="#3fb950" stroke-width="1.6"/>
+          <line x1="110" y1="65" x2="102" y2="72" stroke="#3fb950" stroke-width="1.6"/>
+          <line x1="110" y1="65" x2="118" y2="72" stroke="#3fb950" stroke-width="1.6"/>
+          <circle cx="134" cy="52" r="8" fill="none" stroke="#3fb950" stroke-width="1.6"/>
+          <line x1="134" y1="60" x2="134" y2="76" stroke="#3fb950" stroke-width="1.6"/>
+          <line x1="134" y1="65" x2="126" y2="72" stroke="#3fb950" stroke-width="1.6"/>
+          <line x1="134" y1="65" x2="142" y2="72" stroke="#3fb950" stroke-width="1.6"/>
+          <text x="122" y="92" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="middle">v2 pods</text>
+          <text x="80" y="134" fill="white" font-family="monospace" font-size="9" text-anchor="middle">both running, always</text>
+        </svg>
+        <figcaption>two <b>identical</b> environments, live</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Blue-green keeps two full copies of the app running at once — one serving real traffic, one idle or warming up. Neither is ever "half deployed."</p>
+      </figure>
+
+      <!-- 2. Service selector as the switch -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="60" y="14" width="40" height="24" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <text x="80" y="30" fill="white" font-family="monospace" font-size="8" text-anchor="middle">Service</text>
+          <g transform="translate(80,52) rotate(-25)">
+            <rect x="-3" y="-16" width="6" height="32" fill="#ff5ca8"/>
+            <circle cx="0" cy="-16" r="5" fill="#ff5ca8"/>
+          </g>
+          <circle cx="80" cy="52" r="3" fill="white"/>
+          <path d="M30,84 H72" stroke="#666" stroke-width="1.5" stroke-dasharray="3,3"/>
+          <text x="30" y="80" fill="#58a6ff" font-family="monospace" font-size="8">blue</text>
+          <path d="M88,84 H130" stroke="#3fb950" stroke-width="2.5" marker-end="url(#arrsel)"/>
+          <text x="130" y="80" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="end">green</text>
+          <defs><marker id="arrsel" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker></defs>
+          <text x="80" y="122" fill="white" font-family="monospace" font-size="9" text-anchor="middle">selector: color=green</text>
+          <text x="80" y="136" fill="#8b949e" font-family="monospace" font-size="8" text-anchor="middle">one label flip = the switch</text>
+        </svg>
+        <figcaption>the <b>Service selector</b> IS the switch</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A Kubernetes Service doesn't route by deployment name — it routes to any pod whose labels match its selector. Changing that selector's color value is the entire cutover.</p>
+      </figure>
+
+      <!-- 3. Ingress routing -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <g transform="translate(24,20)">
+            <circle cx="0" cy="0" r="8" fill="none" stroke="white" stroke-width="1.6"/>
+            <line x1="0" y1="8" x2="0" y2="24" stroke="white" stroke-width="1.6"/>
+            <line x1="0" y1="13" x2="-8" y2="19" stroke="white" stroke-width="1.6"/>
+            <line x1="0" y1="13" x2="8" y2="19" stroke="white" stroke-width="1.6"/>
+          </g>
+          <text x="24" y="52" fill="white" font-family="monospace" font-size="7" text-anchor="middle">user</text>
+          <path d="M32,20 H62" stroke="#ff5ca8" stroke-width="2" marker-end="url(#arring)"/>
+          <defs><marker id="arring" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <rect x="66" y="8" width="60" height="24" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="96" y="24" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle">Ingress</text>
+          <text x="96" y="42" fill="#8b949e" font-family="monospace" font-size="7" text-anchor="middle">app.example.com</text>
+          <path d="M96,32 V58" stroke="white" stroke-width="2" marker-end="url(#arring2)"/>
+          <defs><marker id="arring2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="white"/></marker></defs>
+          <rect x="66" y="60" width="60" height="22" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <text x="96" y="75" fill="white" font-family="monospace" font-size="8" text-anchor="middle">masker-client</text>
+          <text x="80" y="128" fill="white" font-family="monospace" font-size="9" text-anchor="middle">one stable hostname</text>
+          <text x="80" y="140" fill="#8b949e" font-family="monospace" font-size="8" text-anchor="middle">color hidden behind it</text>
+        </svg>
+        <figcaption><b>Ingress</b> points at the Service, not a color</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Ingress routes traffic to the masker-client Service by name. Because the Service already hides which color is active, the Ingress config never has to change during a cutover.</p>
+      </figure>
+
+      <!-- 4. Instant rollback -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <path d="M50,50 A28,28 0 1 1 44,74" fill="none" stroke="#f85149" stroke-width="3" stroke-linecap="round"/>
+          <polygon points="44,74 34,68 48,62" fill="#f85149"/>
+          <text x="64" y="66" fill="#f85149" font-family="monospace" font-size="9" text-anchor="middle">bad</text>
+          <text x="64" y="78" fill="#f85149" font-family="monospace" font-size="9" text-anchor="middle">release</text>
+          <path d="M100,50 H130" stroke="#3fb950" stroke-width="2.5" marker-end="url(#arrback)"/>
+          <defs><marker id="arrback" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker></defs>
+          <rect x="94" y="30" width="44" height="20" rx="4" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <text x="116" y="44" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="middle">flip back</text>
+          <path d="M9,98 l4,4 8,-9" fill="none" stroke="#3fb950" stroke-width="2.5" stroke-linecap="round" transform="translate(60,0)"/>
+          <circle cx="80" cy="102" r="16" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <path d="M72,102 l6,6 12,-13" fill="none" stroke="#3fb950" stroke-width="2.5" stroke-linecap="round"/>
+          <text x="80" y="134" fill="white" font-family="monospace" font-size="9" text-anchor="middle">seconds, not a redeploy</text>
+        </svg>
+        <figcaption>rollback = <b>one selector flip</b> back</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Because the previous color's pods never went away, undoing a bad cutover doesn't require rebuilding or redeploying anything — just patching the selector back to what it was.</p>
+      </figure>
+
+      <!-- 5. Rolling update exposure window vs zero-downtime cutover -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="20" width="140" height="16" rx="3" fill="none" stroke="#f85149" stroke-width="1.6"/>
+          <rect x="8" y="20" width="70" height="16" fill="rgba(248,81,73,.25)"/>
+          <text x="80" y="14" fill="#f85149" font-family="monospace" font-size="8" text-anchor="middle">rolling: mixed traffic mid-swap</text>
+          <rect x="8" y="70" width="66" height="16" rx="3" fill="none" stroke="#58a6ff" stroke-width="1.6"/>
+          <text x="41" y="66" fill="#58a6ff" font-family="monospace" font-size="7" text-anchor="middle">all blue</text>
+          <rect x="86" y="70" width="66" height="16" rx="3" fill="none" stroke="#3fb950" stroke-width="1.6"/>
+          <text x="119" y="66" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">all green</text>
+          <path d="M74,78 H88" stroke="white" stroke-width="2.5" marker-end="url(#arrcut)"/>
+          <defs><marker id="arrcut" markerWidth="7" markerHeight="7" refX="3" refY="3" orient="auto"><polygon points="0,0 7,3 0,7" fill="white"/></marker></defs>
+          <text x="80" y="110" fill="white" font-family="monospace" font-size="9" text-anchor="middle">blue-green: one clean cut</text>
+          <text x="80" y="132" fill="#8b949e" font-family="monospace" font-size="8" text-anchor="middle">no half-old, half-new window</text>
+        </svg>
+        <figcaption>no <b>mixed-version</b> window</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A rolling update replaces pods gradually, so some requests hit old code and some hit new code for a stretch of time. Blue-green cuts over all at once, so users are never split across two versions.</p>
+      </figure>
+
+      <!-- 6. Verify green before cutover -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="50" y="18" width="60" height="46" rx="4" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <text x="80" y="34" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="middle">green pods</text>
+          <text x="80" y="50" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">not receiving</text>
+          <text x="80" y="60" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">live traffic yet</text>
+          <path d="M80,64 V84" stroke="white" stroke-width="2" stroke-dasharray="3,3"/>
+          <circle cx="80" cy="96" r="14" fill="none" stroke="white" stroke-width="1.8"/>
+          <path d="M74,96 l4,4 8,-9" fill="none" stroke="#3fb950" stroke-width="2" stroke-linecap="round"/>
+          <text x="80" y="122" fill="white" font-family="monospace" font-size="9" text-anchor="middle">port-forward + curl /health</text>
+          <text x="80" y="136" fill="#8b949e" font-family="monospace" font-size="8" text-anchor="middle">before it ever sees a user</text>
+        </svg>
+        <figcaption>verify green <b>before</b> the flip</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Readiness probes and a manual port-forward check let you confirm the new color actually works while it is still isolated from real traffic, before the selector ever changes.</p>
+      </figure>
+
+      <!-- 7. Recap: labels are the mechanism -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="20" y="16" width="120" height="26" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <text x="80" y="33" fill="white" font-family="monospace" font-size="9" text-anchor="middle">app: masker-client</text>
+          <rect x="20" y="50" width="56" height="24" rx="12" fill="none" stroke="#58a6ff" stroke-width="1.8"/>
+          <text x="48" y="66" fill="#58a6ff" font-family="monospace" font-size="8" text-anchor="middle">color: blue</text>
+          <rect x="84" y="50" width="56" height="24" rx="12" fill="none" stroke="#3fb950" stroke-width="1.8"/>
+          <text x="112" y="66" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="middle">color: green</text>
+          <path d="M48,74 V92" stroke="#58a6ff" stroke-width="1.6" stroke-dasharray="3,3"/>
+          <path d="M112,74 V92" stroke="#3fb950" stroke-width="1.6" stroke-dasharray="3,3"/>
+          <text x="80" y="112" fill="white" font-family="monospace" font-size="9" text-anchor="middle">same app label,</text>
+          <text x="80" y="126" fill="white" font-family="monospace" font-size="9" text-anchor="middle">different color label</text>
+        </svg>
+        <figcaption>two labels do <b>all</b> the work</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Every pod carries an app label naming which service it belongs to and a color label naming which environment it is. The Service selector combines both to decide which pods currently count as "live."</p>
+      </figure>
+
+      <!-- 8. Next session -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="58" width="46" height="34" rx="4" fill="none" stroke="#666" stroke-width="1.8" transform="rotate(-2,37,75)"/>
+          <text x="37" y="79" fill="#666" font-family="monospace" font-size="10" text-anchor="middle">21</text>
+          <path d="M64,75 H108" stroke="#ff5ca8" stroke-width="2.5" stroke-dasharray="5,4" marker-end="url(#arr5)"/>
+          <defs><marker id="arr5" markerWidth="9" markerHeight="9" refX="4" refY="4" orient="auto"><polygon points="0,0 9,4 0,9" fill="#ff5ca8"/></marker></defs>
+          <rect x="112" y="52" width="42" height="46" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2" transform="rotate(2,133,75)"/>
+          <text x="133" y="80" fill="#ff5ca8" font-family="monospace" font-size="14" text-anchor="middle" font-weight="bold">22</text>
+          <path d="M120,108 Q133,96 146,108" fill="none" stroke="white" stroke-width="1.6" stroke-dasharray="2,2"/>
+          <text x="80" y="128" fill="white" font-family="monospace" font-size="9" text-anchor="middle">a slow, partial cutover</text>
+        </svg>
+        <figcaption>next: <b>canary</b> releases</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Session 22, the final capstone session, replaces blue-green's all-at-once switch with a canary rollout — sending a small slice of real traffic to the new version before trusting it with everyone.</p>
+      </figure>
+
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>1. Learning Objectives</h2>
+    <div class="card">
+      <ol class="objectives-list">
+        <li><span class="obj-num">1/5</span><span>Recall <span class="anchor">blue-green</span> from Session 11 and apply it to a <span class="anchor">real running app</span> instead of a diagram</span></li>
+        <li><span class="obj-num">2/5</span><span>Deploy two independent <span class="anchor">Deployments</span> — blue and green — distinguished only by a <span class="anchor">color label</span></span></li>
+        <li><span class="obj-num">3/5</span><span>Explain why the <span class="anchor">Service selector</span> is the single point of control for live traffic</span></li>
+        <li><span class="obj-num">4/5</span><span>Perform a <span class="anchor">cutover</span>: deploy green, verify it, flip the selector, and confirm traffic moved</span></li>
+        <li><span class="obj-num">5/5</span><span>Predict, then observe, an <span class="anchor">instant rollback</span> by flipping the selector back to blue</span></li>
+      </ol>
+    </div>
+
+    <h2>2. Pre-Coding Quiz</h2>
+    <p>Answer before reading the concept. Need 4/5 to proceed.</p>
+
+    <div id="pre-quiz">
+      <div class="quiz-question" data-question="0" data-answer="b">
+        <div class="question-num">Question 1 of 5</div>
+        <p>In a blue-green deployment, what is true about the "inactive" color at any given moment?</p>
+        <label class="quiz-option" data-val="a">It doesn't exist until a rollback is needed</label>
+        <label class="quiz-option" data-val="b">It is still fully running, just not receiving traffic</label>
+        <label class="quiz-option" data-val="c">It is scaled to zero replicas to save resources</label>
+        <label class="quiz-option" data-val="d">It only starts once the active color crashes</label>
+        <div class="explanation">Both colors run as complete, live Deployments the whole time. The only difference is whether the Service selector currently points traffic at them.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="c">
+        <div class="question-num">Question 2 of 5</div>
+        <p>What actually decides which color receives live traffic?</p>
+        <label class="quiz-option" data-val="a">Whichever Deployment was applied most recently</label>
+        <label class="quiz-option" data-val="b">The color with more ready replicas</label>
+        <label class="quiz-option" data-val="c">The Service's selector labels</label>
+        <label class="quiz-option" data-val="d">A DNS record pointing at the pod IP</label>
+        <div class="explanation">A Service routes to any pod whose labels match its selector. Changing the selector's color value is the entire cutover mechanism.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="a">
+        <div class="question-num">Question 3 of 5</div>
+        <p>Why is blue-green's rollback faster than a rolling-update rollback?</p>
+        <label class="quiz-option" data-val="a">The old pods never left, so rollback is just a label flip</label>
+        <label class="quiz-option" data-val="b">Blue-green rollbacks skip the readiness probe check</label>
+        <label class="quiz-option" data-val="c">Kubernetes automatically reverts bad selectors on its own</label>
+        <label class="quiz-option" data-val="d">Blue-green apps use a smaller container image</label>
+        <div class="explanation">Because the previous color's pods are still running, undoing a bad cutover needs no rebuild or redeploy — just patching the selector back.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="d">
+        <div class="question-num">Question 4 of 5</div>
+        <p>How does a rolling update differ from blue-green in terms of user exposure to a bad release?</p>
+        <label class="quiz-option" data-val="a">Rolling updates are never visible to real users</label>
+        <label class="quiz-option" data-val="b">Both patterns expose users identically</label>
+        <label class="quiz-option" data-val="c">Rolling updates use two Services, blue-green uses one</label>
+        <label class="quiz-option" data-val="d">Rolling updates mix old and new pods mid-swap; blue-green cuts over all at once</label>
+        <div class="explanation">A rolling update replaces pods gradually, so some requests hit old code and some hit new code during the swap. Blue-green has no such mixed-version window.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="b">
+        <div class="question-num">Question 5 of 5</div>
+        <p>Before flipping the Service selector to green, what should happen first?</p>
+        <label class="quiz-option" data-val="a">Delete the blue Deployment</label>
+        <label class="quiz-option" data-val="b">Verify green's pods are healthy and ready on their own</label>
+        <label class="quiz-option" data-val="c">Change the Ingress hostname</label>
+        <label class="quiz-option" data-val="d">Nothing — the flip should always happen first</label>
+        <div class="explanation">Warming up and checking green while it's still isolated from live traffic is what makes the eventual cutover safe.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Pre-Quiz</button>
+      <div class="quiz-result" id="pre-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>3. The Concept — Blue-Green, For Real This Time</h2>
+
+    <h3>Recap: what Session 11 taught in the abstract</h3>
+    <p>
+      Session 11 introduced blue-green deployment as a pattern: run two
+      identical environments, send traffic to only one, and switch by
+      flipping a single pointer instead of gradually replacing pods. That
+      was taught with diagrams and a toy example. Today the same pattern
+      gets applied to the Text Masker app that has been built, containerized,
+      and deployed across Sessions 16 through 20 — with real Deployments,
+      a real Service, and a real cutover.
+    </p>
+
+    <h3>Two Deployments, one label apart</h3>
+    <p>
+      Blue and green are not two different apps — they are two copies of the
+      exact same Deployment spec, distinguished only by a <code>color</code>
+      label. Each color gets its own <code>masker-server</code> and
+      <code>masker-client</code> Deployment:
+    </p>
+    <pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: masker-client-blue
+  namespace: masker-bluegreen
+  labels: { app: masker-client, color: blue }
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: masker-client, color: blue } }
+  template:
+    metadata: { labels: { app: masker-client, color: blue } }
+    spec:
+      containers:
+      - name: client
+        image: "${DOCKERHUB_USERNAME}/masker-client:latest"
+        ports: [{ containerPort: 80 }]
+        readinessProbe: { httpGet: { path: /, port: 80 }, initialDelaySeconds: 3, periodSeconds: 5 }</code></pre>
+    <p>
+      The green Deployment is identical except every <code>color: blue</code>
+      becomes <code>color: green</code>. Both can run at full replica count
+      simultaneously — running two colors at once is the whole point, not a
+      transient state to rush through.
+    </p>
+
+    <h3>The Service selector is the single point of control</h3>
+    <pre><code>apiVersion: v1
+kind: Service
+metadata:
+  name: masker-client
+  namespace: masker-bluegreen
+spec:
+  selector:
+    app: masker-client
+    color: blue          # <- this line decides who gets traffic
+  ports:
+  - port: 30080
+    targetPort: 80
+  type: NodePort</code></pre>
+    <p>
+      A Kubernetes Service never talks to a Deployment directly — it watches
+      for any pod whose labels match its <code>selector</code> and load
+      balances across whichever pods currently qualify. With both colors
+      running, the only thing distinguishing "live" from "idle" is which
+      value sits in that <code>color</code> field.
+    </p>
+
+    <!-- mini concept-grid: before / after the flip -->
+    <div class="concept-grid" style="grid-template-columns:repeat(2,1fr);max-width:420px;">
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 120" xmlns="http://www.w3.org/2000/svg">
+          <rect x="20" y="8" width="120" height="14" rx="7" fill="none" stroke="white" stroke-width="2"/>
+          <text x="80" y="18" fill="white" font-family="monospace" font-size="8" text-anchor="middle">selector: color=blue</text>
+          <path d="M50,26 V56" stroke="#58a6ff" stroke-width="2.5" marker-end="url(#arrB1)"/>
+          <defs><marker id="arrB1" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#58a6ff"/></marker></defs>
+          <rect x="20" y="60" width="60" height="36" rx="4" fill="none" stroke="#58a6ff" stroke-width="2"/>
+          <text x="50" y="82" fill="#58a6ff" font-family="monospace" font-size="9" text-anchor="middle">blue</text>
+          <rect x="90" y="60" width="50" height="36" rx="4" fill="none" stroke="#666" stroke-width="1.5" stroke-dasharray="3,3"/>
+          <text x="115" y="82" fill="#666" font-family="monospace" font-size="8" text-anchor="middle">green</text>
+        </svg>
+        <figcaption>before: blue is live</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Green is fully deployed and healthy but receives zero traffic, because no Service selector currently points at it.</p>
+      </figure>
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 120" xmlns="http://www.w3.org/2000/svg">
+          <rect x="20" y="8" width="120" height="14" rx="7" fill="none" stroke="white" stroke-width="2"/>
+          <text x="80" y="18" fill="white" font-family="monospace" font-size="8" text-anchor="middle">selector: color=green</text>
+          <path d="M110,26 V56" stroke="#3fb950" stroke-width="2.5" marker-end="url(#arrB2)"/>
+          <defs><marker id="arrB2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker></defs>
+          <rect x="20" y="60" width="50" height="36" rx="4" fill="none" stroke="#666" stroke-width="1.5" stroke-dasharray="3,3"/>
+          <text x="45" y="82" fill="#666" font-family="monospace" font-size="8" text-anchor="middle">blue</text>
+          <rect x="80" y="60" width="60" height="36" rx="4" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <text x="110" y="82" fill="#3fb950" font-family="monospace" font-size="9" text-anchor="middle">green</text>
+        </svg>
+        <figcaption>after: one patch flips it</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Nothing about either Deployment changed. Only the Service's selector value changed, and every new connection now routes to green pods instead.</p>
+      </figure>
+    </div>
+
+    <h3>Flipping traffic with kubectl patch</h3>
+    <pre><code># point Service at blue (initial state)
+kubectl -n masker-bluegreen patch svc masker-client --type='merge' \
+  -p '{"spec":{"selector":{"app":"masker-client","color":"blue"}}}'
+
+# verify which pods are currently receiving traffic
+kubectl -n masker-bluegreen get endpoints masker-client -o yaml
+
+# cut over to green
+kubectl -n masker-bluegreen patch svc masker-client --type='merge' \
+  -p '{"spec":{"selector":{"app":"masker-client","color":"green"}}}'
+
+# verify again — the endpoint IPs should now belong to green pods
+kubectl -n masker-bluegreen get endpoints masker-client -o yaml</code></pre>
+    <p>
+      <code>kubectl get endpoints</code> is the way to confirm a flip
+      actually happened — it lists the real pod IPs currently backing the
+      Service, which change the instant the selector's <code>color</code>
+      value changes.
+    </p>
+
+    <h3>Ingress: routing that never has to change</h3>
+    <pre><code>apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: masker-ingress
+  namespace: masker-bluegreen
+spec:
+  rules:
+  - host: masker.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: masker-client
+            port:
+              number: 30080</code></pre>
+    <p>
+      The Ingress rule points at the <code>masker-client</code> Service by
+      name, never at a color directly. That's deliberate: since the Service
+      already hides which color is active behind a stable name, the Ingress
+      config — and the public hostname users hit — never needs to change
+      during a cutover or a rollback.
+    </p>
+
+    <h3>The cutover procedure, end to end</h3>
+    <p>
+      Putting it together, a real cutover follows a fixed order: deploy
+      green alongside the still-live blue, verify green independently (a
+      port-forward and a manual request, or trusting its readiness probes),
+      flip the Service selector to green, watch traffic and error rates for
+      a few minutes, and then either leave blue running as a rollback target
+      or scale it down once confidence is high. Rollback, if needed, is
+      simply flipping the selector back to <code>blue</code> — no rebuild,
+      no redeploy, no waiting for pods to terminate and restart.
+    </p>
+
+    <h3>How this differs from Session 20's rolling update</h3>
+    <p>
+      Every deploy through Session 20 used Kubernetes' default rolling
+      update strategy: old pods terminate and new pods start up gradually,
+      a few at a time. During that window, some requests are served by the
+      old version and some by the new one — a real, if usually brief,
+      exposure window for any bug in the new release. Blue-green removes
+      that window entirely: the cutover is a single selector change, so
+      every request before the flip goes to one full version and every
+      request after goes to the other, with nothing in between.
+    </p>
+
+    <hr class="section-divider" />
+
+    <h2>4. Lab</h2>
+    <div class="alert alert-success">
+      <strong>Lab objective:</strong> Stand up blue and green Deployments of
+      the Text Masker app in a dedicated namespace, verify green
+      independently, cut traffic over with a Service selector patch, and
+      then prove rollback works by flipping back.
+    </div>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <p><strong>Create the namespace</strong></p>
+        <pre><code>kubectl create namespace masker-bluegreen
+kubectl label namespace masker-bluegreen purpose=release-strategy --overwrite</code></pre>
+        <p>Confirm <code>kubectl version --client</code> and <code>kubectl get nodes</code> both work before starting, so any later failure is about the manifests, not the cluster connection.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <p><strong>Apply blue and green Deployments, plus the Service</strong></p>
+        <pre><code>kubectl apply -n masker-bluegreen -f .\k8s-bluegreen\masker-server-blue.yaml
+kubectl apply -n masker-bluegreen -f .\k8s-bluegreen\masker-server-green.yaml
+kubectl apply -n masker-bluegreen -f .\k8s-bluegreen\masker-client-service.yaml
+kubectl get deploy,svc -n masker-bluegreen</code></pre>
+        <p><strong>Before running it:</strong> predict how many Deployments <code>kubectl get deploy</code> will list. There are two colors and two components (server, client) — write down the number, then check it against the actual output.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <p><strong>Verify green in isolation, before it takes traffic</strong></p>
+        <p>With the Service still pointed at blue, port-forward directly to a green pod and confirm it responds:</p>
+        <pre><code>kubectl -n masker-bluegreen get pods -l app=masker-client,color=green
+kubectl -n masker-bluegreen port-forward deploy/masker-client-green 8081:80</code></pre>
+        <p>Load <code>http://localhost:8081</code> and confirm the app loads correctly. This step deliberately bypasses the Service, so a broken green never reaches real traffic.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <p><strong>Predict, then flip: patch the Service selector to green</strong></p>
+        <p>Before running the command below, write down what you expect to happen to live traffic the instant the patch applies — does it happen gradually, like a rolling update, or all at once?</p>
+        <pre><code>kubectl -n masker-bluegreen patch svc masker-client --type='merge' \
+  -p '{"spec":{"selector":{"app":"masker-client","color":"green"}}}'
+
+kubectl -n masker-bluegreen get endpoints masker-client -o yaml</code></pre>
+        <p>Check the endpoint IPs in the output against <code>kubectl get pods -l color=green -o wide</code>. They should match exactly, confirming every request now lands on green pods.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <p><strong>Predict, then roll back: flip the selector to blue again</strong></p>
+        <p>Before running this, predict how long the rollback will take compared to the original green rollout in step 2.</p>
+        <pre><code>kubectl -n masker-bluegreen patch svc masker-client --type='merge' \
+  -p '{"spec":{"selector":{"app":"masker-client","color":"blue"}}}'
+
+kubectl -n masker-bluegreen get endpoints masker-client -o yaml</code></pre>
+        <p>Because blue's pods never stopped running, this should complete immediately — no waiting for pods to start, no readiness delay. That instant reversal is the entire payoff of the pattern.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <p><strong>Optional: apply the Ingress route</strong></p>
+        <pre><code>kubectl apply -n masker-bluegreen -f .\k8s-bluegreen\masker-ingress.yaml
+kubectl -n masker-bluegreen get ingress</code></pre>
+        <p>If an ingress controller is installed on the cluster, this exposes the app through a stable hostname regardless of which color is currently live — confirming the Ingress config needs zero changes across a cutover.</p>
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>5. Expected Files Changed</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Action</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><code>k8s-bluegreen/masker-server-blue.yaml</code></td><td>Added</td><td>Blue Deployment for masker-server and masker-client, labeled color=blue</td></tr>
+          <tr><td><code>k8s-bluegreen/masker-server-green.yaml</code></td><td>Added</td><td>Green Deployment for masker-server and masker-client, labeled color=green</td></tr>
+          <tr><td><code>k8s-bluegreen/masker-client-service.yaml</code></td><td>Added</td><td>Single Service whose selector decides which color is live</td></tr>
+          <tr><td><code>k8s-bluegreen/masker-ingress.yaml</code></td><td>Added (optional)</td><td>Stable hostname routed to the Service, unaffected by color</td></tr>
+          <tr><td><code>.github/workflows/deploy_bluegreen.yml</code></td><td>Added</td><td>Manual workflow to apply manifests and flip the selector from CI</td></tr>
+          <tr><td><code>sessions/session-21/index.html</code></td><td>Added</td><td>This session document</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>6. Commit Checkpoint</h2>
+    <pre><code>git add k8s-bluegreen/ .github/workflows/deploy_bluegreen.yml sessions/session-21/index.html
+git commit -m "session-21: add blue-green Deployments and Service-selector cutover for masker app"</code></pre>
+
+    <h2>7. Code Review Checklist</h2>
+    <div class="card">
+      <div class="checklist-item"><input type="checkbox" id="c1"/><label for="c1">Blue and green Deployments are identical except for the color label and matching selector</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c2"/><label for="c2">The masker-client Service selector includes both app and color, so it only ever matches one color at a time</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c3"/><label for="c3">Green was verified independently (port-forward or readiness probe) before the selector was ever flipped to it</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c4"/><label for="c4">kubectl get endpoints was used to confirm the cutover actually moved traffic, not just that the patch command succeeded</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c5"/><label for="c5">A rollback (flip back to blue) was actually performed and confirmed, not just described</label></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>8. Post-Coding Quiz</h2>
+    <div id="post-quiz" data-pass-post="Proceed to Session 22 (Canary Releases) after ≥ 80%.">
+      <div class="quiz-question" data-question="0" data-answer="c">
+        <div class="question-num">Question 1 of 5</div>
+        <p>After patching the Service selector from blue to green, what confirms the cutover actually happened?</p>
+        <label class="quiz-option" data-val="a">The patch command returning exit code 0</label>
+        <label class="quiz-option" data-val="b">The green Deployment showing as Ready</label>
+        <label class="quiz-option" data-val="c">kubectl get endpoints listing green pod IPs</label>
+        <label class="quiz-option" data-val="d">The Ingress rule updating its host field</label>
+        <div class="explanation">A successful patch only means the Service object changed. Checking endpoints confirms which pod IPs are actually receiving traffic right now.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="a">
+        <div class="question-num">Question 2 of 5</div>
+        <p>Why does the blue Deployment stay running even after traffic has fully cut over to green?</p>
+        <label class="quiz-option" data-val="a">So rollback is a selector flip instead of a redeploy</label>
+        <label class="quiz-option" data-val="b">Kubernetes requires at least two Deployments per Service</label>
+        <label class="quiz-option" data-val="c">Blue still receives half of all requests automatically</label>
+        <label class="quiz-option" data-val="d">It is a bug that should be fixed by scaling it to zero immediately</label>
+        <div class="explanation">Keeping blue's pods alive is what makes rollback instant. Scaling it down is a later, deliberate step once confidence in green is high, not a required cleanup.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="d">
+        <div class="question-num">Question 3 of 5</div>
+        <p>The Ingress rule for masker-client points at the Service name, not at a color. What does this buy?</p>
+        <label class="quiz-option" data-val="a">Faster DNS resolution for users</label>
+        <label class="quiz-option" data-val="b">Automatic TLS certificate renewal</label>
+        <label class="quiz-option" data-val="c">The ability to skip readiness probes</label>
+        <label class="quiz-option" data-val="d">A cutover that needs zero Ingress changes</label>
+        <div class="explanation">Because the Service already hides which color is active, the Ingress config and the public hostname stay untouched through every cutover and rollback.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="b">
+        <div class="question-num">Question 4 of 5</div>
+        <p>How does a rolling update's exposure window differ from blue-green's?</p>
+        <label class="quiz-option" data-val="a">Rolling updates never expose users to new code</label>
+        <label class="quiz-option" data-val="b">Rolling updates mix old and new pods gradually; blue-green cuts over all at once</label>
+        <label class="quiz-option" data-val="c">Blue-green takes longer to complete than a rolling update</label>
+        <label class="quiz-option" data-val="d">They behave identically once readiness probes pass</label>
+        <div class="explanation">A rolling update replaces pods a few at a time, so some requests hit each version during the swap. Blue-green has no such window — the selector change is atomic.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="d">
+        <div class="question-num">Question 5 of 5</div>
+        <p>Session 22 will focus on:</p>
+        <label class="quiz-option" data-val="a">Writing the first end-to-end test suite</label>
+        <label class="quiz-option" data-val="b">Adding a second cloud region for failover</label>
+        <label class="quiz-option" data-val="c">Replacing Kubernetes with a serverless platform</label>
+        <label class="quiz-option" data-val="d">Canary releases: sending a small slice of traffic to a new version first</label>
+        <div class="explanation">Session 22, the final capstone session, builds on today's cutover mechanism but sends only a fraction of traffic to the new version before a full switch.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Post-Quiz</button>
+      <div class="quiz-result" id="post-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>9. Reflection Questions</h2>
+    <div class="card">
+      <ol>
+        <li>Before flipping the selector to green, did you correctly predict that the cutover would be immediate rather than gradual? What made you expect that?</li>
+        <li>Why does verifying green through a port-forward, before the flip, matter more here than it would with a rolling update?</li>
+        <li>What would go wrong if the blue and green Deployments' pod template labels were identical instead of differing by color?</li>
+      </ol>
+    </div>
+
+    <h2>10. What Breaks If This Knowledge Is Missing?</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Both Deployments use the same labels:</strong> The Service selector can no longer distinguish blue from green, so it load balances across both colors at once — exactly the mixed-version exposure blue-green exists to prevent.</li>
+        <li><strong>Green is never verified before the flip:</strong> A broken green release goes straight to every user the instant the selector changes, with no isolated check to have caught it first.</li>
+        <li><strong>Blue is deleted immediately after cutover:</strong> Rollback stops being instant — a bad green now requires waiting for blue to redeploy from scratch, which is exactly the slow rollback blue-green was meant to avoid.</li>
+        <li><strong>The Ingress is left pointed at a color instead of the Service:</strong> Every cutover now requires an Ingress change too, reintroducing a coordination step the pattern is designed to remove.</li>
+      </ul>
+    </div>
+
+    <h2>11. What We Learned</h2>
+    <div class="card" style="border-color:var(--green);">
+      <p><strong>Today you learned: blue-green keeps two full, live environments running behind a single Service, the Service selector's color label is the entire cutover mechanism, verifying the new color before flipping keeps a bad release from ever reaching users, and rollback is instant because the old color's pods never stopped running.</strong></p>
+      <p><strong>Next:</strong> <a href="../session-22/index.html">Session 22 — Canary Releases</a>.</p>
+    </div>
+
+    <p style="margin-top:24px;"><a href="../session-20/index.html">← Session 20</a> · <a href="../../syllabus/index.html">Syllabus</a> · <a href="../session-22/index.html">Session 22 →</a></p>
+
+  </div>
+</main>
+
+<script src="../../quiz.js" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    setupQuiz('pre');
+    setupQuiz('post');
+
+    document.querySelectorAll('.concept-explanation-toggle').forEach(function (button) {
+      button.addEventListener('click', function () {
+        const card = button.closest('.concept-card');
+        const isRevealed = card.classList.toggle('explanation-revealed');
+        button.setAttribute('aria-expanded', String(isRevealed));
+        button.querySelector('.concept-explanation-hint').textContent = isRevealed
+          ? 'Click to blur'
+          : 'Click to reveal';
+      });
+    });
+  });
+</script>
+<script src="../../notes-widget.js" defer></script>
+<script src="../../bookmark-widget.js" defer></script>
+
+</body>
+</html>

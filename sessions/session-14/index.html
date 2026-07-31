@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Session 14 — Observability with Prometheus and Grafana</title>
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="stylesheet" href="../../notes-widget.css" />
+  <link rel="stylesheet" href="../../bookmark-widget.css" />
+  <link rel="stylesheet" href="../../quiz-explain-modal.css" />
+  <style>
+    .quiz-option{display:block;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:8px;cursor:pointer;font-size:14px;transition:border-color .15s,background .15s;user-select:none;}
+    .quiz-option:hover{border-color:var(--accent);background:var(--surface);}
+    .quiz-option.selected{border-color:var(--accent);background:rgba(255,92,168,.1);}
+    .quiz-option.correct{border-color:var(--green);background:rgba(63,185,80,.1);}
+    .quiz-option.wrong{border-color:var(--red);background:rgba(248,81,73,.1);}
+    .quiz-question{margin-bottom:28px;}
+    .quiz-question p{font-weight:600;margin-bottom:10px;font-size:15px;}
+    .question-num{color:var(--text-muted);font-size:12px;font-weight:400;margin-bottom:4px;}
+    .quiz-result{display:none;padding:16px 20px;border-radius:var(--radius);margin-top:16px;font-size:15px;font-weight:600;}
+    .quiz-result.pass{background:rgba(63,185,80,.12);border:1px solid var(--green);color:var(--green);}
+    .quiz-result.fail{background:rgba(248,81,73,.12);border:1px solid var(--red);color:var(--red);}
+    .explanation{display:none;font-size:13px;color:var(--text-muted);margin-top:6px;padding:8px 12px;background:var(--surface-2);border-radius:var(--radius);border-left:2px solid var(--border);}
+    .submit-btn{background:var(--accent);color:#0d1117;border:none;border-radius:var(--radius);padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;}
+    .submit-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .step{display:flex;gap:16px;margin-bottom:20px;}
+    .step-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#0d1117;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:2px;}
+    .step-body{flex:1;}
+    .step-body p{margin-bottom:6px;}
+    .section-divider{border:none;border-top:2px solid var(--border);margin:40px 0;}
+    .checklist-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;}
+    .checklist-item input[type="checkbox"]{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;}
+
+    /* Comic-panel concept grid — image teaches first, caption only reinforces */
+    .concept-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0;}
+    @media (max-width:760px){.concept-grid{grid-template-columns:repeat(2,1fr);}}
+    .concept-card{background:#111111;border:1px solid #2a2a2a;border-radius:8px;padding:8px 8px 10px;}
+    .concept-card svg{display:block;width:100%;height:auto;}
+    .concept-card figcaption{margin-top:6px;font-family:monospace;font-size:10.5px;line-height:1.3;color:#c9c9c9;text-align:center;}
+    .concept-card figcaption b{color:#ff5ca8;}
+    .concept-explanation-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin-top:10px;padding:7px 8px;border:1px solid #3a3a3a;border-radius:5px;background:#1a1a1a;color:#ff5ca8;font-family:monospace;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;}
+    .concept-explanation-toggle:hover,.concept-explanation-toggle:focus-visible{border-color:#ff5ca8;outline:none;}
+    .concept-explanation-hint{color:#8b949e;font-size:8px;font-weight:400;letter-spacing:0;text-transform:none;}
+    .concept-explanation-text{margin:7px 2px 0;font-size:11px;line-height:1.45;color:#d8d8d8;filter:blur(4px);user-select:none;transition:filter .2s ease;}
+    .concept-card.explanation-revealed .concept-explanation-text{filter:none;user-select:text;}
+    .concept-card.explanation-revealed .concept-explanation-hint{color:#3fb950;}
+    .anchor{color:#ff5ca8;font-weight:700;}
+    .objectives-list{list-style:none;padding-left:0;}
+    .objectives-list li{display:flex;gap:12px;align-items:baseline;margin-bottom:12px;font-size:15px;}
+    .obj-num{flex-shrink:0;min-width:34px;color:#ff5ca8;font-family:monospace;font-weight:700;font-size:12px;background:rgba(255,92,168,.1);border:1px solid rgba(255,92,168,.4);border-radius:10px;padding:2px 6px;text-align:center;}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="../../index.html" class="brand">⚙ DevOps Learning</a>
+    <a href="../../syllabus/index.html">Syllabus</a>
+    <a href="../../sessions/index.html" class="active">Sessions</a>
+    <a href="../../quizzes/index.html">Quizzes</a>
+    <a href="../../labs/index.html">Labs</a>
+  </div>
+</nav>
+
+<main>
+  <div class="container">
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+      <span class="badge badge-layer">Layer 6</span>
+      <span class="badge badge-current">Session 14</span>
+      <span style="color:var(--text-muted);font-size:13px;">Observability &amp; Landscape</span>
+    </div>
+    <h1>Observability with Prometheus and Grafana</h1>
+    <p class="subtitle">
+      Session 13 proved a canary rollout works by hammering it with request
+      loops and eyeballing which color came back. That approach does not
+      scale past a lab — a real rollout needs a way to watch error rate and
+      latency change in near real time, without writing a PowerShell loop
+      every time. This session installs Prometheus to scrape metrics from
+      the cluster and Grafana to visualize them, so the next canary or
+      blue-green release you run can be watched on a dashboard instead of
+      guessed at.
+    </p>
+    <div class="alert alert-info">
+      Estimated time: 45–55 minutes &middot; Flow: Pre-quiz → Concept → Lab → Commit → Post-quiz
+    </div>
+
+    <!-- Comic-panel concept grid -->
+    <div class="concept-grid">
+
+      <!-- 1. Observability vs monitoring: knowing WHY not just THAT -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="16" width="60" height="30" rx="4" fill="none" stroke="#f85149" stroke-width="2"/>
+          <text x="40" y="35" fill="#f85149" font-family="monospace" font-size="9" text-anchor="middle">"it's down"</text>
+          <rect x="90" y="16" width="60" height="30" rx="4" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <text x="120" y="30" fill="#3fb950" font-family="monospace" font-size="9" text-anchor="middle">"it's down</text>
+          <text x="120" y="41" fill="#3fb950" font-family="monospace" font-size="9" text-anchor="middle">because X"</text>
+          <text x="40" y="66" fill="white" font-family="monospace" font-size="8" text-anchor="middle">monitoring:</text>
+          <text x="40" y="78" fill="white" font-family="monospace" font-size="8" text-anchor="middle">that it happened</text>
+          <text x="120" y="66" fill="white" font-family="monospace" font-size="8" text-anchor="middle">observability:</text>
+          <text x="120" y="78" fill="white" font-family="monospace" font-size="8" text-anchor="middle">why it happened</text>
+          <text x="80" y="112" fill="white" font-family="monospace" font-size="9" text-anchor="middle">both matter, ask different</text>
+          <text x="80" y="126" fill="white" font-family="monospace" font-size="9" text-anchor="middle">questions</text>
+        </svg>
+        <figcaption><b>observability</b> ≠ monitoring</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Monitoring tells you a threshold was crossed. Observability gives you enough raw data — metrics, labels, history — to ask new questions about why, even ones nobody thought to alert on ahead of time.</p>
+      </figure>
+
+      <!-- 2. Prometheus scrapes /metrics -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="20" width="54" height="34" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <text x="37" y="34" fill="white" font-family="monospace" font-size="8" text-anchor="middle">pod</text>
+          <text x="37" y="46" fill="white" font-family="monospace" font-size="7" text-anchor="middle">/metrics</text>
+          <path d="M64,37 H96" stroke="#ff5ca8" stroke-width="2.5" marker-end="url(#arrC14a)"/>
+          <defs><marker id="arrC14a" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <circle cx="122" cy="37" r="24" fill="none" stroke="#ff5ca8" stroke-width="2.2"/>
+          <text x="122" y="41" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle" font-weight="bold">Prom</text>
+          <text x="80" y="90" fill="white" font-family="monospace" font-size="9" text-anchor="middle">pull, not push</text>
+          <text x="80" y="104" fill="#8b949e" font-family="monospace" font-size="8" text-anchor="middle">Prometheus asks the pod</text>
+          <text x="80" y="116" fill="#8b949e" font-family="monospace" font-size="8" text-anchor="middle">the pod never calls out</text>
+        </svg>
+        <figcaption><b>scrapes</b> targets, doesn't wait</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Prometheus is a pull-based system — it periodically requests each target's /metrics endpoint on its own schedule, rather than waiting for applications to push data to it.</p>
+      </figure>
+
+      <!-- 3. Grafana queries Prometheus, draws dashboard -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="34" cy="50" r="24" fill="none" stroke="#ff5ca8" stroke-width="2.2"/>
+          <text x="34" y="54" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle" font-weight="bold">Prom</text>
+          <path d="M58,50 H90" stroke="#3fb950" stroke-width="2.5" marker-end="url(#arrC14b)"/>
+          <defs><marker id="arrC14b" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker></defs>
+          <rect x="94" y="26" width="56" height="48" rx="4" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <path d="M100,64 L110,50 L120,58 L132,38 L144,44" fill="none" stroke="#3fb950" stroke-width="2" stroke-linecap="round"/>
+          <text x="80" y="108" fill="white" font-family="monospace" font-size="9" text-anchor="middle">Grafana queries with PromQL</text>
+          <text x="80" y="122" fill="white" font-family="monospace" font-size="9" text-anchor="middle">draws the dashboard</text>
+        </svg>
+        <figcaption><b>Grafana</b> visualizes, doesn't store</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Grafana holds no metric history of its own. It sends PromQL queries to Prometheus's data source on demand and renders whatever comes back as graphs, gauges, and tables.</p>
+      </figure>
+
+      <!-- 4. kubectl top vs Prometheus: instant vs historical -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="20" width="60" height="26" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <text x="38" y="37" fill="white" font-family="monospace" font-size="8" text-anchor="middle">kubectl top</text>
+          <text x="38" y="60" fill="#8b949e" font-family="monospace" font-size="7" text-anchor="middle">snapshot, right now</text>
+          <rect x="90" y="20" width="60" height="26" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="120" y="37" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle">Prometheus</text>
+          <text x="120" y="60" fill="#8b949e" font-family="monospace" font-size="7" text-anchor="middle">history, multi-label</text>
+          <path d="M38,66 V90" stroke="#666" stroke-width="1.5" stroke-dasharray="3,3"/>
+          <path d="M120,66 L120,80 L100,100" stroke="#ff5ca8" stroke-width="1.6" fill="none"/>
+          <text x="80" y="120" fill="white" font-family="monospace" font-size="8" text-anchor="middle">different data sources</text>
+          <text x="80" y="132" fill="white" font-family="monospace" font-size="8" text-anchor="middle">metrics-server vs Prometheus</text>
+        </svg>
+        <figcaption>same numbers, <b>different source</b></figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">kubectl top reads from the lightweight Metrics Server, which only keeps a recent snapshot. Prometheus scrapes and stores history with full label detail, enabling trends and rate() calculations Metrics Server cannot answer.</p>
+      </figure>
+
+      <!-- 5. PromQL anatomy -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="30" width="144" height="26" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="80" y="47" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle">rate(http_requests_total[5m])</text>
+          <path d="M20,58 V70" stroke="#3fb950" stroke-width="1.6" marker-end="url(#arrC14c)"/>
+          <defs><marker id="arrC14c" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><polygon points="0,0 6,3 0,6" fill="#3fb950"/></marker></defs>
+          <text x="20" y="82" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">function</text>
+          <path d="M60,58 V70" stroke="white" stroke-width="1.6" marker-end="url(#arrC14d)"/>
+          <defs><marker id="arrC14d" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><polygon points="0,0 6,3 0,6" fill="white"/></marker></defs>
+          <text x="60" y="82" fill="white" font-family="monospace" font-size="7" text-anchor="middle">metric</text>
+          <path d="M130,58 V70" stroke="#8b949e" stroke-width="1.6" marker-end="url(#arrC14e)"/>
+          <defs><marker id="arrC14e" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><polygon points="0,0 6,3 0,6" fill="#8b949e"/></marker></defs>
+          <text x="130" y="82" fill="#8b949e" font-family="monospace" font-size="7" text-anchor="middle">time range</text>
+          <text x="80" y="110" fill="white" font-family="monospace" font-size="9" text-anchor="middle">per-second average</text>
+          <text x="80" y="122" fill="white" font-family="monospace" font-size="9" text-anchor="middle">over the last 5 minutes</text>
+        </svg>
+        <figcaption><b>rate()</b> smooths a counter</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A counter like http_requests_total only ever goes up. rate() converts that raw total into a per-second average over the given window, which is what actually plots as a usable trend line.</p>
+      </figure>
+
+      <!-- 6. Namespace isolation: monitoring vs diner-lab -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="16" width="66" height="70" rx="5" fill="none" stroke="white" stroke-width="2" stroke-dasharray="4,3"/>
+          <text x="41" y="30" fill="white" font-family="monospace" font-size="8" text-anchor="middle">diner-lab</text>
+          <rect x="20" y="40" width="42" height="16" rx="3" fill="none" stroke="white" stroke-width="1.6"/>
+          <rect x="20" y="60" width="42" height="16" rx="3" fill="none" stroke="white" stroke-width="1.6"/>
+          <rect x="86" y="16" width="66" height="70" rx="5" fill="none" stroke="#ff5ca8" stroke-width="2" stroke-dasharray="4,3"/>
+          <text x="119" y="30" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle">monitoring</text>
+          <rect x="98" y="40" width="42" height="16" rx="3" fill="none" stroke="#ff5ca8" stroke-width="1.6"/>
+          <text x="119" y="51" fill="#ff5ca8" font-family="monospace" font-size="6" text-anchor="middle">prometheus</text>
+          <rect x="98" y="60" width="42" height="16" rx="3" fill="none" stroke="#ff5ca8" stroke-width="1.6"/>
+          <text x="119" y="71" fill="#ff5ca8" font-family="monospace" font-size="6" text-anchor="middle">grafana</text>
+          <text x="80" y="112" fill="white" font-family="monospace" font-size="9" text-anchor="middle">separate namespace</text>
+          <text x="80" y="126" fill="#8b949e" font-family="monospace" font-size="8" text-anchor="middle">still sees app metrics</text>
+        </svg>
+        <figcaption><b>monitoring ns</b>, still cluster-wide</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Installing the stack into its own monitoring namespace keeps it operationally separate from diner-lab, but Prometheus's scrape config still reaches across the whole cluster to collect metrics from any namespace.</p>
+      </figure>
+
+      <!-- 7. Dashboard with mostly-idle workloads still useful -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16,90 H140" stroke="#333" stroke-width="1.5"/>
+          <path d="M16,20 V90" stroke="#333" stroke-width="1.5"/>
+          <path d="M16,86 L40,84 L64,85 L88,83 L112,84 L136,82" fill="none" stroke="#3fb950" stroke-width="2" stroke-linecap="round"/>
+          <path d="M16,86 L40,80 L64,50 L88,82 L112,84 L136,60" fill="none" stroke="#ff5ca8" stroke-width="2" stroke-linecap="round" stroke-dasharray="0"/>
+          <text x="64" y="44" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">spike = loadgen</text>
+          <text x="80" y="112" fill="white" font-family="monospace" font-size="9" text-anchor="middle">flat line still teaches you</text>
+          <text x="80" y="124" fill="white" font-family="monospace" font-size="9" text-anchor="middle">structure and labels</text>
+        </svg>
+        <figcaption>idle dashboards <b>still useful</b></figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Even without real production load, a mostly-flat dashboard still teaches you the shape of the metrics: what labels exist, how panels are wired, and how a synthetic load spike shows up when you generate one.</p>
+      </figure>
+
+      <!-- 8. Next session -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="58" width="46" height="34" rx="4" fill="none" stroke="#666" stroke-width="1.8" transform="rotate(-2,37,75)"/>
+          <text x="37" y="79" fill="#666" font-family="monospace" font-size="10" text-anchor="middle">14</text>
+          <path d="M64,75 H108" stroke="#ff5ca8" stroke-width="2.5" stroke-dasharray="5,4" marker-end="url(#arrC14f)"/>
+          <defs><marker id="arrC14f" markerWidth="9" markerHeight="9" refX="4" refY="4" orient="auto"><polygon points="0,0 9,4 0,9" fill="#ff5ca8"/></marker></defs>
+          <rect x="112" y="52" width="42" height="46" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2" transform="rotate(2,133,75)"/>
+          <text x="133" y="80" fill="#ff5ca8" font-family="monospace" font-size="14" text-anchor="middle" font-weight="bold">15</text>
+          <text x="80" y="128" fill="white" font-family="monospace" font-size="9" text-anchor="middle">zooming out: the whole map</text>
+        </svg>
+        <figcaption>next: the tool landscape</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Session 15 steps back from hands-on labs entirely to map where every tool used so far — and several you have not touched yet — sits in the build, package, provision, deploy, and observe landscape.</p>
+      </figure>
+
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>1. Learning Objectives</h2>
+    <div class="card">
+      <ol class="objectives-list">
+        <li><span class="obj-num">1/5</span><span>Distinguish <span class="anchor">observability</span> from plain <span class="anchor">monitoring</span>: understanding why, not just knowing that</span></li>
+        <li><span class="obj-num">2/5</span><span>Install <span class="anchor">Prometheus</span> and <span class="anchor">Grafana</span> via Helm into an isolated <span class="anchor">monitoring namespace</span></span></li>
+        <li><span class="obj-num">3/5</span><span>Explain the <span class="anchor">pull-based scrape</span> model and how it differs from a push-based agent</span></li>
+        <li><span class="obj-num">4/5</span><span>Write basic <span class="anchor">PromQL</span> queries using <code>rate()</code>, labels, and filtering</span></li>
+        <li><span class="obj-num">5/5</span><span>Build a Grafana dashboard connected to Prometheus and compare it against <span class="anchor">kubectl top</span></span></li>
+      </ol>
+    </div>
+
+    <h2>2. Pre-Coding Quiz</h2>
+    <p>Answer before reading the concept. Need 4/5 to proceed.</p>
+
+    <div id="pre-quiz">
+      <div class="quiz-question" data-question="0" data-answer="b">
+        <div class="question-num">Question 1 of 5</div>
+        <p>What is the core difference between monitoring and observability?</p>
+        <label class="quiz-option" data-val="a">Monitoring is for Kubernetes, observability is for VMs</label>
+        <label class="quiz-option" data-val="b">Monitoring tells you something happened; observability gives you enough data to ask why</label>
+        <label class="quiz-option" data-val="c">They are the same thing with different marketing names</label>
+        <label class="quiz-option" data-val="d">Observability replaces the need for any alerting</label>
+        <div class="explanation">Monitoring answers "did a threshold get crossed." Observability is about having rich enough data — metrics, labels, history — to investigate questions nobody thought to alert on ahead of time.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="c">
+        <div class="question-num">Question 2 of 5</div>
+        <p>How does Prometheus collect metrics from a target by default?</p>
+        <label class="quiz-option" data-val="a">Targets push metrics to Prometheus over a webhook</label>
+        <label class="quiz-option" data-val="b">Prometheus reads log files directly</label>
+        <label class="quiz-option" data-val="c">Prometheus scrapes each target's /metrics endpoint on a schedule</label>
+        <label class="quiz-option" data-val="d">Grafana forwards metrics to Prometheus after collecting them itself</label>
+        <div class="explanation">Prometheus is pull-based — it periodically requests /metrics from each configured target rather than waiting for applications to send data to it.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="a">
+        <div class="question-num">Question 3 of 5</div>
+        <p>What role does Grafana actually play in this stack?</p>
+        <label class="quiz-option" data-val="a">It queries Prometheus and renders the results as dashboards; it stores no metric history itself</label>
+        <label class="quiz-option" data-val="b">It scrapes pods directly, competing with Prometheus</label>
+        <label class="quiz-option" data-val="c">It replaces Prometheus once dashboards are built</label>
+        <label class="quiz-option" data-val="d">It stores metrics permanently so Prometheus can be uninstalled</label>
+        <div class="explanation">Grafana is a visualization layer. It sends PromQL queries to a configured Prometheus data source on demand and draws whatever comes back.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="d">
+        <div class="question-num">Question 4 of 5</div>
+        <p>Why can kubectl top and a Prometheus dashboard show slightly different numbers for the same pod?</p>
+        <label class="quiz-option" data-val="a">kubectl top is always wrong and should be ignored</label>
+        <label class="quiz-option" data-val="b">Grafana rounds numbers differently than the terminal</label>
+        <label class="quiz-option" data-val="c">Only Prometheus can see CPU usage; kubectl top only sees memory</label>
+        <label class="quiz-option" data-val="d">They read from different sources — Metrics Server's live snapshot versus Prometheus's scraped history</label>
+        <div class="explanation">kubectl top is powered by the lightweight Metrics Server, which keeps only a recent snapshot. Prometheus scrapes and retains history with full label detail, so exact values can differ slightly.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="b">
+        <div class="question-num">Question 5 of 5</div>
+        <p>What does wrapping a counter metric in rate(...) actually compute?</p>
+        <label class="quiz-option" data-val="a">The total number of times the counter has ever incremented</label>
+        <label class="quiz-option" data-val="b">The per-second average rate of increase over the given time window</label>
+        <label class="quiz-option" data-val="c">The maximum value the counter reached in its lifetime</label>
+        <label class="quiz-option" data-val="d">A prediction of the counter's value one hour from now</label>
+        <div class="explanation">rate() converts an ever-increasing counter into a usable per-second trend over the specified window, which is what actually makes sense plotted on a graph.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Pre-Quiz</button>
+      <div class="quiz-result" id="pre-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>3. The Concept — Metrics, Scraping, and Dashboards</h2>
+
+    <h3>Observability is a bigger idea than monitoring</h3>
+    <p>
+      Monitoring is asking "is X currently broken." It works well for
+      questions you thought to ask in advance — an alert on error rate, a
+      threshold on CPU. Observability is the broader property of a system
+      being genuinely understandable from its outputs: metrics, logs, and
+      traces detailed enough that you can investigate a question you never
+      pre-wrote an alert for. Prometheus and Grafana are the metrics half of
+      that picture — they do not replace logs or traces, but they are
+      usually the first piece a team builds.
+    </p>
+
+    <h3>Prometheus: a pull-based metrics database</h3>
+    <p>
+      Prometheus does not wait for applications to send it data. It is
+      configured with a list of scrape targets and, on an interval, sends an
+      HTTP request to each target's <code>/metrics</code> endpoint, parsing
+      whatever plaintext metrics come back. This pull model means a target
+      simply has to expose a well-known endpoint — it never needs to know
+      Prometheus exists, let alone where it lives.
+    </p>
+    <pre><code>helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update
+
+kubectl create namespace monitoring
+helm install prometheus prometheus-community/prometheus -n monitoring</code></pre>
+    <p>
+      Installing the Prometheus Helm chart deploys several components — a
+      server, an alertmanager, and exporters — but the important mental
+      model for this session is just: it scrapes, it stores, it answers
+      PromQL queries.
+    </p>
+
+    <h3>Grafana: queries Prometheus, owns no data</h3>
+    <pre><code>helm install grafana grafana/grafana -n monitoring \
+  --set service.type=NodePort \
+  --set persistence.enabled=false \
+  --set adminPassword='admin'
+
+kubectl port-forward svc/grafana 3000:80 -n monitoring</code></pre>
+    <div class="alert alert-warning">
+      <strong>Lab-only setting:</strong> a hardcoded admin password and
+      disabled persistence are fine for a local learning cluster. Neither
+      belongs in a real deployment — use a secret manager for the password
+      and enable persistence so dashboards survive a pod restart.
+    </div>
+    <p>
+      Inside the Grafana UI, add a data source of type <code>Prometheus</code>
+      pointing at Prometheus's in-cluster service DNS name:
+    </p>
+    <pre><code>http://prometheus-server.monitoring.svc.cluster.local</code></pre>
+    <p>
+      That URL works because Kubernetes gives every Service a stable DNS
+      name of the form <code>&lt;service&gt;.&lt;namespace&gt;.svc.cluster.local</code>
+      — Grafana never needs a hardcoded IP address, and the same URL keeps
+      working across restarts and rescheduling.
+    </p>
+
+    <h3>PromQL fundamentals</h3>
+    <pre><code>container_memory_usage_bytes
+rate(container_cpu_usage_seconds_total[5m])
+kube_pod_container_status_restarts_total</code></pre>
+    <p>
+      A bare metric name like <code>container_memory_usage_bytes</code>
+      returns the current value for every label combination Prometheus has
+      seen — one line per pod, per container, per node. Filtering by label
+      narrows that down, and wrapping a counter in <code>rate()</code> turns
+      an ever-climbing total into a usable per-second trend:
+    </p>
+    <pre><code>rate(container_cpu_usage_seconds_total{namespace="diner-lab"}[5m])
+sum(rate(container_cpu_usage_seconds_total{namespace="diner-lab"}[5m])) by (pod)</code></pre>
+    <p>
+      <code>sum(...) by (pod)</code> aggregates the per-container rate up to
+      one line per pod — the aggregation functions (<code>sum</code>,
+      <code>avg</code>, <code>max</code>) and the <code>by</code> grouping
+      clause are what turn a wall of raw label combinations into a readable
+      graph.
+    </p>
+
+    <h3>Importing real dashboards instead of building from zero</h3>
+    <p>
+      Grafana's dashboard import feature accepts a numeric dashboard ID from
+      the public Grafana dashboard library. Dashboard <code>315</code>
+      (Kubernetes Pods Resources) and <code>6417</code> (NGINX Ingress) are
+      widely used community dashboards that render correctly against a
+      standard <code>kube-prometheus</code>-style install without any manual
+      panel building.
+    </p>
+
+    <h3>Metrics Server vs Prometheus</h3>
+    <p>
+      <code>kubectl top pods</code> is powered by the Metrics Server, a
+      lightweight component that keeps only a brief in-memory snapshot of
+      CPU and memory — enough for <code>kubectl top</code> and the HPA from
+      Session 12, nothing more. Prometheus is a different system entirely:
+      it retains history, tracks arbitrary labels, and answers arbitrary
+      PromQL — which is why the two can report legitimately different
+      numbers for the same pod at the same moment without either being
+      "wrong."
+    </p>
+
+    <hr class="section-divider" />
+
+    <h2>4. Lab</h2>
+    <div class="alert alert-success">
+      <strong>Lab objective:</strong> Install Prometheus and Grafana via
+      Helm into a dedicated monitoring namespace, connect Grafana to
+      Prometheus, import a dashboard, and generate synthetic load to watch
+      metrics move.
+    </div>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <p><strong>Add Helm repos and create the namespace</strong></p>
+        <pre><code>helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update
+kubectl create namespace monitoring</code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <p><strong>Install Prometheus and verify it is scraping</strong></p>
+        <pre><code>helm install prometheus prometheus-community/prometheus -n monitoring
+kubectl get pods -n monitoring
+kubectl get svc -n monitoring</code></pre>
+        <p><strong>Predict before running:</strong> which Service name do you expect to use as the Prometheus data source URL inside Grafana in step 4? Write it down, then confirm against the actual Service list.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <p><strong>Install Grafana and port-forward to it</strong></p>
+        <pre><code>helm install grafana grafana/grafana -n monitoring `
+  --set service.type=NodePort `
+  --set persistence.enabled=false `
+  --set adminPassword='admin'
+kubectl port-forward svc/grafana 3000:80 -n monitoring</code></pre>
+        <p>Open <code>http://localhost:3000</code> and log in with username <code>admin</code> and the password set above.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <p><strong>Add Prometheus as a data source</strong></p>
+        <p>In Grafana: Connections → Data sources → Add data source → Prometheus. Set the URL to <code>http://prometheus-server.monitoring.svc.cluster.local</code>, then Save &amp; test. A green confirmation means Grafana successfully queried Prometheus.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <p><strong>Import dashboards 315 and 6417</strong></p>
+        <p>Dashboards → New → Import. Enter dashboard ID <code>315</code> (Kubernetes Pods Resources), select the Prometheus data source, and load it. Repeat with ID <code>6417</code> (NGINX Ingress). Confirm panels render data for the <code>diner-lab</code> namespace.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <p><strong>Run PromQL queries directly</strong></p>
+        <pre><code>container_memory_usage_bytes
+rate(container_cpu_usage_seconds_total[5m])
+kube_pod_container_status_restarts_total</code></pre>
+        <p>Try each in Prometheus's own Graph UI or Grafana's Explore view. Note which labels are attached to each result — namespace, pod, container — and filter one query down to just <code>namespace="diner-lab"</code>.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">7</div>
+      <div class="step-body">
+        <p><strong>Compare kubectl top against the dashboard</strong></p>
+        <pre><code>kubectl top pods -n diner-lab</code></pre>
+        <p><strong>Stop and think:</strong> before comparing, predict whether the numbers will match exactly. Then check the Kubernetes Pods Resources dashboard for the same pods and note any difference — and explain why, using the Metrics Server vs Prometheus distinction from the Concept section.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">8</div>
+      <div class="step-body">
+        <p><strong>Optional: generate synthetic load and watch it spike</strong></p>
+        <pre><code>kubectl run loadgen --image=busybox --restart=Never -n diner-lab -- sh -c "while true; do wget -q -O- http://diner-stable-svc >/dev/null; done"</code></pre>
+        <p>Watch the imported dashboards for a visible spike, then clean up the load generator: <code>kubectl delete pod loadgen -n diner-lab</code>.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">9</div>
+      <div class="step-body">
+        <p><strong>Cleanup</strong></p>
+        <pre><code>helm uninstall grafana -n monitoring
+helm uninstall prometheus -n monitoring
+kubectl delete ns monitoring</code></pre>
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>5. Expected Files Changed</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Action</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><code>monitoring/README.md</code></td><td>Added</td><td>Records the Helm install commands, data source URL, and imported dashboard IDs for repeatability</td></tr>
+          <tr><td><code>monitoring/dashboards.txt</code></td><td>Added</td><td>Tracks imported dashboard IDs (315, 6417) so they can be re-imported after a cluster rebuild</td></tr>
+          <tr><td><code>sessions/session-14/index.html</code></td><td>Updated</td><td>This session document</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>6. Commit Checkpoint</h2>
+    <pre><code>git add monitoring sessions/session-14/index.html
+git commit -m "session-14: install prometheus and grafana, build a diner-lab dashboard"</code></pre>
+
+    <h2>7. Code Review Checklist</h2>
+    <div class="card">
+      <div class="checklist-item"><input type="checkbox" id="c1"/><label for="c1">Prometheus and Grafana are installed into an isolated monitoring namespace</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c2"/><label for="c2">Grafana's Prometheus data source uses the in-cluster Service DNS name, not a hardcoded IP</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c3"/><label for="c3">At least one imported dashboard renders real data for the diner-lab namespace</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c4"/><label for="c4">I ran at least one rate() query and can explain what time window it is averaging over</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c5"/><label for="c5">I compared kubectl top output against the dashboard and can explain any difference</label></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>8. Post-Coding Quiz</h2>
+    <div id="post-quiz" data-pass-post="Proceed to Session 15 (The DevOps Language Landscape) after ≥ 80%.">
+      <div class="quiz-question" data-question="0" data-answer="a">
+        <div class="question-num">Question 1 of 5</div>
+        <p>Why does Grafana's Prometheus data source use a cluster DNS name instead of a pod IP address?</p>
+        <label class="quiz-option" data-val="a">Service DNS names stay stable even as pods restart or reschedule</label>
+        <label class="quiz-option" data-val="b">Pod IPs are faster to resolve than DNS names</label>
+        <label class="quiz-option" data-val="c">Grafana cannot parse raw IP addresses at all</label>
+        <label class="quiz-option" data-val="d">DNS names are required for HTTPS to work</label>
+        <div class="explanation">A Kubernetes Service gets a predictable DNS name of the form service.namespace.svc.cluster.local that keeps resolving correctly no matter how many times the underlying pods are rescheduled.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="c">
+        <div class="question-num">Question 2 of 5</div>
+        <p>What does rate(container_cpu_usage_seconds_total[5m]) actually return?</p>
+        <label class="quiz-option" data-val="a">The total CPU seconds used since the container started</label>
+        <label class="quiz-option" data-val="b">A prediction of CPU usage 5 minutes from now</label>
+        <label class="quiz-option" data-val="c">The average per-second rate of CPU usage over the last 5 minutes</label>
+        <label class="quiz-option" data-val="d">The single highest CPU spike recorded in the last 5 minutes</label>
+        <div class="explanation">rate() is specifically built to turn an ever-increasing counter into a usable per-second average over the given window, matching the PromQL fundamentals covered in the Concept section.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="d">
+        <div class="question-num">Question 3 of 5</div>
+        <p>kubectl top pods and a Grafana dashboard show slightly different memory values for the same pod at the same time. What is the most likely explanation?</p>
+        <label class="quiz-option" data-val="a">One of the two tools has a bug</label>
+        <label class="quiz-option" data-val="b">Memory cannot be measured accurately in Kubernetes</label>
+        <label class="quiz-option" data-val="c">Grafana always overstates memory usage by design</label>
+        <label class="quiz-option" data-val="d">They read from different sources — a live Metrics Server snapshot versus scraped Prometheus history</label>
+        <div class="explanation">This is the exact distinction the lab asked you to verify hands-on: Metrics Server and Prometheus are separate systems with separate collection cadences, so small differences are expected and not a bug.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="b">
+        <div class="question-num">Question 4 of 5</div>
+        <p>A teammate asks why the loadgen pod's requests do not show up in the dashboard right away. What is the most likely reason?</p>
+        <label class="quiz-option" data-val="a">Prometheus only records data once per day</label>
+        <label class="quiz-option" data-val="b">Prometheus scrapes on an interval, so there is a short delay before new data appears</label>
+        <label class="quiz-option" data-val="c">Grafana panels must be manually refreshed by editing YAML</label>
+        <label class="quiz-option" data-val="d">busybox pods are invisible to Prometheus entirely</label>
+        <div class="explanation">Because Prometheus is pull-based and scrapes on a fixed interval rather than instantly, there is always a small lag between something happening and it appearing in a query result.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="c">
+        <div class="question-num">Question 5 of 5</div>
+        <p>Session 15 will focus on:</p>
+        <label class="quiz-option" data-val="a">Writing a new Grafana plugin from scratch</label>
+        <label class="quiz-option" data-val="b">Migrating Prometheus to a managed cloud service</label>
+        <label class="quiz-option" data-val="c">A discussion-only session mapping where different tools and languages fit in the DevOps landscape</label>
+        <label class="quiz-option" data-val="d">Building a second canary rollout with a service mesh</label>
+        <div class="explanation">Session 15 is the Layer 6 gate — a discussion session with no lab or commit, stepping back to place every tool covered so far into a build/package/provision/deploy/observe map.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Post-Quiz</button>
+      <div class="quiz-result" id="post-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>9. Reflection Questions</h2>
+    <div class="card">
+      <ol>
+        <li>Now that you have a dashboard, what is the first real question you would want to ask it during a canary rollout like the one from Session 13?</li>
+        <li>Why might a team keep both kubectl top and a full Prometheus stack, rather than relying on just one?</li>
+        <li>What is one metric or dashboard panel you did not build today that you think would matter most for this app in production?</li>
+      </ol>
+    </div>
+
+    <h2>10. What Breaks If This Knowledge Is Missing?</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Treating monitoring and observability as the same thing:</strong> A team that only sets up threshold alerts will be blind to problems nobody thought to alert on — the entire point of observability is answering questions asked after the fact.</li>
+        <li><strong>Assuming Prometheus pushes data:</strong> Debugging "why isn't this metric showing up" goes nowhere if you assume the app pushes data — the actual fix is almost always about the scrape target configuration, since Prometheus always pulls.</li>
+        <li><strong>Skipping the Metrics Server vs Prometheus distinction:</strong> A team that sees kubectl top and a dashboard disagree and assumes one is broken will waste time debugging a non-issue instead of understanding they are simply different data sources.</li>
+        <li><strong>Hardcoding a Grafana data source IP instead of the Service DNS name:</strong> The dashboard silently breaks the next time Prometheus's pod reschedules, because a pod IP is not stable across restarts.</li>
+      </ul>
+    </div>
+
+    <h2>11. What We Learned</h2>
+    <div class="card" style="border-color:var(--green);">
+      <p><strong>Today you learned: observability is broader than monitoring, Prometheus is a pull-based metrics database that scrapes /metrics endpoints on an interval, Grafana queries Prometheus with PromQL to render dashboards without storing data itself, and kubectl top and Prometheus report from genuinely different sources — the Metrics Server's live snapshot versus Prometheus's scraped history.</strong></p>
+      <p><strong>Next:</strong> <a href="../session-15/index.html">Session 15 — The DevOps Language Landscape</a>.</p>
+    </div>
+
+    <p style="margin-top:24px;"><a href="../session-13/index.html">← Session 13</a> · <a href="../../syllabus/index.html">Syllabus</a> · <a href="../session-15/index.html">Session 15 →</a></p>
+
+  </div>
+</main>
+
+<script src="../../quiz.js" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    setupQuiz('pre');
+    setupQuiz('post');
+
+    document.querySelectorAll('.concept-explanation-toggle').forEach(function (button) {
+      button.addEventListener('click', function () {
+        const card = button.closest('.concept-card');
+        const isRevealed = card.classList.toggle('explanation-revealed');
+        button.setAttribute('aria-expanded', String(isRevealed));
+        button.querySelector('.concept-explanation-hint').textContent = isRevealed
+          ? 'Click to blur'
+          : 'Click to reveal';
+      });
+    });
+  });
+</script>
+<script src="../../notes-widget.js" defer></script>
+<script src="../../bookmark-widget.js" defer></script>
+
+</body>
+</html>

@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Session 15 — The DevOps Language Landscape</title>
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="stylesheet" href="../../notes-widget.css" />
+  <link rel="stylesheet" href="../../bookmark-widget.css" />
+  <link rel="stylesheet" href="../../quiz-explain-modal.css" />
+  <style>
+    .quiz-option{display:block;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:8px;cursor:pointer;font-size:14px;transition:border-color .15s,background .15s;user-select:none;}
+    .quiz-option:hover{border-color:var(--accent);background:var(--surface);}
+    .quiz-option.selected{border-color:var(--accent);background:rgba(255,92,168,.1);}
+    .quiz-option.correct{border-color:var(--green);background:rgba(63,185,80,.1);}
+    .quiz-option.wrong{border-color:var(--red);background:rgba(248,81,73,.1);}
+    .quiz-question{margin-bottom:28px;}
+    .quiz-question p{font-weight:600;margin-bottom:10px;font-size:15px;}
+    .question-num{color:var(--text-muted);font-size:12px;font-weight:400;margin-bottom:4px;}
+    .quiz-result{display:none;padding:16px 20px;border-radius:var(--radius);margin-top:16px;font-size:15px;font-weight:600;}
+    .quiz-result.pass{background:rgba(63,185,80,.12);border:1px solid var(--green);color:var(--green);}
+    .quiz-result.fail{background:rgba(248,81,73,.12);border:1px solid var(--red);color:var(--red);}
+    .explanation{display:none;font-size:13px;color:var(--text-muted);margin-top:6px;padding:8px 12px;background:var(--surface-2);border-radius:var(--radius);border-left:2px solid var(--border);}
+    .submit-btn{background:var(--accent);color:#0d1117;border:none;border-radius:var(--radius);padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;}
+    .submit-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .step{display:flex;gap:16px;margin-bottom:20px;}
+    .step-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#0d1117;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:2px;}
+    .step-body{flex:1;}
+    .step-body p{margin-bottom:6px;}
+    .section-divider{border:none;border-top:2px solid var(--border);margin:40px 0;}
+    .checklist-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;}
+    .checklist-item input[type="checkbox"]{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;}
+
+    /* Comic-panel concept grid — image teaches first, caption only reinforces */
+    .concept-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0;}
+    @media (max-width:760px){.concept-grid{grid-template-columns:repeat(2,1fr);}}
+    .concept-card{background:#111111;border:1px solid #2a2a2a;border-radius:8px;padding:8px 8px 10px;}
+    .concept-card svg{display:block;width:100%;height:auto;}
+    .concept-card figcaption{margin-top:6px;font-family:monospace;font-size:10.5px;line-height:1.3;color:#c9c9c9;text-align:center;}
+    .concept-card figcaption b{color:#ff5ca8;}
+    .concept-explanation-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin-top:10px;padding:7px 8px;border:1px solid #3a3a3a;border-radius:5px;background:#1a1a1a;color:#ff5ca8;font-family:monospace;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;}
+    .concept-explanation-toggle:hover,.concept-explanation-toggle:focus-visible{border-color:#ff5ca8;outline:none;}
+    .concept-explanation-hint{color:#8b949e;font-size:8px;font-weight:400;letter-spacing:0;text-transform:none;}
+    .concept-explanation-text{margin:7px 2px 0;font-size:11px;line-height:1.45;color:#d8d8d8;filter:blur(4px);user-select:none;transition:filter .2s ease;}
+    .concept-card.explanation-revealed .concept-explanation-text{filter:none;user-select:text;}
+    .concept-card.explanation-revealed .concept-explanation-hint{color:#3fb950;}
+    .anchor{color:#ff5ca8;font-weight:700;}
+    .objectives-list{list-style:none;padding-left:0;}
+    .objectives-list li{display:flex;gap:12px;align-items:baseline;margin-bottom:12px;font-size:15px;}
+    .obj-num{flex-shrink:0;min-width:34px;color:#ff5ca8;font-family:monospace;font-weight:700;font-size:12px;background:rgba(255,92,168,.1);border:1px solid rgba(255,92,168,.4);border-radius:10px;padding:2px 6px;text-align:center;}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="../../index.html" class="brand">⚙ DevOps Learning</a>
+    <a href="../../syllabus/index.html">Syllabus</a>
+    <a href="../../sessions/index.html" class="active">Sessions</a>
+    <a href="../../quizzes/index.html">Quizzes</a>
+    <a href="../../labs/index.html">Labs</a>
+  </div>
+</nav>
+
+<main>
+  <div class="container">
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+      <span class="badge badge-layer">Layer 6</span>
+      <span class="badge badge-current">Session 15</span>
+      <span style="color:var(--text-muted);font-size:13px;">Observability &amp; Landscape</span>
+    </div>
+    <h1>The DevOps Language Landscape</h1>
+    <p class="subtitle">
+      Fourteen sessions in, you have typed Bash one-liners, written YAML for
+      Kubernetes and GitHub Actions, and touched HCL in Terraform — without
+      ever stopping to ask why those particular languages showed up where
+      they did. This session has no lab and no commit. It steps back and
+      maps the tools you already used, plus a few you have only heard of, so
+      the next time you reach for a language you are choosing it on purpose
+      instead of by habit.
+    </p>
+    <div class="alert alert-info">
+      Estimated time: 20–30 minutes &middot; Flow: Pre-quiz → Concept → Discussion → Post-quiz
+    </div>
+    <div class="alert alert-warning">
+      This is a <strong>discussion session</strong>, not a build session. There is no lab, no files change, and no commit checkpoint — read the concept, work through the discussion questions, and take the quizzes.
+    </div>
+
+    <!-- Comic-panel concept grid -->
+    <div class="concept-grid">
+
+      <!-- 1. Bash -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="18" width="140" height="34" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <text x="80" y="32" fill="white" font-family="monospace" font-size="8" text-anchor="middle">for pod in $(kubectl</text>
+          <text x="80" y="44" fill="white" font-family="monospace" font-size="8" text-anchor="middle">get pods -o name)</text>
+          <path d="M80,56 V72" stroke="#ff5ca8" stroke-width="2.2" marker-end="url(#arrS15a)"/>
+          <defs><marker id="arrS15a" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <text x="80" y="90" fill="#ff5ca8" font-family="monospace" font-size="9" text-anchor="middle" font-weight="bold">every Linux box has it</text>
+          <text x="80" y="118" fill="white" font-family="monospace" font-size="9" text-anchor="middle">glue between commands,</text>
+          <text x="80" y="130" fill="white" font-family="monospace" font-size="9" text-anchor="middle">not a general app language</text>
+        </svg>
+        <figcaption><b>Bash</b> — the universal glue</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Bash ships on virtually every Linux server, so it is the default for entrypoint scripts, provisioning, and small CI/CD steps. It excels at chaining existing commands together, not at writing large programs.</p>
+      </figure>
+
+      <!-- 2. Python -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="45" cy="40" r="24" fill="none" stroke="white" stroke-width="2"/>
+          <text x="45" y="44" fill="white" font-family="monospace" font-size="8" text-anchor="middle">os</text>
+          <path d="M69,40 H95" stroke="#ff5ca8" stroke-width="2.2" marker-end="url(#arrS15b)"/>
+          <defs><marker id="arrS15b" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <circle cx="119" cy="40" r="24" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <text x="119" y="37" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">requests</text>
+          <text x="119" y="48" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">.get()</text>
+          <text x="80" y="96" fill="white" font-family="monospace" font-size="9" text-anchor="middle">one language, system calls</text>
+          <text x="80" y="108" fill="white" font-family="monospace" font-size="9" text-anchor="middle">and HTTP requests both</text>
+          <text x="80" y="128" fill="#8b949e" font-family="monospace" font-size="8" text-anchor="middle">huge library ecosystem</text>
+        </svg>
+        <figcaption><b>Python</b> — readable, huge libraries</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Python combines readable syntax with a massive library ecosystem, so it powers infrastructure tools like Ansible and the AWS CLI, plus most API testing and automation scripts that go beyond what Bash comfortably handles.</p>
+      </figure>
+
+      <!-- 3. Go -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="20" y="20" width="120" height="40" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2"/>
+          <text x="80" y="36" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle" font-weight="bold">compiled binary</text>
+          <text x="80" y="50" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle" font-weight="bold">no runtime needed</text>
+          <text x="45" y="92" fill="white" font-family="monospace" font-size="8" text-anchor="middle">kubectl</text>
+          <text x="80" y="92" fill="white" font-family="monospace" font-size="8" text-anchor="middle">terraform</text>
+          <text x="118" y="92" fill="white" font-family="monospace" font-size="8" text-anchor="middle">prometheus</text>
+          <text x="80" y="120" fill="white" font-family="monospace" font-size="9" text-anchor="middle">the tools you already</text>
+          <text x="80" y="132" fill="white" font-family="monospace" font-size="9" text-anchor="middle">use are written in Go</text>
+        </svg>
+        <figcaption><b>Go</b> — what your tools are built from</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Go compiles to a single fast binary with no separate runtime to install, and has built-in concurrency support. That combination is why Kubernetes, Terraform, and Prometheus — three tools used constantly in this course — are all written in Go.</p>
+      </figure>
+
+      <!-- 4. YAML/JSON/HCL declarative -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="20" width="60" height="60" rx="4" fill="none" stroke="#f85149" stroke-width="2"/>
+          <text x="40" y="42" fill="#f85149" font-family="monospace" font-size="8" text-anchor="middle">do this,</text>
+          <text x="40" y="54" fill="#f85149" font-family="monospace" font-size="8" text-anchor="middle">then this,</text>
+          <text x="40" y="66" fill="#f85149" font-family="monospace" font-size="8" text-anchor="middle">then that</text>
+          <rect x="90" y="20" width="60" height="60" rx="4" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <text x="120" y="42" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="middle">replicas: 3</text>
+          <text x="120" y="54" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="middle">image: v2</text>
+          <text x="80" y="102" fill="white" font-family="monospace" font-size="9" text-anchor="middle">imperative steps vs</text>
+          <text x="80" y="114" fill="white" font-family="monospace" font-size="9" text-anchor="middle">declared desired state</text>
+        </svg>
+        <figcaption><b>YAML/JSON/HCL</b> describe, don't execute</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">These are data formats, not programming languages — a Kubernetes manifest, a GitHub Actions workflow, and a Terraform file all describe a desired end state, which a separate tool (kubectl, the Actions runner, Terraform itself) then reconciles reality against.</p>
+      </figure>
+
+      <!-- 5. Perl/Awk/Sed legacy -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="20" width="132" height="30" rx="4" fill="none" stroke="#666" stroke-width="1.8"/>
+          <text x="80" y="34" fill="#666" font-family="monospace" font-size="7" text-anchor="middle">awk '/ERROR/ {print $5}'</text>
+          <text x="80" y="45" fill="#666" font-family="monospace" font-size="7" text-anchor="middle">/var/log/syslog</text>
+          <text x="80" y="76" fill="white" font-family="monospace" font-size="9" text-anchor="middle">pre-Bash era text tools</text>
+          <text x="80" y="100" fill="#8b949e" font-family="monospace" font-size="8" text-anchor="middle">still readable in old</text>
+          <text x="80" y="112" fill="#8b949e" font-family="monospace" font-size="8" text-anchor="middle">infrastructure scripts</text>
+          <text x="80" y="130" fill="#8b949e" font-family="monospace" font-size="8" text-anchor="middle">rarely written new</text>
+        </svg>
+        <figcaption><b>Perl/Awk/Sed</b> — read, rarely write</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">These predate Bash-centric scripting and still appear in older log-parsing pipelines. Most DevOps engineers today read them occasionally when inheriting legacy scripts, but rarely choose them for new work.</p>
+      </figure>
+
+      <!-- 6. Ruby legacy -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="20" width="132" height="40" rx="4" fill="none" stroke="#666" stroke-width="1.8"/>
+          <text x="80" y="36" fill="#666" font-family="monospace" font-size="7" text-anchor="middle">package 'nginx' do</text>
+          <text x="80" y="48" fill="#666" font-family="monospace" font-size="7" text-anchor="middle">  action :install</text>
+          <text x="80" y="60" fill="#666" font-family="monospace" font-size="7" text-anchor="middle">end</text>
+          <path d="M80,66 V80" stroke="#ff5ca8" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arrS15c)"/>
+          <defs><marker id="arrS15c" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto"><polygon points="0,0 7,3.5 0,7" fill="#ff5ca8"/></marker></defs>
+          <text x="80" y="96" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle">Chef's declarative style</text>
+          <text x="80" y="120" fill="white" font-family="monospace" font-size="9" text-anchor="middle">faded as YAML tools</text>
+          <text x="80" y="132" fill="white" font-family="monospace" font-size="9" text-anchor="middle">like Ansible took over</text>
+        </svg>
+        <figcaption><b>Ruby</b> — Chef's declarative style</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Chef recipes and some older Jenkins plugins are written in Ruby with a declarative-looking DSL. As YAML-based tools like Ansible became dominant, Ruby's role in new infrastructure automation shrank sharply.</p>
+      </figure>
+
+      <!-- 7. Choosing on purpose -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="20" y="20" width="120" height="30" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <text x="80" y="39" fill="white" font-family="monospace" font-size="9" text-anchor="middle">what's the task, really?</text>
+          <path d="M80,54 V68" stroke="#ff5ca8" stroke-width="2.2" marker-end="url(#arrS15d)"/>
+          <defs><marker id="arrS15d" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <text x="80" y="86" fill="#ff5ca8" font-family="monospace" font-size="9" text-anchor="middle" font-weight="bold">chain commands? Bash.</text>
+          <text x="80" y="100" fill="#ff5ca8" font-family="monospace" font-size="9" text-anchor="middle" font-weight="bold">call an API? Python.</text>
+          <text x="80" y="114" fill="#ff5ca8" font-family="monospace" font-size="9" text-anchor="middle" font-weight="bold">declare state? YAML/HCL.</text>
+        </svg>
+        <figcaption>match the <b>language to the job</b></figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">None of these languages is objectively "best" — the skill this session builds is recognizing which category a task falls into (command chaining, general-purpose logic, or declared state) and reaching for the right tool instead of the familiar one.</p>
+      </figure>
+
+      <!-- 8. Next session -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="58" width="46" height="34" rx="4" fill="none" stroke="#666" stroke-width="1.8" transform="rotate(-2,37,75)"/>
+          <text x="37" y="79" fill="#666" font-family="monospace" font-size="10" text-anchor="middle">15</text>
+          <path d="M64,75 H108" stroke="#ff5ca8" stroke-width="2.5" stroke-dasharray="5,4" marker-end="url(#arrS15e)"/>
+          <defs><marker id="arrS15e" markerWidth="9" markerHeight="9" refX="4" refY="4" orient="auto"><polygon points="0,0 9,4 0,9" fill="#ff5ca8"/></marker></defs>
+          <rect x="112" y="52" width="42" height="46" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2" transform="rotate(2,133,75)"/>
+          <text x="133" y="80" fill="#ff5ca8" font-family="monospace" font-size="14" text-anchor="middle" font-weight="bold">16</text>
+          <text x="80" y="128" fill="white" font-family="monospace" font-size="9" text-anchor="middle">Layer 7: build a real app</text>
+        </svg>
+        <figcaption>next: the capstone begins</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Session 16 leaves standalone topic labs behind and starts a single continuous project — the Text Masker app — that carries through CI, CD, and release strategies using the exact tools discussed today.</p>
+      </figure>
+
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>1. Learning Objectives</h2>
+    <div class="card">
+      <ol class="objectives-list">
+        <li><span class="obj-num">1/4</span><span>Explain why <span class="anchor">Bash</span> is the default glue language on almost any Linux-based DevOps toolchain</span></li>
+        <li><span class="obj-num">2/4</span><span>Contrast <span class="anchor">Python</span>'s general-purpose readability with <span class="anchor">Go</span>'s compiled, concurrent design, and name a real tool built in each</span></li>
+        <li><span class="obj-num">3/4</span><span>Distinguish <span class="anchor">declarative</span> config formats (YAML/JSON/HCL) from <span class="anchor">imperative</span> scripting languages</span></li>
+        <li><span class="obj-num">4/4</span><span>Place <span class="anchor">legacy tools</span> (Perl/Awk/Sed, Ruby/Chef) in context as things you will mostly read, not write</span></li>
+      </ol>
+    </div>
+
+    <h2>2. Pre-Coding Quiz</h2>
+    <p>Answer before reading the concept. Need 4/5 to proceed.</p>
+
+    <div id="pre-quiz">
+      <div class="quiz-question" data-question="0" data-answer="c">
+        <div class="question-num">Question 1 of 5</div>
+        <p>Why does nearly every DevOps toolchain lean on Bash somewhere?</p>
+        <label class="quiz-option" data-val="a">Bash has the best error messages of any shell</label>
+        <label class="quiz-option" data-val="b">Bash is required by the Linux kernel to boot</label>
+        <label class="quiz-option" data-val="c">Bash ships by default on almost every Linux system, making it the universal glue for chaining commands</label>
+        <label class="quiz-option" data-val="d">Bash compiles to faster binaries than Go</label>
+        <div class="explanation">Bash's advantage is availability, not raw power — it is present on virtually every Linux box already, so scripts written in it run anywhere without installing anything extra.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="a">
+        <div class="question-num">Question 2 of 5</div>
+        <p>What is a defining trait of Go that made Kubernetes, Terraform, and Prometheus all get written in it?</p>
+        <label class="quiz-option" data-val="a">It compiles to a single fast binary with built-in concurrency and no separate runtime</label>
+        <label class="quiz-option" data-val="b">It has the largest standard library of any language</label>
+        <label class="quiz-option" data-val="c">It was the first language to support YAML natively</label>
+        <label class="quiz-option" data-val="d">It only runs inside containers</label>
+        <div class="explanation">Go's compiled binaries, strong typing, and native concurrency support are exactly what infrastructure tools that need to be fast and reliable across platforms tend to need.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="d">
+        <div class="question-num">Question 3 of 5</div>
+        <p>What makes YAML, JSON, and HCL different from languages like Python or Go?</p>
+        <label class="quiz-option" data-val="a">They cannot be version controlled in git</label>
+        <label class="quiz-option" data-val="b">They only work with Kubernetes, not Terraform</label>
+        <label class="quiz-option" data-val="c">They require a compiler before use</label>
+        <label class="quiz-option" data-val="d">They are declarative data formats describing a desired state, not step-by-step instructions</label>
+        <div class="explanation">A Terraform .tf file or Kubernetes manifest describes what should exist, not a sequence of commands to run — a separate tool reconciles reality to match that description.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="b">
+        <div class="question-num">Question 4 of 5</div>
+        <p>Where are Perl, Awk, and Sed most likely to still show up today?</p>
+        <label class="quiz-option" data-val="a">As the primary language for new Kubernetes operators</label>
+        <label class="quiz-option" data-val="b">In older log-parsing scripts inherited from pre-Bash-era infrastructure</label>
+        <label class="quiz-option" data-val="c">As the recommended language for Terraform modules</label>
+        <label class="quiz-option" data-val="d">Inside GitHub Actions workflow files</label>
+        <div class="explanation">These tools predate widespread Bash scripting and mostly persist today in legacy log-processing pipelines that nobody has rewritten yet.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="c">
+        <div class="question-num">Question 5 of 5</div>
+        <p>Why did Ruby's role in infrastructure automation (Chef) shrink over time?</p>
+        <label class="quiz-option" data-val="a">Ruby was deprecated by its maintainers</label>
+        <label class="quiz-option" data-val="b">Chef stopped supporting Linux</label>
+        <label class="quiz-option" data-val="c">YAML-based declarative tools like Ansible became the more common way to express infrastructure as code</label>
+        <label class="quiz-option" data-val="d">Ruby cannot install packages</label>
+        <div class="explanation">As tooling shifted toward plain YAML for describing desired state, Chef's Ruby-based DSL became less common relative to newer YAML-first tools.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Pre-Quiz</button>
+      <div class="quiz-result" id="pre-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>3. The Concept — Reading the Landscape</h2>
+
+    <h3>Bash: the universal glue</h3>
+    <p>
+      Every Linux server ships with Bash, which is exactly why it is the
+      default choice for entrypoint scripts, provisioning steps, and small
+      CI/CD jobs. It is not a general-purpose application language — it is
+      built to chain existing commands together and handle their text
+      output.
+    </p>
+    <pre><code>#!/bin/bash
+# Loop through all running pods and print names
+for pod in $(kubectl get pods -o name); do
+  echo "Pod: $pod"
+done</code></pre>
+
+    <h3>Python: readable, and enormous library support</h3>
+    <p>
+      Python's combination of readable syntax and a huge ecosystem of
+      libraries is why it underpins tools like Ansible and the AWS CLI, and
+      why it is a common choice for API automation and testing.
+    </p>
+    <pre><code>import os
+print("Home directory:", os.getenv("HOME"))
+
+# Check web endpoint health
+import requests
+r = requests.get("https://api.github.com")
+print("Status:", r.status_code)</code></pre>
+
+    <h3>Go: the language behind your tools</h3>
+    <p>
+      Go compiles to a single, fast, statically typed binary with
+      concurrency built in and no separate runtime to install. That is the
+      exact profile that made it the language of choice for Kubernetes,
+      Terraform, and Prometheus — three tools this course already leans on
+      heavily.
+    </p>
+    <pre><code>package main
+
+import "fmt"
+
+func main() {
+  fmt.Println("Hello from Go — the language behind K8s and Terraform")
+}</code></pre>
+
+    <h3>YAML / JSON / HCL: declarative, not imperative</h3>
+    <p>
+      These are data formats, not programming languages. A Helm values file,
+      a GitHub Actions workflow, and a Terraform configuration all describe
+      a desired end state — replica counts, image tags, resource
+      definitions — and a separate tool reconciles the real world against
+      that description.
+    </p>
+    <pre><code># values.yaml — Helm chart config
+app:
+  name: diner
+  replicas: 3
+  image: diner:v2</code></pre>
+
+    <h3>Legacy text tools: read more than you write</h3>
+    <p>
+      Perl, Awk, and Sed predate Bash-centric scripting and still appear in
+      older infrastructure for fast text processing on raw logs. Most
+      engineers today encounter them when inheriting an old script, not when
+      starting something new.
+    </p>
+    <pre><code># Extract lines with ERROR and print the 5th field
+awk '/ERROR/ {print $5}' /var/log/syslog</code></pre>
+
+    <h3>Ruby and Chef: declarative before YAML won</h3>
+    <p>
+      Chef recipes, written in a Ruby-based domain-specific language, were
+      an early attempt at declarative infrastructure — install this
+      package, ensure this state — before YAML-first tools like Ansible
+      became the dominant way to express the same idea.
+    </p>
+    <pre><code>puts "Chef style resource example:"
+package "nginx" do
+  action :install
+end</code></pre>
+
+    <div class="alert alert-info">
+      The pattern across all six: pick the tool by what the task actually
+      needs — chaining commands, general-purpose logic, or declaring state —
+      not by which one you already know best.
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>4. Discussion</h2>
+    <div class="alert alert-success">
+      <strong>Discussion objective:</strong> Work through each question below, out loud if you have a study partner, in writing if solo. There is no code to run and nothing to commit this session.
+    </div>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <p><strong>Which of the six code samples above looks easiest to follow, and why?</strong></p>
+        <p>Point to a specific line, not just a vibe — what made it readable or unreadable to you?</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <p><strong>How does Bash differ from PowerShell in handling output?</strong></p>
+        <p>You have used PowerShell in earlier sessions on Windows and Bash-style syntax in Linux-targeted labs — what's actually different about how each treats command output as data?</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <p><strong>Why might Python be a better fit than Bash for API or cloud logic?</strong></p>
+        <p>Think back to the Python sample's <code>requests.get()</code> call — could that be done cleanly in Bash? What would get harder?</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <p><strong>What stands out about YAML compared to the code-language samples?</strong></p>
+        <p>Notice that the YAML sample has no loops, no functions, no conditionals — why is that a feature, not a limitation, for its job?</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <p><strong>Which of these languages do you expect to write most often versus mostly just read?</strong></p>
+        <p>Be honest about your own path — based on the sessions so far, which category (glue scripting, general-purpose logic, declarative config) will you touch daily?</p>
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>5. Expected Files Changed</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Action</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><em>None</em></td><td>—</td><td>This is a discussion-only session — no lab, no repository changes, nothing to commit</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>6. Commit Checkpoint</h2>
+    <div class="alert alert-info">
+      No commit for this session. If you want a written record of your discussion answers, add them to a personal notes file outside the repo, or use the notes widget in the bottom-right corner of this page.
+    </div>
+
+    <h2>7. Code Review Checklist</h2>
+    <div class="card">
+      <div class="checklist-item"><input type="checkbox" id="c1"/><label for="c1">I can name which category (glue scripting, general-purpose logic, declarative config) each of the six languages belongs to</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c2"/><label for="c2">I can explain why Kubernetes, Terraform, and Prometheus are all written in Go</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c3"/><label for="c3">I worked through all five discussion questions, not just skimmed them</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c4"/><label for="c4">I can explain the declarative vs imperative distinction in my own words, without re-reading the concept section</label></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>8. Post-Coding Quiz</h2>
+    <div id="post-quiz" data-pass-post="Proceed to Session 16 (Layer 7 — the capstone project begins) after ≥ 80%.">
+      <div class="quiz-question" data-question="0" data-answer="d">
+        <div class="question-num">Question 1 of 5</div>
+        <p>A teammate wants to write a quick script that restarts a container if a health check fails. What's the strongest argument for Bash here over Python?</p>
+        <label class="quiz-option" data-val="a">Bash is a compiled language, so it runs faster</label>
+        <label class="quiz-option" data-val="b">Python cannot call shell commands</label>
+        <label class="quiz-option" data-val="c">Bash has better support for HTTP requests</label>
+        <label class="quiz-option" data-val="d">The task is mostly chaining a couple of existing commands, which is exactly what Bash is built for and it needs no extra install</label>
+        <div class="explanation">When a task is essentially "run this command, check its result, run another command," Bash's zero-install availability and command-chaining strength usually win over reaching for a full language.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="a">
+        <div class="question-num">Question 2 of 5</div>
+        <p>Why is a Terraform .tf file described as declarative rather than imperative?</p>
+        <label class="quiz-option" data-val="a">It states what infrastructure should exist, and Terraform figures out the steps to get there</label>
+        <label class="quiz-option" data-val="b">It runs top to bottom exactly like a Bash script</label>
+        <label class="quiz-option" data-val="c">It cannot describe more than one resource at a time</label>
+        <label class="quiz-option" data-val="d">Declarative just means it uses YAML syntax</label>
+        <div class="explanation">The defining trait of a declarative format is describing the desired end state rather than a sequence of steps — Terraform's own engine works out the plan to reach that state.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="c">
+        <div class="question-num">Question 3 of 5</div>
+        <p>You inherit an old log-processing script written in Awk. What is the most realistic response?</p>
+        <label class="quiz-option" data-val="a">Immediately rewrite it in Go for performance</label>
+        <label class="quiz-option" data-val="b">Assume it is broken since Awk is deprecated</label>
+        <label class="quiz-option" data-val="c">Read and understand it as-is — legacy text tools like Awk are still common enough to need reading, even if you would not write new ones</label>
+        <label class="quiz-option" data-val="d">Delete it since no modern tool uses text processing</label>
+        <div class="explanation">Legacy tools like Perl, Awk, and Sed are a "read more than write" category — the realistic skill is being able to understand what an inherited script does, not necessarily authoring new ones.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="b">
+        <div class="question-num">Question 4 of 5</div>
+        <p>What replaced most of Ruby/Chef's role in new infrastructure-as-code projects?</p>
+        <label class="quiz-option" data-val="a">Go became the standard configuration language</label>
+        <label class="quiz-option" data-val="b">YAML-first declarative tools such as Ansible became the more common way to express infrastructure as code</label>
+        <label class="quiz-option" data-val="c">Bash scripts fully replaced configuration management</label>
+        <label class="quiz-option" data-val="d">Nothing replaced it — Chef is still the dominant tool today</label>
+        <div class="explanation">As the ecosystem moved toward plain YAML for expressing desired state, Chef's Ruby DSL became a smaller share of new infrastructure-as-code work.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="a">
+        <div class="question-num">Question 5 of 5</div>
+        <p>What starts in Session 16?</p>
+        <label class="quiz-option" data-val="a">Layer 7 — a single continuous capstone project (the Text Masker app) built and shipped through CI/CD and release strategies</label>
+        <label class="quiz-option" data-val="b">A second round of standalone Kubernetes topic labs</label>
+        <label class="quiz-option" data-val="c">A deep dive into Go specifically</label>
+        <label class="quiz-option" data-val="d">A repeat of the Docker fundamentals from Session 1</label>
+        <div class="explanation">Session 16 begins the capstone layer: one real app, built from scratch and carried through CI, CD to local and cloud Kubernetes, and blue-green/canary releases, using the exact tools discussed in this session.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Post-Quiz</button>
+      <div class="quiz-result" id="post-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>9. Reflection Questions</h2>
+    <div class="card">
+      <ol>
+        <li>Looking back at Sessions 1–14, which language did you personally write the most of — and does that match what this session says it is "for"?</li>
+        <li>If you had to teach one of these six languages to someone with zero DevOps background, which would you pick first, and why?</li>
+        <li>Is there a language not covered here (PowerShell, Rust, TypeScript) that you think deserves a place in this landscape? Where would it fit?</li>
+      </ol>
+    </div>
+
+    <h2>10. What Breaks If This Knowledge Is Missing?</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Reaching for Bash on a task that needs real logic:</strong> A script that grows past a few dozen lines of Bash conditionals becomes fragile and hard to debug — that is usually the sign a task has outgrown "glue" territory and belongs in Python or Go.</li>
+        <li><strong>Treating YAML like a programming language:</strong> Someone who expects to write a loop or a conditional directly in a Kubernetes manifest will get stuck — declarative formats intentionally do not support that, by design.</li>
+        <li><strong>Not recognizing Go in the toolchain:</strong> An engineer who does not know Kubernetes and Terraform are Go binaries under the hood will struggle to read their source, understand plugin systems, or contribute upstream fixes.</li>
+        <li><strong>Panicking at inherited Perl/Awk/Sed:</strong> Assuming legacy scripts are unreadable garbage, rather than learning to read them, means re-solving already-solved problems and losing institutional knowledge baked into the original script.</li>
+      </ul>
+    </div>
+
+    <h2>11. What We Learned</h2>
+    <div class="card" style="border-color:var(--green);">
+      <p><strong>Today you learned: Bash is the universal glue language on Linux, Python trades some speed for readability and library support, Go's compiled-and-concurrent design is why core infrastructure tools are written in it, YAML/JSON/HCL are declarative formats describing state rather than steps, and Perl/Awk/Sed and Ruby/Chef are legacy tools worth reading but rarely worth writing new.</strong></p>
+      <p><strong>Next:</strong> <a href="../session-16/index.html">Session 16 — Building the Capstone App</a>.</p>
+    </div>
+
+    <p style="margin-top:24px;"><a href="../session-14/index.html">← Session 14</a> · <a href="../../syllabus/index.html">Syllabus</a> · <a href="../session-16/index.html">Session 16 →</a></p>
+
+  </div>
+</main>
+
+<script src="../../quiz.js" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    setupQuiz('pre');
+    setupQuiz('post');
+
+    document.querySelectorAll('.concept-explanation-toggle').forEach(function (button) {
+      button.addEventListener('click', function () {
+        const card = button.closest('.concept-card');
+        const isRevealed = card.classList.toggle('explanation-revealed');
+        button.setAttribute('aria-expanded', String(isRevealed));
+        button.querySelector('.concept-explanation-hint').textContent = isRevealed
+          ? 'Click to blur'
+          : 'Click to reveal';
+      });
+    });
+  });
+</script>
+<script src="../../notes-widget.js" defer></script>
+<script src="../../bookmark-widget.js" defer></script>
+
+</body>
+</html>

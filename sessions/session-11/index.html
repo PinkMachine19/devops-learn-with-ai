@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Session 11 — Blue-Green Deployments (Raw Kubernetes, Helm, and Terraform)</title>
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="stylesheet" href="../../notes-widget.css" />
+  <link rel="stylesheet" href="../../bookmark-widget.css" />
+  <link rel="stylesheet" href="../../quiz-explain-modal.css" />
+  <style>
+    .quiz-option{display:block;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:8px;cursor:pointer;font-size:14px;transition:border-color .15s,background .15s;user-select:none;}
+    .quiz-option:hover{border-color:var(--accent);background:var(--surface);}
+    .quiz-option.selected{border-color:var(--accent);background:rgba(255,92,168,.1);}
+    .quiz-option.correct{border-color:var(--green);background:rgba(63,185,80,.1);}
+    .quiz-option.wrong{border-color:var(--red);background:rgba(248,81,73,.1);}
+    .quiz-question{margin-bottom:28px;}
+    .quiz-question p{font-weight:600;margin-bottom:10px;font-size:15px;}
+    .question-num{color:var(--text-muted);font-size:12px;font-weight:400;margin-bottom:4px;}
+    .quiz-result{display:none;padding:16px 20px;border-radius:var(--radius);margin-top:16px;font-size:15px;font-weight:600;}
+    .quiz-result.pass{background:rgba(63,185,80,.12);border:1px solid var(--green);color:var(--green);}
+    .quiz-result.fail{background:rgba(248,81,73,.12);border:1px solid var(--red);color:var(--red);}
+    .explanation{display:none;font-size:13px;color:var(--text-muted);margin-top:6px;padding:8px 12px;background:var(--surface-2);border-radius:var(--radius);border-left:2px solid var(--border);}
+    .submit-btn{background:var(--accent);color:#0d1117;border:none;border-radius:var(--radius);padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;}
+    .submit-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .step{display:flex;gap:16px;margin-bottom:20px;}
+    .step-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#0d1117;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:2px;}
+    .step-body{flex:1;}
+    .step-body p{margin-bottom:6px;}
+    .section-divider{border:none;border-top:2px solid var(--border);margin:40px 0;}
+    .checklist-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;}
+    .checklist-item input[type="checkbox"]{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;}
+
+    /* Comic-panel concept grid — image teaches first, caption only reinforces */
+    .concept-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0;}
+    @media (max-width:760px){.concept-grid{grid-template-columns:repeat(2,1fr);}}
+    .concept-card{background:#111111;border:1px solid #2a2a2a;border-radius:8px;padding:8px 8px 10px;}
+    .concept-card svg{display:block;width:100%;height:auto;}
+    .concept-card figcaption{margin-top:6px;font-family:monospace;font-size:10.5px;line-height:1.3;color:#c9c9c9;text-align:center;}
+    .concept-card figcaption b{color:#ff5ca8;}
+    .concept-explanation-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin-top:10px;padding:7px 8px;border:1px solid #3a3a3a;border-radius:5px;background:#1a1a1a;color:#ff5ca8;font-family:monospace;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;}
+    .concept-explanation-toggle:hover,.concept-explanation-toggle:focus-visible{border-color:#ff5ca8;outline:none;}
+    .concept-explanation-hint{color:#8b949e;font-size:8px;font-weight:400;letter-spacing:0;text-transform:none;}
+    .concept-explanation-text{margin:7px 2px 0;font-size:11px;line-height:1.45;color:#d8d8d8;filter:blur(4px);user-select:none;transition:filter .2s ease;}
+    .concept-card.explanation-revealed .concept-explanation-text{filter:none;user-select:text;}
+    .concept-card.explanation-revealed .concept-explanation-hint{color:#3fb950;}
+    .anchor{color:#ff5ca8;font-weight:700;}
+    .objectives-list{list-style:none;padding-left:0;}
+    .objectives-list li{display:flex;gap:12px;align-items:baseline;margin-bottom:12px;font-size:15px;}
+    .obj-num{flex-shrink:0;min-width:34px;color:#ff5ca8;font-family:monospace;font-weight:700;font-size:12px;background:rgba(255,92,168,.1);border:1px solid rgba(255,92,168,.4);border-radius:10px;padding:2px 6px;text-align:center;}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="../../index.html" class="brand">⚙ DevOps Learning</a>
+    <a href="../../syllabus/index.html">Syllabus</a>
+    <a href="../../sessions/index.html" class="active">Sessions</a>
+    <a href="../../quizzes/index.html">Quizzes</a>
+    <a href="../../labs/index.html">Labs</a>
+  </div>
+</nav>
+
+<main>
+  <div class="container">
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+      <span class="badge badge-layer">Layer 5</span>
+      <span class="badge badge-current">Session 11</span>
+      <span style="color:var(--text-muted);font-size:13px;">Release Strategies</span>
+    </div>
+    <h1>Blue-Green Deployments (Raw Kubernetes, Helm, and Terraform)</h1>
+    <p class="subtitle">
+      Session 10 put a cert-manager certificate in front of the app and gave it
+      a trusted HTTPS address behind an ingress. That address is now permanent —
+      but the thing behind it does not have to be. Today you'll learn how to
+      release a brand-new version of the app onto that same ingress, at that
+      same URL, with zero downtime and an instant undo: blue-green deployment,
+      built three different ways — raw <code>kubectl</code>, Helm, and Terraform —
+      so you can see the same idea survive three different tools.
+    </p>
+    <div class="alert alert-info">Estimated time: 65–80 minutes (all three approaches)</div>
+    <p style="color:var(--text-muted);font-size:13px;">Flow: Pre-quiz → Concept → Lab → Commit → Post-quiz</p>
+
+    <!-- Comic-panel concept grid: image teaches first, caption only reinforces -->
+    <div class="concept-grid">
+
+      <!-- 1. Overview: traffic -> selector switch -> blue/green -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <text x="80" y="14" fill="white" font-family="monospace" font-size="9" text-anchor="middle">traffic</text>
+          <path d="M80,18 V38" stroke="white" stroke-width="2" marker-end="url(#s11a1)"/>
+          <defs><marker id="s11a1" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="white"/></marker></defs>
+          <rect x="46" y="40" width="68" height="22" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="80" y="55" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle">Service selector</text>
+          <path d="M60,62 L34,90" stroke="#3fb950" stroke-width="2.5" marker-end="url(#s11a2)"/>
+          <path d="M100,62 L126,90" stroke="#666" stroke-width="2" stroke-dasharray="3,3"/>
+          <defs><marker id="s11a2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker></defs>
+          <rect x="8" y="92" width="52" height="30" rx="4" fill="none" stroke="#3fb950" stroke-width="2.2"/>
+          <text x="34" y="111" fill="#3fb950" font-family="monospace" font-size="10" text-anchor="middle" font-weight="bold">BLUE</text>
+          <rect x="100" y="92" width="52" height="30" rx="4" fill="none" stroke="#666" stroke-width="1.6"/>
+          <text x="126" y="111" fill="#888" font-family="monospace" font-size="10" text-anchor="middle">GREEN</text>
+          <text x="80" y="140" fill="white" font-family="monospace" font-size="9" text-anchor="middle">both run, one is live</text>
+        </svg>
+        <figcaption><b>blue-green</b> = two full copies, one switch</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Blue and green are two complete, independent copies of the app running at the same time. Only one of them receives real traffic at any moment — which one is a single switch, not a redeploy.</p>
+      </figure>
+
+      <!-- 2. Rolling update vs blue-green -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <text x="6" y="14" fill="white" font-family="monospace" font-size="8">rolling:</text>
+          <rect x="10" y="20" width="24" height="16" rx="2" fill="none" stroke="#888" stroke-width="1.5"/>
+          <rect x="40" y="20" width="24" height="16" rx="2" fill="none" stroke="#3fb950" stroke-width="1.5"/>
+          <rect x="70" y="20" width="24" height="16" rx="2" fill="none" stroke="#3fb950" stroke-width="1.5"/>
+          <text x="100" y="32" fill="#666" font-family="monospace" font-size="8">...one at a time</text>
+          <line x1="6" y1="46" x2="154" y2="46" stroke="#2a2a2a" stroke-width="1"/>
+          <text x="6" y="62" fill="white" font-family="monospace" font-size="8">blue-green:</text>
+          <rect x="10" y="70" width="60" height="20" rx="3" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <text x="40" y="83" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="middle">all live</text>
+          <rect x="90" y="70" width="60" height="20" rx="3" fill="none" stroke="#666" stroke-width="1.6" stroke-dasharray="3,3"/>
+          <text x="120" y="83" fill="#888" font-family="monospace" font-size="8" text-anchor="middle">all standby</text>
+          <path d="M40,94 L120,94" stroke="#ff5ca8" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#s11a3)"/>
+          <defs><marker id="s11a3" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <text x="80" y="112" fill="white" font-family="monospace" font-size="8" text-anchor="middle">flip = all pods at once</text>
+          <text x="80" y="136" fill="white" font-family="monospace" font-size="9" text-anchor="middle" font-weight="bold">atomic, not gradual</text>
+        </svg>
+        <figcaption>not a <b>rolling update</b></figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A rolling update swaps pods one at a time inside a single environment, mixing old and new versions mid-flight. Blue-green never mixes — the whole new environment is either fully off or fully live.</p>
+      </figure>
+
+      <!-- 3. Instant rollback -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="30" width="60" height="30" rx="4" fill="none" stroke="#666" stroke-width="1.6"/>
+          <text x="40" y="49" fill="#888" font-family="monospace" font-size="9" text-anchor="middle">BLUE</text>
+          <rect x="90" y="30" width="60" height="30" rx="4" fill="none" stroke="#f85149" stroke-width="2"/>
+          <text x="120" y="46" fill="#f85149" font-family="monospace" font-size="9" text-anchor="middle" font-weight="bold">GREEN</text>
+          <text x="120" y="57" fill="#f85149" font-family="monospace" font-size="7" text-anchor="middle">bad build</text>
+          <path d="M120,64 Q80,86 44,64" fill="none" stroke="#ff5ca8" stroke-width="2.5" marker-end="url(#s11a4)"/>
+          <defs><marker id="s11a4" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <text x="80" y="96" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle">flip selector back</text>
+          <rect x="10" y="106" width="60" height="26" rx="4" fill="none" stroke="#3fb950" stroke-width="2.2"/>
+          <text x="40" y="123" fill="#3fb950" font-family="monospace" font-size="9" text-anchor="middle" font-weight="bold">LIVE again</text>
+          <text x="80" y="144" fill="white" font-family="monospace" font-size="8" text-anchor="middle">no redeploy needed</text>
+        </svg>
+        <figcaption><b>rollback</b> = one more flip</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Because blue never gets deleted when green goes live, undoing a bad release is exactly the same operation as releasing — flip the switch the other way. Nothing has to be rebuilt or reapplied.</p>
+      </figure>
+
+      <!-- 4. Approach 1: raw kubectl -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="16" width="132" height="40" rx="4" fill="none" stroke="white" stroke-width="1.6"/>
+          <text x="80" y="32" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">$ kubectl edit svc</text>
+          <text x="80" y="46" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">color: blue → green</text>
+          <path d="M80,58 V78" stroke="#ff5ca8" stroke-width="2" marker-end="url(#s11a5)"/>
+          <defs><marker id="s11a5" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <rect x="40" y="82" width="80" height="24" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="80" y="98" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle">Service (selector)</text>
+          <text x="80" y="122" fill="white" font-family="monospace" font-size="9" text-anchor="middle" font-weight="bold">Approach 1</text>
+          <text x="80" y="136" fill="white" font-family="monospace" font-size="9" text-anchor="middle">raw Kubernetes YAML</text>
+        </svg>
+        <figcaption>edit the <b>selector</b> label, reapply</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">With plain manifests, blue-green is just a Service whose selector includes a color label. Changing that one label and reapplying the file is the entire cutover mechanism.</p>
+      </figure>
+
+      <!-- 5. Approach 2: Helm -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <path d="M40,16 L80,4 L120,16 L120,40 L80,52 L40,40 Z" fill="none" stroke="#ff5ca8" stroke-width="1.8"/>
+          <text x="80" y="32" fill="#ff5ca8" font-family="monospace" font-size="9" text-anchor="middle" font-weight="bold">chart</text>
+          <path d="M80,54 V74" stroke="white" stroke-width="2" marker-end="url(#s11a6)"/>
+          <defs><marker id="s11a6" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="white"/></marker></defs>
+          <rect x="30" y="78" width="100" height="24" rx="3" fill="none" stroke="white" stroke-width="1.6"/>
+          <text x="80" y="94" fill="white" font-family="monospace" font-size="7" text-anchor="middle">activeColor: green</text>
+          <path d="M80,104 V116" stroke="#3fb950" stroke-width="2" marker-end="url(#s11a7)"/>
+          <defs><marker id="s11a7" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker></defs>
+          <text x="80" y="132" fill="#3fb950" font-family="monospace" font-size="9" text-anchor="middle" font-weight="bold">Approach 2</text>
+          <text x="80" y="145" fill="white" font-family="monospace" font-size="8" text-anchor="middle">helm upgrade -f values.yaml</text>
+        </svg>
+        <figcaption><b>values.yaml</b> is the one control</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">The chart templates a Service whose selector reads an activeColor value. Running helm upgrade with a changed value re-renders and reapplies every affected manifest in one command.</p>
+      </figure>
+
+      <!-- 6. Approach 3: Terraform -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="50" y="8" width="60" height="18" rx="3" fill="none" stroke="#ff5ca8" stroke-width="1.8"/>
+          <text x="80" y="21" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">active_color</text>
+          <path d="M80,26 V44" stroke="white" stroke-width="2" marker-end="url(#s11a8)"/>
+          <defs><marker id="s11a8" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="white"/></marker></defs>
+          <rect x="30" y="48" width="100" height="26" rx="3" fill="none" stroke="white" stroke-width="1.6"/>
+          <text x="80" y="61" fill="white" font-family="monospace" font-size="7" text-anchor="middle">locals.service_map</text>
+          <text x="80" y="70" fill="white" font-family="monospace" font-size="7" text-anchor="middle">[active_color]</text>
+          <path d="M80,76 V92" stroke="#3fb950" stroke-width="2" marker-end="url(#s11a9)"/>
+          <defs><marker id="s11a9" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker></defs>
+          <rect x="42" y="96" width="76" height="20" rx="3" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <text x="80" y="110" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="middle">ingress backend</text>
+          <text x="80" y="132" fill="white" font-family="monospace" font-size="9" text-anchor="middle" font-weight="bold">Approach 3</text>
+          <text x="80" y="145" fill="white" font-family="monospace" font-size="8" text-anchor="middle">terraform apply -auto-approve</text>
+        </svg>
+        <figcaption>one <b>variable</b>, declaratively applied</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A single active_color variable feeds a locals lookup table that resolves to the correct Service name. Terraform records which color is active in its state, so the switch is auditable and repeatable.</p>
+      </figure>
+
+      <!-- 7. Cost tradeoff -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="20" y="20" width="50" height="60" rx="4" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <text x="45" y="54" fill="#3fb950" font-family="monospace" font-size="9" text-anchor="middle">live</text>
+          <rect x="90" y="20" width="50" height="60" rx="4" fill="none" stroke="#666" stroke-width="1.8" stroke-dasharray="3,3"/>
+          <text x="115" y="54" fill="#888" font-family="monospace" font-size="9" text-anchor="middle">idle</text>
+          <text x="80" y="98" fill="#f85149" font-family="monospace" font-size="10" text-anchor="middle" font-weight="bold">2x compute, always</text>
+          <text x="80" y="114" fill="white" font-family="monospace" font-size="8" text-anchor="middle">even while idle is on standby</text>
+          <text x="80" y="136" fill="white" font-family="monospace" font-size="9" text-anchor="middle">safety costs capacity</text>
+        </svg>
+        <figcaption>the price of an <b>instant</b> rollback</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Keeping a full standby environment ready to receive traffic at any second means paying for double the CPU and memory the whole time, not just during the switch.</p>
+      </figure>
+
+      <!-- 8. Next session -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="58" width="46" height="34" rx="4" fill="none" stroke="#666" stroke-width="1.8" transform="rotate(-2,37,75)"/>
+          <text x="37" y="79" fill="#666" font-family="monospace" font-size="10" text-anchor="middle">11</text>
+          <path d="M64,75 H108" stroke="#ff5ca8" stroke-width="2.5" stroke-dasharray="5,4" marker-end="url(#s11a10)"/>
+          <defs><marker id="s11a10" markerWidth="9" markerHeight="9" refX="4" refY="4" orient="auto"><polygon points="0,0 9,4 0,9" fill="#ff5ca8"/></marker></defs>
+          <rect x="112" y="52" width="42" height="46" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2" transform="rotate(2,133,75)"/>
+          <text x="133" y="80" fill="#ff5ca8" font-family="monospace" font-size="14" text-anchor="middle" font-weight="bold">12</text>
+          <path d="M118,110 a10,8 0 1 1 20,-2" fill="none" stroke="white" stroke-width="1.6"/>
+          <text x="80" y="132" fill="white" font-family="monospace" font-size="9" text-anchor="middle">is green actually healthy?</text>
+        </svg>
+        <figcaption>next: probes &amp; autoscaling</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Blue-green assumes you know green is healthy before flipping to it. Session 12 builds the liveness and readiness probes that make that assumption actually true.</p>
+      </figure>
+
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>1. Learning Objectives</h2>
+    <div class="card">
+      <ol class="objectives-list">
+        <li><span class="obj-num">1/5</span><span>Explain what makes a <span class="anchor">blue-green deployment</span> different from a <span class="anchor">rolling update</span>: two full environments, one atomic switch</span></li>
+        <li><span class="obj-num">2/5</span><span>Perform a blue-green cutover with a raw Kubernetes <span class="anchor">Service selector</span> and confirm it with <code>kubectl get endpoints</code></span></li>
+        <li><span class="obj-num">3/5</span><span>Perform the same cutover with <span class="anchor">Helm</span>, using an <code>activeColor</code> value and <code>helm upgrade</code></span></li>
+        <li><span class="obj-num">4/5</span><span>Perform the same cutover with <span class="anchor">Terraform</span>, using a validated <code>active_color</code> variable and a <span class="anchor">locals lookup map</span></span></li>
+        <li><span class="obj-num">5/5</span><span>Identify the <span class="anchor">resource cost</span> tradeoff of keeping a full standby environment running at all times</span></li>
+      </ol>
+    </div>
+
+    <h2>2. Pre-Coding Quiz</h2>
+    <p>Answer before reading the concept. Need 4/5 to proceed.</p>
+
+    <div id="pre-quiz">
+      <div class="quiz-question" data-question="0" data-answer="b">
+        <div class="question-num">Question 1 of 5</div>
+        <p>What best describes a blue-green deployment?</p>
+        <label class="quiz-option" data-val="a">Pods are updated one at a time inside a single environment</label>
+        <label class="quiz-option" data-val="b">Two full environments run in parallel; traffic switches to one instantly</label>
+        <label class="quiz-option" data-val="c">Traffic is split 90/10 between two versions and shifted gradually</label>
+        <label class="quiz-option" data-val="d">Only the failing pods are replaced, one image tag at a time</label>
+        <div class="explanation">Blue-green keeps two complete, independent copies running side by side. Exactly one receives real traffic at a time, and switching which one is a single atomic action.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="c">
+        <div class="question-num">Question 2 of 5</div>
+        <p>In the raw Kubernetes approach, what actually performs the traffic cutover?</p>
+        <label class="quiz-option" data-val="a">Deleting the blue Deployment</label>
+        <label class="quiz-option" data-val="b">Scaling blue down to zero replicas</label>
+        <label class="quiz-option" data-val="c">Changing the Service's selector label and reapplying it</label>
+        <label class="quiz-option" data-val="d">Restarting the ingress controller pod</label>
+        <div class="explanation">The Service's selector decides which pods it routes to. Editing that one label (for example color: blue to color: green) and reapplying the manifest is the entire cutover.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="a">
+        <div class="question-num">Question 3 of 5</div>
+        <p>What is the main resource cost of blue-green deployments?</p>
+        <label class="quiz-option" data-val="a">Roughly double the compute, since both environments stay up</label>
+        <label class="quiz-option" data-val="b">No extra cost beyond the original single environment</label>
+        <label class="quiz-option" data-val="c">Extra storage only, compute usage stays the same</label>
+        <label class="quiz-option" data-val="d">Cost only appears during the few seconds of the switch</label>
+        <div class="explanation">The standby environment has to be fully running and ready at all times to make an instant switch possible, so you pay for its CPU and memory continuously, not just during the cutover.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="d">
+        <div class="question-num">Question 4 of 5</div>
+        <p>In the Helm approach, what triggers the switch to the green release?</p>
+        <label class="quiz-option" data-val="a">Deleting the diner-blue chart entirely</label>
+        <label class="quiz-option" data-val="b">Editing the ingress YAML file by hand</label>
+        <label class="quiz-option" data-val="c">Running <code>helm create</code> again</label>
+        <label class="quiz-option" data-val="d">Running <code>helm upgrade</code> with a changed active-color value</label>
+        <div class="explanation">Helm templates render from values. Changing the activeColor value and running helm upgrade re-renders and reapplies the Service that selects on that color.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="b">
+        <div class="question-num">Question 5 of 5</div>
+        <p>In the Terraform approach, what single variable decides which color is live?</p>
+        <label class="quiz-option" data-val="a">kubeconfig</label>
+        <label class="quiz-option" data-val="b">active_color</label>
+        <label class="quiz-option" data-val="c">namespace</label>
+        <label class="quiz-option" data-val="d">install_ingress_controller</label>
+        <div class="explanation">active_color feeds a locals map that resolves to the correct Service name, which the ingress backend then points at.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Pre-Quiz</button>
+      <div class="quiz-result" id="pre-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>3. The Concept — One Idea, Three Tools</h2>
+    <p>
+      Every approach below solves the exact same problem: run a new version
+      of the app fully side by side with the old one, prove it works, and
+      flip a single switch to send real traffic to it. What changes between
+      approaches is only <em>where that switch lives</em> and how it gets
+      flipped.
+    </p>
+
+    <h3>Approach 1: Raw Kubernetes</h3>
+    <p>
+      With plain manifests, blue and green are two ordinary Deployments that
+      happen to share an <code>app</code> label but carry different
+      <code>color</code> labels. A single Service in front of them selects
+      on both labels — <code>app=myapp</code> and <code>color=blue</code>
+      (or <code>green</code>). Nothing about the pods themselves changes
+      during a cutover; only the Service's selector does.
+    </p>
+    <pre><code>apiVersion: v1
+kind: Service
+metadata:
+  name: myapp-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: myapp
+    color: blue   # change to green, then kubectl apply
+  ports:
+    - port: 80
+      targetPort: 80</code></pre>
+    <p>
+      Verification is entirely observable through <code>kubectl</code>:
+      <code>kubectl get pods --show-labels</code> confirms both colors are
+      running, and <code>kubectl get endpoints myapp-svc -o wide</code>
+      shows exactly which pod IPs the Service is currently sending traffic
+      to. Flipping the selector back to <code>blue</code> and reapplying is
+      the entire rollback procedure — no image rebuild, no redeploy.
+    </p>
+
+    <h3>Approach 2: Helm</h3>
+    <p>
+      Helm turns the same idea into a template. A single chart defines both
+      a <code>deploy-blue</code> and a <code>deploy-green</code> resource,
+      plus one Service whose selector reads an <code>activeColor</code>
+      value from <code>values.yaml</code>:
+    </p>
+    <pre><code># values.yaml
+activeColor: blue
+image:
+  repository: nginx
+  tag: "1.25"</code></pre>
+    <pre><code># templates/service.yaml
+spec:
+  selector:
+    app.kubernetes.io/name: {{ include "diner.name" . }}
+    color: {{ .Values.activeColor | quote }}</code></pre>
+    <p>
+      A cutover becomes one command: <code>helm upgrade diner ./diner
+      --set activeColor=green</code>. Helm re-renders every template that
+      depends on that value and reapplies only what changed. Because Helm
+      keeps a release history, <code>helm rollback diner 1</code> reverts
+      to the previous revision — including its <code>activeColor</code> —
+      without you having to remember what the old value was.
+    </p>
+
+    <h3>Approach 3: Terraform</h3>
+    <p>
+      Terraform expresses the same switch declaratively, as a single
+      validated variable whose value flows into the resource graph:
+    </p>
+    <pre><code>variable "active_color" {
+  type        = string
+  description = "Which color gets traffic: blue or green"
+  default     = "blue"
+  validation {
+    condition     = contains(["blue", "green"], var.active_color)
+    error_message = "active_color must be blue or green."
+  }
+}</code></pre>
+    <p>
+      An <code>ingress.tf</code> file resolves that variable to a concrete
+      Service name through a <code>locals</code> lookup table, and the
+      ingress backend references the resolved name:
+    </p>
+    <pre><code>locals {
+  service_map = {
+    blue  = kubernetes_service_v1.blue.metadata[0].name
+    green = kubernetes_service_v1.green.metadata[0].name
+  }
+  active_service_name = local.service_map[var.active_color]
+}</code></pre>
+    <p>
+      Changing <code>active_color</code> in <code>variables.tf</code> and
+      running <code>terraform apply -auto-approve</code> updates only the
+      ingress backend reference — Terraform's plan output shows exactly
+      that one change before it applies anything, and Terraform's state
+      file becomes the permanent, auditable record of which color was live
+      at any point in time.
+    </p>
+
+    <div class="alert alert-warning">
+      <strong>A real debugging lesson from building this lab:</strong> the
+      first version of <code>ingress.tf</code> tried to pick the active
+      service with a ternary expression — <code>var.active_color == "blue"
+      ? kubernetes_service_v1.blue.metadata[0].name :
+      kubernetes_service_v1.green.metadata[0].name</code> — and it failed
+      to parse cleanly in that provider version. The fix was to replace the
+      ternary with the <code>locals</code> map lookup shown above: a map
+      keyed by color is both easier to read and easier to extend if a third
+      color is ever added, and pairing it with the variable's
+      <code>validation</code> block means an invalid color is rejected at
+      <code>terraform plan</code> time instead of producing a confusing
+      runtime error. If you hit a similar parse error with conditional
+      expressions in your own Terraform, a lookup map is usually the
+      cleaner fix.
+    </div>
+
+    <h3>The tradeoff, across all three tools</h3>
+    <p>
+      None of the three approaches change the fundamental cost: a full
+      standby environment has to be running and ready before you can trust
+      it enough to flip traffic onto it. That is strictly more resource
+      usage than a rolling update, which never runs two full copies at
+      once. The payoff is that a bad release is undone by flipping a label,
+      a value, or a variable back — not by re-running a deploy pipeline
+      under pressure.
+    </p>
+
+    <hr class="section-divider" />
+
+    <h2>4. Lab</h2>
+    <div class="alert alert-success">
+      <strong>Lab objective:</strong> Stand up a blue and a green environment
+      behind a single entry point three separate ways, cut traffic from blue
+      to green, verify it, then roll back — once with raw manifests, once
+      with a Helm chart, and once with Terraform.
+    </div>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <p><strong>Raw Kubernetes: apply blue and green Deployments plus a Service</strong></p>
+        <p>Apply a manifest defining <code>myapp</code> (blue) and <code>myapp-green</code>
+        (green) Deployments, each writing its own HTML banner to
+        <code>index.html</code> at container start, plus a <code>myapp-svc</code>
+        Service selecting on <code>app=myapp, color=blue</code>.</p>
+        <p><strong>Predict before running:</strong> before you port-forward, write down which
+        color's banner you expect to see. Run <code>kubectl port-forward svc/myapp-svc
+        8080:80</code> and open <code>http://localhost:8080</code> to confirm.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <p><strong>Raw Kubernetes: cut traffic to green, then roll back</strong></p>
+        <p>Edit the Service's <code>color</code> selector to <code>green</code> and
+        reapply. Refresh the browser — it should now show the green banner.
+        Confirm with <code>kubectl get endpoints myapp-svc -o wide</code>: the
+        listed pod IPs should now belong to the green pods, not blue.</p>
+        <p><strong>Stop and think:</strong> what would you have to do differently if you
+        instead wanted to roll back to blue? Then do it, and confirm it worked
+        with the same endpoints command.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <p><strong>Helm: create and install the blue and green releases</strong></p>
+        <p>Scaffold a chart with <code>helm create diner</code>, adjust the
+        Deployment templates to add a <code>color</code> label and matching
+        selector for each of <code>blue</code> and <code>green</code>, and
+        template the Service's selector to read <code>{{ .Values.activeColor }}</code>.
+        Install it with <code>helm install diner ./diner</code>, with
+        <code>activeColor: blue</code> in <code>values.yaml</code>.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <p><strong>Helm: flip traffic and inspect the release history</strong></p>
+        <p>Run <code>helm upgrade diner ./diner --set activeColor=green</code>.
+        Confirm the switch with <code>kubectl get pods --show-labels</code> and
+        by checking the Service's resolved selector. Then run
+        <code>helm history diner</code> and read the revision list — note which
+        revision is which <code>activeColor</code> before you decide whether to
+        roll back.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <p><strong>Terraform: install, initialize, and validate</strong></p>
+        <p>If <code>terraform -version</code> fails, install Terraform and make
+        sure its directory is on your <code>PATH</code> before continuing — a
+        missing binary is a common blocker and worth ruling out first. Run
+        <code>terraform init</code> to download the Kubernetes and Helm
+        providers declared in <code>versions.tf</code>, then
+        <code>terraform validate</code> to confirm the configuration parses
+        cleanly before you apply anything.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <p><strong>Terraform: apply with blue active, then verify</strong></p>
+        <p>With <code>active_color = "blue"</code> in <code>variables.tf</code>, run
+        <code>terraform apply -auto-approve</code>. Verify with
+        <code>kubectl get pods -n diner-lab --show-labels</code> and
+        <code>kubectl describe ingress diner-ingress -n diner-lab</code> — the
+        ingress backend should list the blue Service.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">7</div>
+      <div class="step-body">
+        <p><strong>Terraform: flip to green and confirm live routing</strong></p>
+        <p><strong>Predict before running:</strong> which Terraform resources do you
+        expect to change when only <code>active_color</code> changes — all of
+        them, or just the ingress? Change <code>active_color</code> to
+        <code>"green"</code> and run <code>terraform apply -auto-approve</code> again.
+        Read the plan output before confirming: it should show exactly one
+        resource changing, the ingress backend.</p>
+        <p>Confirm with <code>kubectl describe ingress diner-ingress -n diner-lab</code>
+        and a request against the ingress host. Then flip back to
+        <code>"blue"</code> and reapply to prove the rollback path works too.</p>
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>5. Expected Files Changed</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Action</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><code>k8s/blue-green/myapp-bluegreen.yaml</code></td><td>Added</td><td>Blue and green Deployments plus the Service that selects between them</td></tr>
+          <tr><td><code>helm/diner/values.yaml</code></td><td>Added</td><td>Defines <code>activeColor</code> as the single switch for the chart</td></tr>
+          <tr><td><code>helm/diner/templates/*.yaml</code></td><td>Added</td><td>Templated blue/green Deployments and a Service selecting on <code>activeColor</code></td></tr>
+          <tr><td><code>terraform/blue-green/*.tf</code></td><td>Added</td><td>Namespace, blue/green resources, ingress with a locals-map lookup, and the <code>active_color</code> variable</td></tr>
+          <tr><td><code>sessions/session-11/index.html</code></td><td>Updated</td><td>This session document</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>6. Commit Checkpoint</h2>
+    <pre><code>git add k8s/blue-green helm/diner terraform/blue-green sessions/session-11/index.html
+git commit -m "session-11: add blue-green cutover via raw kubectl, Helm, and Terraform"</code></pre>
+
+    <h2>7. Code Review Checklist</h2>
+    <div class="card">
+      <div class="checklist-item"><input type="checkbox" id="c1"/><label for="c1">Raw manifests: blue and green Deployments both apply cleanly and the Service selector correctly targets only one color at a time</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c2"/><label for="c2">Raw manifests: <code>kubectl get endpoints</code> was used to prove the cutover, not just a visual check in the browser</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c3"/><label for="c3">Helm: <code>activeColor</code> is the only value that needs to change to flip traffic, and <code>helm history</code> shows both revisions</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c4"/><label for="c4">Terraform: <code>active_color</code> has a validation block restricting it to <code>blue</code> or <code>green</code></label></div>
+      <div class="checklist-item"><input type="checkbox" id="c5"/><label for="c5">Terraform: the ingress backend resolves through a <code>locals</code> map, not a ternary expression</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c6"/><label for="c6">I can explain, out loud, why blue-green rollback never requires a redeploy in any of the three approaches</label></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>8. Post-Coding Quiz</h2>
+    <div id="post-quiz" data-pass-post="Proceed to Session 12 (Health Probes and Autoscaling) after ≥ 80%.">
+      <div class="quiz-question" data-question="0" data-answer="c">
+        <div class="question-num">Question 1 of 5</div>
+        <p>Why doesn't a blue-green rollback require rebuilding an image or rerunning a pipeline?</p>
+        <label class="quiz-option" data-val="a">Kubernetes automatically keeps the last five images cached</label>
+        <label class="quiz-option" data-val="b">Rollback always requires a full redeploy either way</label>
+        <label class="quiz-option" data-val="c">The old environment was never deleted, so flipping the switch back is enough</label>
+        <label class="quiz-option" data-val="d">Terraform stores a backup image inside its state file</label>
+        <div class="explanation">Blue-green keeps the previous environment fully intact and idle. Rollback is the same one-switch operation as the original cutover, just pointed the other direction.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="d">
+        <div class="question-num">Question 2 of 5</div>
+        <p>Why was the ternary expression in <code>ingress.tf</code> replaced with a <code>locals</code> map lookup?</p>
+        <label class="quiz-option" data-val="a">Terraform doesn't support ternary syntax at all, ever</label>
+        <label class="quiz-option" data-val="b">Maps run faster at apply time than conditionals</label>
+        <label class="quiz-option" data-val="c">It was a stylistic preference with no functional benefit</label>
+        <label class="quiz-option" data-val="d">The ternary failed to parse cleanly; the map is clearer and easier to extend</label>
+        <div class="explanation">The lookup map keyed by color, paired with the variable's validation block, replaced a parse failure with a construct that is both readable and safely extensible to a third color later.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="a">
+        <div class="question-num">Question 3 of 5</div>
+        <p>A rolling update is generally not a good substitute for blue-green when you need an instant rollback. Why?</p>
+        <label class="quiz-option" data-val="a">It mixes old and new pods mid-rollout, so there's no single atomic environment to fall back to</label>
+        <label class="quiz-option" data-val="b">Rolling updates cannot be reversed under any circumstances</label>
+        <label class="quiz-option" data-val="c">Rolling updates always use twice the resources of blue-green</label>
+        <label class="quiz-option" data-val="d">Kubernetes disables kubectl rollout undo during rolling updates</label>
+        <div class="explanation">Because a rolling update replaces pods gradually within one environment, at any given moment some pods are old and some are new — there's no clean single version to revert to instantly.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="b">
+        <div class="question-num">Question 4 of 5</div>
+        <p>What should be true about the green environment before you flip traffic to it in a real workflow?</p>
+        <label class="quiz-option" data-val="a">Nothing — flipping traffic first and checking after is the standard approach</label>
+        <label class="quiz-option" data-val="b">It should already be fully up and passing its own health checks</label>
+        <label class="quiz-option" data-val="c">It only needs to exist; readiness is checked after the flip</label>
+        <label class="quiz-option" data-val="d">It must have fewer replicas than blue to save cost during the switch</label>
+        <div class="explanation">Blue-green assumes the standby environment is already known-good before the switch. Session 12 builds the probes that make "known-good" something Kubernetes can verify automatically.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="c">
+        <div class="question-num">Question 5 of 5</div>
+        <p>Session 12 will focus on:</p>
+        <label class="quiz-option" data-val="a">Splitting traffic gradually between two versions by percentage</label>
+        <label class="quiz-option" data-val="b">Encrypting traffic between services with mutual TLS</label>
+        <label class="quiz-option" data-val="c">Liveness/readiness probes and autoscaling based on load</label>
+        <label class="quiz-option" data-val="d">Migrating from Helm charts to Kustomize overlays</label>
+        <div class="explanation">Session 12 covers the probes and HorizontalPodAutoscaler that keep pods provably healthy and appropriately sized — the missing piece behind "green is ready" and "there are enough pods."</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Post-Quiz</button>
+      <div class="quiz-result" id="post-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>9. Reflection Questions</h2>
+    <div class="card">
+      <ol>
+        <li>Which of the three approaches (raw kubectl, Helm, Terraform) felt like it would be safest to operate under pressure, and why?</li>
+        <li>The lab's Terraform fix replaced a ternary with a locals map. Can you think of another place in infrastructure code where a lookup table beats a chain of conditionals?</li>
+        <li>If your team could only afford to run blue-green for the highest-risk releases and rolling updates for everything else, how would you decide which category a given release falls into?</li>
+      </ol>
+    </div>
+
+    <h2>10. What Breaks If This Knowledge Is Missing?</h2>
+    <div class="card">
+      <ul>
+        <li><strong>No blue-green pattern, only rolling updates:</strong> every release risks a window where old and new versions serve traffic simultaneously, and a bad release requires a second rollout to undo instead of a single flip.</li>
+        <li><strong>Flipping traffic without verifying the standby environment first:</strong> the switch works instantly, which also means a broken green environment goes live instantly — the value of blue-green depends entirely on verifying green before the flip, not after.</li>
+        <li><strong>Ignoring the resource cost:</strong> teams that adopt blue-green everywhere without budgeting for double capacity are often the ones who quietly stop doing it under cost pressure, right when they need the safety net most.</li>
+      </ul>
+    </div>
+
+    <h2>11. What We Learned</h2>
+    <div class="card" style="border-color:var(--green);">
+      <p><strong>Today you learned: blue-green deployment keeps two full environments running and switches all traffic between them atomically, and that idea can be implemented as a raw Service selector, a Helm value, or a validated Terraform variable resolved through a locals map — with the same instant-rollback property and the same double-resource tradeoff in all three.</strong></p>
+      <p><strong>Next:</strong> <a href="../session-12/index.html">Session 12 — Health Probes and Autoscaling</a>.</p>
+    </div>
+
+    <p style="margin-top:24px;"><a href="../session-10/index.html">← Session 10</a> · <a href="../../syllabus/index.html">Syllabus</a> · <a href="../session-12/index.html">Session 12 →</a></p>
+
+  </div>
+</main>
+
+<script src="../../quiz.js" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    setupQuiz('pre');
+    setupQuiz('post');
+
+    document.querySelectorAll('.concept-explanation-toggle').forEach(function (button) {
+      button.addEventListener('click', function () {
+        const card = button.closest('.concept-card');
+        const isRevealed = card.classList.toggle('explanation-revealed');
+        button.setAttribute('aria-expanded', String(isRevealed));
+        button.querySelector('.concept-explanation-hint').textContent = isRevealed
+          ? 'Click to blur'
+          : 'Click to reveal';
+      });
+    });
+  });
+</script>
+<script src="../../notes-widget.js" defer></script>
+<script src="../../bookmark-widget.js" defer></script>
+
+</body>
+</html>

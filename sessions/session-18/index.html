@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Session 18 — Capstone: CD to Local Docker</title>
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="stylesheet" href="../../notes-widget.css" />
+  <link rel="stylesheet" href="../../bookmark-widget.css" />
+  <link rel="stylesheet" href="../../quiz-explain-modal.css" />
+  <style>
+    .quiz-option{display:block;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:8px;cursor:pointer;font-size:14px;transition:border-color .15s,background .15s;user-select:none;}
+    .quiz-option:hover{border-color:var(--accent);background:var(--surface);}
+    .quiz-option.selected{border-color:var(--accent);background:rgba(255,92,168,.1);}
+    .quiz-option.correct{border-color:var(--green);background:rgba(63,185,80,.1);}
+    .quiz-option.wrong{border-color:var(--red);background:rgba(248,81,73,.1);}
+    .quiz-question{margin-bottom:28px;}
+    .quiz-question p{font-weight:600;margin-bottom:10px;font-size:15px;}
+    .question-num{color:var(--text-muted);font-size:12px;font-weight:400;margin-bottom:4px;}
+    .quiz-result{display:none;padding:16px 20px;border-radius:var(--radius);margin-top:16px;font-size:15px;font-weight:600;}
+    .quiz-result.pass{background:rgba(63,185,80,.12);border:1px solid var(--green);color:var(--green);}
+    .quiz-result.fail{background:rgba(248,81,73,.12);border:1px solid var(--red);color:var(--red);}
+    .explanation{display:none;font-size:13px;color:var(--text-muted);margin-top:6px;padding:8px 12px;background:var(--surface-2);border-radius:var(--radius);border-left:2px solid var(--border);}
+    .submit-btn{background:var(--accent);color:#0d1117;border:none;border-radius:var(--radius);padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;}
+    .submit-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .step{display:flex;gap:16px;margin-bottom:20px;}
+    .step-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#0d1117;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:2px;}
+    .step-body{flex:1;}
+    .step-body p{margin-bottom:6px;}
+    .section-divider{border:none;border-top:2px solid var(--border);margin:40px 0;}
+    .checklist-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;}
+    .checklist-item input[type="checkbox"]{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;}
+
+    /* Comic-panel concept grid — image teaches first, caption only reinforces */
+    .concept-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0;}
+    @media (max-width:760px){.concept-grid{grid-template-columns:repeat(2,1fr);}}
+    .concept-card{background:#111111;border:1px solid #2a2a2a;border-radius:8px;padding:8px 8px 10px;}
+    .concept-card svg{display:block;width:100%;height:auto;}
+    .concept-card figcaption{margin-top:6px;font-family:monospace;font-size:10.5px;line-height:1.3;color:#c9c9c9;text-align:center;}
+    .concept-card figcaption b{color:#ff5ca8;}
+    .concept-explanation-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin-top:10px;padding:7px 8px;border:1px solid #3a3a3a;border-radius:5px;background:#1a1a1a;color:#ff5ca8;font-family:monospace;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;}
+    .concept-explanation-toggle:hover,.concept-explanation-toggle:focus-visible{border-color:#ff5ca8;outline:none;}
+    .concept-explanation-hint{color:#8b949e;font-size:8px;font-weight:400;letter-spacing:0;text-transform:none;}
+    .concept-explanation-text{margin:7px 2px 0;font-size:11px;line-height:1.45;color:#d8d8d8;filter:blur(4px);user-select:none;transition:filter .2s ease;}
+    .concept-card.explanation-revealed .concept-explanation-text{filter:none;user-select:text;}
+    .concept-card.explanation-revealed .concept-explanation-hint{color:#3fb950;}
+    .anchor{color:#ff5ca8;font-weight:700;}
+    .objectives-list{list-style:none;padding-left:0;}
+    .objectives-list li{display:flex;gap:12px;align-items:baseline;margin-bottom:12px;font-size:15px;}
+    .obj-num{flex-shrink:0;min-width:34px;color:#ff5ca8;font-family:monospace;font-weight:700;font-size:12px;background:rgba(255,92,168,.1);border:1px solid rgba(255,92,168,.4);border-radius:10px;padding:2px 6px;text-align:center;}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="../../index.html" class="brand">⚙ DevOps Learning</a>
+    <a href="../../syllabus/index.html">Syllabus</a>
+    <a href="../../sessions/index.html" class="active">Sessions</a>
+    <a href="../../quizzes/index.html">Quizzes</a>
+    <a href="../../labs/index.html">Labs</a>
+  </div>
+</nav>
+
+<main>
+  <div class="container">
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+      <span class="badge badge-layer">Layer 7</span>
+      <span class="badge badge-current">Session 18</span>
+      <span style="color:var(--text-muted);font-size:13px;">Capstone: Ship a Real App</span>
+    </div>
+    <h1>Capstone: CD to Local Docker</h1>
+    <p class="subtitle">
+      Session 17 wired up continuous integration: a push to main now
+      automatically builds both Text Masker images and pushes them to a
+      registry. Nothing runs them, though — a human still has to notice the
+      new images exist and manually restart containers. Today that gap
+      closes. This session extends the same CI pipeline into real continuous
+      deployment, so a completed build automatically redeploys the running
+      containers on a local machine, with zero manual <code>docker</code>
+      commands.
+    </p>
+    <div class="alert alert-info">Estimated time: 40–50 minutes</div>
+    <p style="color:var(--text-muted);font-size:13px;">Pre-quiz → Concept → Lab → Commit → Post-quiz</p>
+
+    <!-- Comic-panel concept grid: image teaches first, caption only reinforces -->
+    <div class="concept-grid">
+
+      <!-- 1. CI vs CD: two connected boxes, build -> deploy -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="30" width="62" height="40" rx="5" fill="none" stroke="#ff5ca8" stroke-width="2" transform="rotate(-1,39,50)"/>
+          <text x="39" y="46" fill="#ff5ca8" font-family="monospace" font-size="10" text-anchor="middle" font-weight="bold">CI</text>
+          <text x="39" y="60" fill="white" font-family="monospace" font-size="7" text-anchor="middle">build+push</text>
+          <path d="M72,50 H98" stroke="white" stroke-width="2.5" marker-end="url(#arrc1)"/>
+          <defs><marker id="arrc1" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="white"/></marker></defs>
+          <rect x="100" y="30" width="52" height="40" rx="5" fill="none" stroke="#3fb950" stroke-width="2" transform="rotate(1,126,50)"/>
+          <text x="126" y="46" fill="#3fb950" font-family="monospace" font-size="10" text-anchor="middle" font-weight="bold">CD</text>
+          <text x="126" y="60" fill="white" font-family="monospace" font-size="7" text-anchor="middle">deploy</text>
+          <text x="80" y="98" fill="white" font-family="monospace" font-size="9" text-anchor="middle">image ready</text>
+          <text x="80" y="112" fill="white" font-family="monospace" font-size="9" text-anchor="middle">≠ image running</text>
+        </svg>
+        <figcaption><b>CI</b> builds it, <b>CD</b> runs it</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">CI ends the moment a fresh image lands in the registry. CD is the separate job of noticing that image and getting it running somewhere — session 17 only did the first half.</p>
+      </figure>
+
+      <!-- 2. Self-hosted runner sitting on "your workstation" vs cloud runner -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="120" cy="24" rx="26" ry="12" fill="none" stroke="#666" stroke-width="1.6"/>
+          <ellipse cx="104" cy="20" rx="16" ry="9" fill="none" stroke="#666" stroke-width="1.6"/>
+          <text x="120" y="28" fill="#666" font-family="monospace" font-size="7" text-anchor="middle">cloud</text>
+          <rect x="16" y="70" width="70" height="46" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <rect x="24" y="78" width="54" height="22" rx="2" fill="none" stroke="#ff5ca8" stroke-width="1.4"/>
+          <text x="51" y="92" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">runner</text>
+          <circle cx="30" cy="108" r="3" fill="#3fb950"/>
+          <path d="M16,130 H86" stroke="#666" stroke-width="1.4" stroke-dasharray="3,3"/>
+          <text x="51" y="128" fill="white" font-family="monospace" font-size="7" text-anchor="middle">your workstation</text>
+          <text x="80" y="144" fill="white" font-family="monospace" font-size="9" text-anchor="middle">has your Docker daemon</text>
+        </svg>
+        <figcaption><b>self-hosted runner</b> = your box</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A cloud-hosted runner has no way to reach the Docker engine on a developer's machine. A self-hosted runner is a small agent installed on that exact machine, registered to the repo, so workflow steps run with local Docker access.</p>
+      </figure>
+
+      <!-- 3. workflow_run chaining -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="6" y="24" width="60" height="34" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <text x="36" y="45" fill="white" font-family="monospace" font-size="8" text-anchor="middle">workflow A</text>
+          <path d="M36,58 V72" stroke="#3fb950" stroke-width="2" marker-end="url(#arrc2)"/>
+          <text x="52" y="70" fill="#3fb950" font-family="monospace" font-size="8">done</text>
+          <defs><marker id="arrc2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker></defs>
+          <path d="M36,76 H98" stroke="#ff5ca8" stroke-width="2.5" marker-end="url(#arrc3)"/>
+          <defs><marker id="arrc3" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <text x="66" y="70" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">workflow_run</text>
+          <rect x="94" y="60" width="60" height="34" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="124" y="81" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle">workflow B</text>
+          <text x="80" y="120" fill="white" font-family="monospace" font-size="9" text-anchor="middle">fires only after A</text>
+          <text x="80" y="134" fill="white" font-family="monospace" font-size="9" text-anchor="middle">finishes, not on push</text>
+        </svg>
+        <figcaption><b>workflow_run</b> chains two jobs</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A second push trigger would race the build — it might fire before the new image finishes pushing. workflow_run instead waits for the named workflow to reach a completed state before starting.</p>
+      </figure>
+
+      <!-- 4. password-stdin: token flowing through a pipe, not typed -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="50" width="34" height="20" rx="3" fill="none" stroke="#ff5ca8" stroke-width="1.8"/>
+          <text x="25" y="63" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">token</text>
+          <path d="M42,60 H70" stroke="white" stroke-width="6" stroke-linecap="round"/>
+          <path d="M42,60 H70" stroke="#111" stroke-width="2" stroke-dasharray="1,4" stroke-linecap="round"/>
+          <text x="56" y="50" fill="white" font-family="monospace" font-size="7" text-anchor="middle">pipe |</text>
+          <rect x="74" y="42" width="76" height="36" rx="4" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <text x="112" y="56" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">docker login</text>
+          <text x="112" y="68" fill="#3fb950" font-family="monospace" font-size="6.5" text-anchor="middle">--password-stdin</text>
+          <line x1="20" y1="96" x2="46" y2="96" stroke="#f85149" stroke-width="2.4"/>
+          <line x1="20" y1="90" x2="46" y2="102" stroke="#f85149" stroke-width="2.4"/>
+          <line x1="20" y1="102" x2="46" y2="90" stroke="#f85149" stroke-width="2.4"/>
+          <text x="33" y="118" fill="#f85149" font-family="monospace" font-size="7" text-anchor="middle">no typed</text>
+          <text x="33" y="128" fill="#f85149" font-family="monospace" font-size="7" text-anchor="middle">prompt</text>
+          <text x="80" y="144" fill="white" font-family="monospace" font-size="9" text-anchor="middle">never lands in shell history</text>
+        </svg>
+        <figcaption>token flows in, never typed</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Piping the token into stdin lets docker login run non-interactively in a workflow step, and keeps the secret out of process arguments and shell history where it could otherwise be logged.</p>
+      </figure>
+
+      <!-- 5. stop-old/pull-new/start-new swap sequence -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="6" y="14" width="46" height="24" rx="3" fill="none" stroke="#f85149" stroke-width="1.8"/>
+          <text x="29" y="30" fill="#f85149" font-family="monospace" font-size="7" text-anchor="middle">stop old</text>
+          <path d="M29,38 V54" stroke="white" stroke-width="2" marker-end="url(#arrc4)"/>
+          <defs><marker id="arrc4" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="white"/></marker></defs>
+          <rect x="57" y="14" width="46" height="24" rx="3" fill="none" stroke="#ff5ca8" stroke-width="1.8"/>
+          <text x="80" y="30" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">pull new</text>
+          <path d="M80,38 V54" stroke="white" stroke-width="2" marker-end="url(#arrc4)"/>
+          <rect x="108" y="14" width="46" height="24" rx="3" fill="none" stroke="#3fb950" stroke-width="1.8"/>
+          <text x="131" y="30" fill="#3fb950" font-family="monospace" font-size="6.5" text-anchor="middle">start new</text>
+          <rect x="30" y="66" width="100" height="40" rx="5" fill="none" stroke="white" stroke-width="2"/>
+          <text x="80" y="90" fill="white" font-family="monospace" font-size="9" text-anchor="middle" font-weight="bold">1..2..3</text>
+          <text x="80" y="128" fill="white" font-family="monospace" font-size="9" text-anchor="middle">same order, every time</text>
+        </svg>
+        <figcaption>the container swap sequence</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Old containers are removed before new ones start so the fixed host ports they need are free — two containers can't both bind port 8080 at once.</p>
+      </figure>
+
+      <!-- 6. Full pipeline diagram, converted from overview-ascii.txt -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="6" y="4" width="60" height="22" rx="3" fill="none" stroke="#ff5ca8" stroke-width="1.6" transform="rotate(-1,36,15)"/>
+          <text x="36" y="18" fill="#ff5ca8" font-family="monospace" font-size="6.5" text-anchor="middle">CI build+push</text>
+          <path d="M36,26 V36" stroke="white" stroke-width="1.6" marker-end="url(#arrc5)"/>
+          <defs><marker id="arrc5" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto"><polygon points="0,0 7,3.5 0,7" fill="white"/></marker></defs>
+          <rect x="6" y="38" width="60" height="20" rx="3" fill="none" stroke="white" stroke-width="1.4"/>
+          <text x="36" y="51" fill="white" font-family="monospace" font-size="6" text-anchor="middle">self-hosted runner</text>
+          <path d="M36,58 V68" stroke="white" stroke-width="1.6" marker-end="url(#arrc5)"/>
+          <rect x="94" y="4" width="60" height="20" rx="3" fill="none" stroke="#3fb950" stroke-width="1.6"/>
+          <text x="124" y="17" fill="#3fb950" font-family="monospace" font-size="6" text-anchor="middle">deploy_local.ps1</text>
+          <path d="M66,14 H94" stroke="#666" stroke-width="1.2" stroke-dasharray="2,2"/>
+          <rect x="6" y="70" width="148" height="36" rx="3" fill="none" stroke="white" stroke-width="1.6"/>
+          <text x="80" y="84" fill="white" font-family="monospace" font-size="6.5" text-anchor="middle">local Docker engine</text>
+          <text x="46" y="98" fill="#ff5ca8" font-family="monospace" font-size="6" text-anchor="middle">server:8080</text>
+          <text x="118" y="98" fill="#ff5ca8" font-family="monospace" font-size="6" text-anchor="middle">client:30080</text>
+          <path d="M80,106 V116" stroke="white" stroke-width="1.6" marker-end="url(#arrc5)"/>
+          <text x="80" y="130" fill="white" font-family="monospace" font-size="8" text-anchor="middle">browser</text>
+        </svg>
+        <figcaption>the full CI→CD chain</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">One push sets off the whole chain: CI builds and pushes images, workflow_run hands off to the self-hosted runner, the runner executes deploy_local.ps1, and the local Docker engine ends up running both containers, visible in a browser.</p>
+      </figure>
+
+      <!-- 7. Next session teaser: Docker box -> Kubernetes -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="58" width="46" height="34" rx="4" fill="none" stroke="#666" stroke-width="1.8" transform="rotate(-2,37,75)"/>
+          <text x="37" y="79" fill="#666" font-family="monospace" font-size="9" text-anchor="middle">18</text>
+          <path d="M64,75 H108" stroke="#ff5ca8" stroke-width="2.5" stroke-dasharray="5,4" marker-end="url(#arrc6)"/>
+          <defs><marker id="arrc6" markerWidth="9" markerHeight="9" refX="4" refY="4" orient="auto"><polygon points="0,0 9,4 0,9" fill="#ff5ca8"/></marker></defs>
+          <rect x="112" y="52" width="42" height="46" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2" transform="rotate(2,133,75)"/>
+          <circle cx="133" cy="66" r="6" fill="none" stroke="#ff5ca8" stroke-width="1.4"/>
+          <circle cx="121" cy="86" r="6" fill="none" stroke="#ff5ca8" stroke-width="1.4"/>
+          <circle cx="145" cy="86" r="6" fill="none" stroke="#ff5ca8" stroke-width="1.4"/>
+          <line x1="133" y1="72" x2="121" y2="82" stroke="#ff5ca8" stroke-width="1.2"/>
+          <line x1="133" y1="72" x2="145" y2="82" stroke="#ff5ca8" stroke-width="1.2"/>
+          <text x="80" y="128" fill="white" font-family="monospace" font-size="9" text-anchor="middle">Docker → Kubernetes</text>
+        </svg>
+        <figcaption>next: local Kubernetes</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Session 19 swaps the plain docker run swap built today for a Kubernetes deployment on the same self-hosted runner, still triggered by the same workflow_run pattern.</p>
+      </figure>
+
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>1. Learning Objectives</h2>
+    <div class="card">
+      <ol class="objectives-list">
+        <li><span class="obj-num">1/5</span><span>Explain the difference between <span class="anchor">CI</span> (build) and <span class="anchor">CD</span> (deploy), and why session 17's pipeline was CI only</span></li>
+        <li><span class="obj-num">2/5</span><span>Set up a <span class="anchor">self-hosted runner</span> with the <span class="anchor">Docker permissions</span> it needs to run deployment steps</span></li>
+        <li><span class="obj-num">3/5</span><span>Chain a deploy workflow to a build workflow using <span class="anchor">workflow_run</span> instead of a second push trigger</span></li>
+        <li><span class="obj-num">4/5</span><span>Write a <span class="anchor">deploy_local.ps1</span> script that logs in with <span class="anchor">--password-stdin</span>, swaps containers, and logs out</span></li>
+        <li><span class="obj-num">5/5</span><span>Trigger the full pipeline end-to-end and <span class="anchor">verify</span> the deployment with docker ps, a health check, and a browser</span></li>
+      </ol>
+    </div>
+
+    <h2>2. Pre-Coding Quiz</h2>
+    <p>Answer before reading the concept. Need 4/5 to proceed.</p>
+
+    <div id="pre-quiz">
+      <div class="quiz-question" data-question="0" data-answer="c">
+        <div class="question-num">Question 1 of 5</div>
+        <p>What is the core difference between CI and CD?</p>
+        <label class="quiz-option" data-val="a">CI runs tests, CD writes tests</label>
+        <label class="quiz-option" data-val="b">CD only applies to mobile apps</label>
+        <label class="quiz-option" data-val="c">CI builds and validates code; CD gets it running somewhere</label>
+        <label class="quiz-option" data-val="d">They are two names for the exact same step</label>
+        <div class="explanation">CI covers build, test, and push. CD is the separate concern of taking a built artifact and actually deploying it to a running environment.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="b">
+        <div class="question-num">Question 2 of 5</div>
+        <p>Why does the deploy job in this lab need a self-hosted runner instead of a normal GitHub-hosted one?</p>
+        <label class="quiz-option" data-val="a">GitHub-hosted runners are slower</label>
+        <label class="quiz-option" data-val="b">It needs access to Docker running on this specific machine</label>
+        <label class="quiz-option" data-val="c">Self-hosted runners are required for all private repos</label>
+        <label class="quiz-option" data-val="d">GitHub-hosted runners cannot run PowerShell</label>
+        <div class="explanation">A GitHub-hosted runner is an ephemeral cloud VM with no route to a developer's local Docker engine. The self-hosted runner is an agent installed on that exact workstation.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="a">
+        <div class="question-num">Question 3 of 5</div>
+        <p>Why use <code>workflow_run</code> instead of triggering the deploy workflow on <code>push</code> as well?</p>
+        <label class="quiz-option" data-val="a">It waits for the build workflow to actually finish first</label>
+        <label class="quiz-option" data-val="b">push triggers are deprecated in newer GitHub Actions</label>
+        <label class="quiz-option" data-val="c">workflow_run is required for self-hosted runners</label>
+        <label class="quiz-option" data-val="d">It makes the workflow run faster</label>
+        <div class="explanation">A second push trigger would fire deploy at the same time as build, possibly before new images exist. workflow_run only starts once the named workflow reaches a completed state.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="d">
+        <div class="question-num">Question 4 of 5</div>
+        <p>Why does deploy_local.ps1 pipe the Docker Hub token into <code>docker login --password-stdin</code> rather than passing it as a typed argument?</p>
+        <label class="quiz-option" data-val="a">--password-stdin logs in faster</label>
+        <label class="quiz-option" data-val="b">Typed passwords are no longer accepted by Docker at all</label>
+        <label class="quiz-option" data-val="c">It lets the script skip docker login entirely</label>
+        <label class="quiz-option" data-val="d">It avoids an interactive prompt and keeps the secret out of shell history</label>
+        <div class="explanation">Piping the token in lets the workflow step run non-interactively and avoids the secret ever appearing as a plain command-line argument.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="b">
+        <div class="question-num">Question 5 of 5</div>
+        <p>What does <code>$ErrorActionPreference = 'Stop'</code> do at the top of deploy_local.ps1?</p>
+        <label class="quiz-option" data-val="a">It silences every warning message</label>
+        <label class="quiz-option" data-val="b">It turns non-terminating errors into terminating ones, so the script halts</label>
+        <label class="quiz-option" data-val="c">It stops the script only after 30 seconds</label>
+        <label class="quiz-option" data-val="d">It prevents the script from being interrupted with Ctrl+C</label>
+        <div class="explanation">Without it, many PowerShell cmdlet errors just print a message and keep going, which could let a failed docker pull sail through to docker run on a stale image.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Pre-Quiz</button>
+      <div class="quiz-result" id="pre-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>3. The Concept — Turning a Build Into a Deployment</h2>
+
+    <h3>CI vs CD, recapped</h3>
+    <p>
+      Session 17 built a workflow that runs on every push to main: it builds
+      both Text Masker images and pushes them to a registry under tags like
+      <code>server-latest</code> and <code>client-latest</code>. That workflow
+      is <span class="anchor">continuous integration</span> — new code gets
+      validated and packaged automatically. But the containers actually
+      running on any given machine don't change just because a new image
+      exists in a registry somewhere. Getting that new image running is a
+      separate job: <span class="anchor">continuous deployment</span>. Today's
+      session builds the CD half.
+    </p>
+
+    <h3>Setting up a self-hosted runner</h3>
+    <p>
+      GitHub-hosted runners are short-lived cloud virtual machines — they
+      have no way to reach a Docker engine running on a developer's own
+      workstation. A <span class="anchor">self-hosted runner</span> solves
+      this: it's a small agent process installed directly on the target
+      machine and registered to the repository under
+      <strong>Settings → Actions → Runners</strong>. Once registered and
+      running, it shows up green and idle, waiting for jobs that specify
+      <code>runs-on: self-hosted</code>.
+    </p>
+    <p>
+      One detail matters more than it looks: the runner service has to run
+      under a user account that actually has permission to talk to Docker.
+      If it's installed under an account without Docker group membership (or
+      without Docker Desktop's WSL integration enabled for that user), every
+      <code>docker</code> command in the deploy job fails with an access
+      error, even though the exact same command works fine when typed
+      manually in a terminal logged in as that user.
+    </p>
+
+    <h3>The deployment script</h3>
+    <p>
+      <code>deploy_local.ps1</code> lives at the repo root and does five
+      things in order: log in, stop the old containers, pull the new images,
+      start new containers, log out.
+    </p>
+    <pre><code>param([string]$DockerUser, [string]$DockerToken)
+$ErrorActionPreference = 'Stop'
+
+Write-Host 'Logging into Docker Hub...'
+$DockerToken | docker login -u $DockerUser --password-stdin
+
+Write-Host 'Stopping old containers (if running)...'
+docker rm -f masker-server masker-client 2>$null
+
+Write-Host 'Pulling latest images...'
+docker pull "$DockerUser/masker:server-latest"
+docker pull "$DockerUser/masker:client-latest"
+
+Write-Host 'Starting new containers...'
+docker run -d --name masker-server -p 8080:8080 "$DockerUser/masker:server-latest"
+docker run -d --name masker-client -p 30080:80 "$DockerUser/masker:client-latest"
+
+Write-Host 'Logging out of Docker Hub...'
+docker logout
+
+Write-Host 'Deployment complete!'</code></pre>
+    <p>
+      Image paths use a placeholder here —
+      <code>&lt;your-dockerhub-username&gt;/masker:server-latest</code> — but
+      in the actual script it's whatever value gets passed in for
+      <code>$DockerUser</code>. Keeping server and client under one
+      repository name with different tags (rather than two separate
+      repositories) keeps the pull commands symmetric and easy to script.
+    </p>
+
+    <h3>The workflow that triggers it</h3>
+    <pre><code>name: Deploy Locally (Docker Runner)
+
+on:
+  workflow_run:
+    workflows: ["Build and Push Masker Images"]
+    types: [completed]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run local deployment script
+        run: pwsh "${{ github.workspace }}/deploy_local.ps1" -DockerUser $env:DOCKERHUB_USERNAME -DockerToken $env:DOCKERHUB_TOKEN
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}</code></pre>
+    <p>
+      The <code>workflows: [...]</code> list under <code>workflow_run</code>
+      names the exact workflow this one waits on — here, whatever the CI
+      workflow from session 17 is named (for example, "Build and Push Masker
+      Images"). <code>types: [completed]</code> means this job fires whenever
+      that workflow finishes, whether it succeeded or failed — the deploy
+      job itself is responsible for checking
+      <code>github.event.workflow_run.conclusion</code> if it needs to skip
+      deploying on a failed build.
+    </p>
+
+    <h3>Why secrets get re-declared as env vars</h3>
+    <p>
+      On GitHub-hosted runners, <code>${{ secrets.* }}</code> can often be
+      referenced fairly directly in a step. On a self-hosted runner it's
+      safer and more reliable to explicitly map each secret into an
+      environment variable under that step's <code>env:</code> block, then
+      read it inside the script as <code>$env:DOCKERHUB_USERNAME</code>. This
+      keeps the secret scoped to exactly the step that needs it instead of
+      leaking into the runner's broader shell environment, and it avoids
+      relying on repository variables, which don't get injected into
+      self-hosted runner jobs the same way secrets do.
+    </p>
+
+    <h3>Verifying the deployment</h3>
+    <p>
+      Once both workflows finish, three quick checks confirm it actually
+      worked:
+    </p>
+    <pre><code>docker ps
+curl http://localhost:8080/health
+start http://localhost:30080</code></pre>
+    <p>
+      <code>docker ps</code> should list both <code>masker-server</code> and
+      <code>masker-client</code> as freshly started. The curl call hits the
+      server's health endpoint directly. Opening
+      <code>localhost:30080</code> in a browser confirms the client is
+      actually reachable end-to-end. Instead of hardcoding
+      <code>localhost</code> or a raw IP when checking from another device on
+      the same network, a stable local hostname (for example, one provided
+      by a tool like Tailscale's MagicDNS) avoids the deployment breaking
+      every time the machine gets a new IP address.
+    </p>
+
+    <h3>The full pipeline, end to end</h3>
+    <p>
+      One push to main now sets off a complete chain: CI builds and pushes
+      both images, <code>workflow_run</code> hands off to the self-hosted
+      runner, the runner executes <code>deploy_local.ps1</code>, and the
+      local Docker engine ends up running the updated
+      <code>masker-server</code> on port 8080 and <code>masker-client</code>
+      on port 30080 — visible immediately in a browser. See card 6 in the
+      diagram grid above for the visual version of this chain.
+    </p>
+
+    <hr class="section-divider" />
+
+    <h2>4. Lab</h2>
+    <div class="alert alert-success">
+      <strong>Lab objective:</strong> Create the deployment script and its
+      triggering workflow, push a change to fire the full CI→CD chain, and
+      verify the running containers locally.
+    </div>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <p><strong>Confirm the self-hosted runner is registered and green</strong></p>
+        <p>Open <strong>Settings → Actions → Runners</strong> in the repository. Confirm a runner shows an "Idle" green status. If it isn't listed at all, install and register it first, making sure the runner service is started under an account that has Docker permissions on this machine.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <p><strong>Create deploy_local.ps1 at the repo root</strong></p>
+        <p>Add the script from the concept section above. It accepts <code>-DockerUser</code> and <code>-DockerToken</code> parameters, sets <code>$ErrorActionPreference = 'Stop'</code>, and runs login → stop old → pull new → start new → logout in that order.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <p><strong>Create .github/workflows/deploy_local.yml</strong></p>
+        <p>Use the <code>workflow_run</code> trigger keyed to the exact name of the CI workflow from session 17, run on <code>self-hosted</code>, and re-declare <code>DOCKERHUB_USERNAME</code> and <code>DOCKERHUB_TOKEN</code> as step-level env vars sourced from repository secrets.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <p><strong>Predict, then trigger the full chain</strong></p>
+        <p>Before pushing: predict what <code>docker ps</code> will show once both workflows finish — which two container names, which two ports, and roughly how "new" their start times will be. Write it down, then commit and push a small change.</p>
+        <pre><code>git add .
+git commit -m "Trigger CD pipeline"
+git push</code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <p><strong>Watch both workflows run in the Actions tab</strong></p>
+        <p>Confirm the build workflow completes first, then the deploy workflow starts automatically afterward on the self-hosted runner. Expect to see <code>Login Succeeded</code> and successful pulls for both images in the deploy job's logs.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <p><strong>Verify locally and compare against your prediction</strong></p>
+        <pre><code>docker ps
+curl http://localhost:8080/health
+start http://localhost:30080</code></pre>
+        <p>Confirm both containers are running with fresh start times, the health check responds, and the app loads in the browser. Compare the actual output to what was predicted in step 4.</p>
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>5. Expected Files Changed</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Action</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><code>deploy_local.ps1</code></td><td>Added</td><td>Logs into Docker Hub, swaps old containers for freshly pulled images, logs out</td></tr>
+          <tr><td><code>.github/workflows/deploy_local.yml</code></td><td>Added</td><td>Chains deployment to the CI build via workflow_run on the self-hosted runner</td></tr>
+          <tr><td><code>sessions/session-18/index.html</code></td><td>Added</td><td>This session document</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>6. Commit Checkpoint</h2>
+    <pre><code>git add deploy_local.ps1 .github/workflows/deploy_local.yml
+git commit -m "session-18: add local CD workflow to redeploy containers after CI builds"</code></pre>
+
+    <h2>7. Code Review Checklist</h2>
+    <div class="card">
+      <div class="checklist-item"><input type="checkbox" id="c1"/><label for="c1">deploy_local.ps1 sets $ErrorActionPreference = 'Stop' before any Docker commands run</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c2"/><label for="c2">The Docker Hub token is piped via --password-stdin, never passed as a plain typed argument</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c3"/><label for="c3">Old containers are removed before new ones are started, avoiding a port conflict</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c4"/><label for="c4">deploy_local.yml uses workflow_run keyed to the correct CI workflow name, not a second push trigger</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c5"/><label for="c5">I triggered the full chain with a real push and confirmed docker ps, the health check, and the browser all matched my prediction</label></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>8. Post-Coding Quiz</h2>
+    <div id="post-quiz" data-pass-post="Proceed to Session 19 (Capstone: CD to Local Kubernetes) after ≥ 80%.">
+      <div class="quiz-question" data-question="0" data-answer="d">
+        <div class="question-num">Question 1 of 5</div>
+        <p>The self-hosted runner service is registered under a Windows account with no Docker permissions. What happens when the deploy job runs?</p>
+        <label class="quiz-option" data-val="a">Docker automatically grants access on first use</label>
+        <label class="quiz-option" data-val="b">Nothing — permissions only matter for docker build</label>
+        <label class="quiz-option" data-val="c">The job silently skips the Docker steps</label>
+        <label class="quiz-option" data-val="d">The Docker commands fail with an access-denied error</label>
+        <div class="explanation">Docker commands require the running user to have Docker access. Without it, every docker command in the script fails, even though the workflow itself started fine.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="b">
+        <div class="question-num">Question 2 of 5</div>
+        <p>Why does deploy_local.ps1 remove the old masker-server and masker-client containers before starting new ones?</p>
+        <label class="quiz-option" data-val="a">It has nothing to do with ports — it just saves disk space</label>
+        <label class="quiz-option" data-val="b">The new containers need the same host ports, which the old ones are still holding</label>
+        <label class="quiz-option" data-val="c">Docker refuses to pull a new image while any container is running</label>
+        <label class="quiz-option" data-val="d">Removing containers is required before every docker login</label>
+        <div class="explanation">Two containers cannot both bind host port 8080 (or 30080) at the same time, so the old container has to be removed before the new one can start on that port.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="c">
+        <div class="question-num">Question 3 of 5</div>
+        <p><code>types: [completed]</code> on a workflow_run trigger fires when the watched workflow finishes. What does "completed" include?</p>
+        <label class="quiz-option" data-val="a">Only successful runs</label>
+        <label class="quiz-option" data-val="b">Only runs that were manually approved</label>
+        <label class="quiz-option" data-val="c">Both successful and failed runs — conclusion must be checked separately</label>
+        <label class="quiz-option" data-val="d">Only runs triggered by a tag push</label>
+        <div class="explanation">completed fires regardless of outcome. A deploy job that shouldn't run after a failed build needs to explicitly check github.event.workflow_run.conclusion == 'success'.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="a">
+        <div class="question-num">Question 4 of 5</div>
+        <p>Why is periodically running <code>docker system prune -f</code> a useful cleanup practice on a self-hosted deployment machine?</p>
+        <label class="quiz-option" data-val="a">Every deploy pulls a new image, so old unused layers accumulate and eat disk space</label>
+        <label class="quiz-option" data-val="b">It is required before docker login will succeed again</label>
+        <label class="quiz-option" data-val="c">It restarts the self-hosted runner service</label>
+        <label class="quiz-option" data-val="d">It re-registers the runner with a new token</label>
+        <div class="explanation">Each successful deploy leaves the previous image behind on disk unless it's cleaned up. Left unchecked over many deploys, this steadily fills the disk on the deployment machine.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="c">
+        <div class="question-num">Question 5 of 5</div>
+        <p>Session 19 will focus on:</p>
+        <label class="quiz-option" data-val="a">Adding a second self-hosted runner for redundancy</label>
+        <label class="quiz-option" data-val="b">Writing unit tests for deploy_local.ps1</label>
+        <label class="quiz-option" data-val="c">Replacing the plain docker run swap with a Kubernetes deployment</label>
+        <label class="quiz-option" data-val="d">Moving the whole pipeline to a managed cloud runner</label>
+        <div class="explanation">Session 19 keeps the same workflow_run trigger and self-hosted runner, but swaps today's docker run container swap for a Kubernetes deployment.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Post-Quiz</button>
+      <div class="quiz-result" id="post-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>9. Reflection Questions</h2>
+    <div class="card">
+      <ol>
+        <li>Before pushing in step 4 of the lab, did you correctly predict what docker ps would show? What did you get right or wrong?</li>
+        <li>Why is it safer to keep the deploy job on a self-hosted runner rather than trying to make a cloud-hosted runner reach into a workstation's Docker engine?</li>
+        <li>What would you need to change in deploy_local.ps1 if the app ever needed a rollback to the previous image instead of always pulling latest?</li>
+      </ol>
+    </div>
+
+    <h2>10. What Breaks If This Knowledge Is Missing?</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Runner installed under an account without Docker permissions:</strong> Every Docker step in the deploy job fails with an access error, even though the workflow itself starts and the runner shows green.</li>
+        <li><strong>Using push instead of workflow_run:</strong> The deploy job can fire before the image finishes building and pushing, pulling a stale or nonexistent tag and deploying the wrong version — or none at all.</li>
+        <li><strong>Skipping --password-stdin in favor of a typed password:</strong> The login step either hangs waiting for interactive input on a runner with no terminal to answer it, or the token ends up exposed in logs or shell history.</li>
+      </ul>
+    </div>
+
+    <h2>11. What We Learned</h2>
+    <div class="card" style="border-color:var(--green);">
+      <p><strong>Today you learned: CD is a distinct step from CI, a self-hosted runner needs Docker permissions to act on local containers, workflow_run chains a deploy job to a completed build instead of racing it on push, --password-stdin logs in without exposing a secret, and the stop-old/pull-new/start-new sequence is what a safe container swap actually looks like.</strong></p>
+      <p><strong>Next:</strong> <a href="../session-19/index.html">Session 19 — Capstone: CD to Local Kubernetes</a>.</p>
+    </div>
+
+    <p style="margin-top:24px;"><a href="../session-17/index.html">← Session 17</a> · <a href="../../syllabus/index.html">Syllabus</a> · <a href="../session-19/index.html">Session 19 →</a></p>
+
+  </div>
+</main>
+
+<script src="../../quiz.js" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    setupQuiz('pre');
+    setupQuiz('post');
+
+    document.querySelectorAll('.concept-explanation-toggle').forEach(function (button) {
+      button.addEventListener('click', function () {
+        const card = button.closest('.concept-card');
+        const isRevealed = card.classList.toggle('explanation-revealed');
+        button.setAttribute('aria-expanded', String(isRevealed));
+        button.querySelector('.concept-explanation-hint').textContent = isRevealed
+          ? 'Click to blur'
+          : 'Click to reveal';
+      });
+    });
+  });
+</script>
+<script src="../../notes-widget.js" defer></script>
+<script src="../../bookmark-widget.js" defer></script>
+
+</body>
+</html>

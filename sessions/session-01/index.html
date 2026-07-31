@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Session 01 — Container Lifecycle, Bind Mounts, Volumes, and Networks</title>
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="stylesheet" href="../../notes-widget.css" />
+  <link rel="stylesheet" href="../../bookmark-widget.css" />
+  <link rel="stylesheet" href="../../quiz-explain-modal.css" />
+  <style>
+    .quiz-option{display:block;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:8px;cursor:pointer;font-size:14px;transition:border-color .15s,background .15s;user-select:none;}
+    .quiz-option:hover{border-color:var(--accent);background:var(--surface);}
+    .quiz-option.selected{border-color:var(--accent);background:rgba(255,92,168,.1);}
+    .quiz-option.correct{border-color:var(--green);background:rgba(63,185,80,.1);}
+    .quiz-option.wrong{border-color:var(--red);background:rgba(248,81,73,.1);}
+    .quiz-question{margin-bottom:28px;}
+    .quiz-question p{font-weight:600;margin-bottom:10px;font-size:15px;}
+    .question-num{color:var(--text-muted);font-size:12px;font-weight:400;margin-bottom:4px;}
+    .quiz-result{display:none;padding:16px 20px;border-radius:var(--radius);margin-top:16px;font-size:15px;font-weight:600;}
+    .quiz-result.pass{background:rgba(63,185,80,.12);border:1px solid var(--green);color:var(--green);}
+    .quiz-result.fail{background:rgba(248,81,73,.12);border:1px solid var(--red);color:var(--red);}
+    .explanation{display:none;font-size:13px;color:var(--text-muted);margin-top:6px;padding:8px 12px;background:var(--surface-2);border-radius:var(--radius);border-left:2px solid var(--border);}
+    .submit-btn{background:var(--accent);color:#0d1117;border:none;border-radius:var(--radius);padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;}
+    .submit-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .step{display:flex;gap:16px;margin-bottom:20px;}
+    .step-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#0d1117;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:2px;}
+    .step-body{flex:1;}
+    .step-body p{margin-bottom:6px;}
+    .section-divider{border:none;border-top:2px solid var(--border);margin:40px 0;}
+    .checklist-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;}
+    .checklist-item input[type="checkbox"]{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;}
+
+    /* Comic-panel concept grid — image teaches first, caption only reinforces */
+    .concept-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0;}
+    @media (max-width:760px){.concept-grid{grid-template-columns:repeat(2,1fr);}}
+    .concept-card{background:#111111;border:1px solid #2a2a2a;border-radius:8px;padding:8px 8px 10px;}
+    .concept-card svg{display:block;width:100%;height:auto;}
+    .concept-card figcaption{margin-top:6px;font-family:monospace;font-size:10.5px;line-height:1.3;color:#c9c9c9;text-align:center;}
+    .concept-card figcaption b{color:#ff5ca8;}
+    .concept-explanation-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin-top:10px;padding:7px 8px;border:1px solid #3a3a3a;border-radius:5px;background:#1a1a1a;color:#ff5ca8;font-family:monospace;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;}
+    .concept-explanation-toggle:hover,.concept-explanation-toggle:focus-visible{border-color:#ff5ca8;outline:none;}
+    .concept-explanation-hint{color:#8b949e;font-size:8px;font-weight:400;letter-spacing:0;text-transform:none;}
+    .concept-explanation-text{margin:7px 2px 0;font-size:11px;line-height:1.45;color:#d8d8d8;filter:blur(4px);user-select:none;transition:filter .2s ease;}
+    .concept-card.explanation-revealed .concept-explanation-text{filter:none;user-select:text;}
+    .concept-card.explanation-revealed .concept-explanation-hint{color:#3fb950;}
+    .anchor{color:#ff5ca8;font-weight:700;}
+    .objectives-list{list-style:none;padding-left:0;}
+    .objectives-list li{display:flex;gap:12px;align-items:baseline;margin-bottom:12px;font-size:15px;}
+    .obj-num{flex-shrink:0;min-width:34px;color:#ff5ca8;font-family:monospace;font-weight:700;font-size:12px;background:rgba(255,92,168,.1);border:1px solid rgba(255,92,168,.4);border-radius:10px;padding:2px 6px;text-align:center;}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="../../index.html" class="brand">⚙ DevOps Learning</a>
+    <a href="../../syllabus/index.html">Syllabus</a>
+    <a href="../../sessions/index.html" class="active">Sessions</a>
+    <a href="../../quizzes/index.html">Quizzes</a>
+    <a href="../../labs/index.html">Labs</a>
+  </div>
+</nav>
+
+<main>
+  <div class="container">
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+      <span class="badge badge-layer">Layer 1</span>
+      <span class="badge badge-current">Session 01</span>
+      <span style="color:var(--text-muted);font-size:13px;">Docker Foundations</span>
+    </div>
+    <h1>Container Lifecycle, Bind Mounts, Volumes, and Networks</h1>
+    <p class="subtitle">
+      Every layer in this course — from Kubernetes deployments to CI/CD
+      pipelines to production observability — assumes you already know what a
+      container actually is and how it behaves. This is that starting point.
+      Today you run a single container, watch it live, hand it a folder from
+      your own machine, give it storage that survives its death, and connect
+      two containers so they can find each other by name. No orchestration
+      tools yet — just the raw primitives everything else in DevOps is built
+      on top of.
+    </p>
+    <div class="alert alert-info">Estimated time: 90–100 minutes</div>
+
+    <!-- Comic-panel concept grid: image teaches first, caption only reinforces -->
+    <div class="concept-grid">
+
+      <!-- 1. Image vs Container: blueprint card -> running box with motion lines -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="34" width="54" height="66" rx="3" fill="none" stroke="#888" stroke-width="2" stroke-dasharray="4,3" transform="rotate(-2,37,67)"/>
+          <line x1="20" y1="48" x2="54" y2="48" stroke="#888" stroke-width="1.4"/>
+          <line x1="20" y1="58" x2="54" y2="58" stroke="#888" stroke-width="1.4"/>
+          <line x1="20" y1="68" x2="46" y2="68" stroke="#888" stroke-width="1.4"/>
+          <text x="37" y="92" fill="#888" font-family="monospace" font-size="8" text-anchor="middle">image</text>
+          <path d="M68,66 H100" stroke="#ff5ca8" stroke-width="2.5" marker-end="url(#arrI1)"/>
+          <defs><marker id="arrI1" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <rect x="104" y="34" width="46" height="60" rx="4" fill="none" stroke="#3fb950" stroke-width="2.4" transform="rotate(1.5,127,64)"/>
+          <circle cx="127" cy="58" r="4" fill="#3fb950"/>
+          <path d="M112,80 q15,-8 30,0" fill="none" stroke="#3fb950" stroke-width="1.6"/>
+          <text x="127" y="102" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="middle">container</text>
+          <text x="80" y="128" fill="white" font-family="monospace" font-size="9" text-anchor="middle">read-only → running</text>
+        </svg>
+        <figcaption><b>image</b> is a template, not a process</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">An image is a frozen, read-only blueprint on disk. Nothing about it is executing. A container is what you get when Docker starts a process from that blueprint — it's alive, it has its own writable layer, and it can be stopped, started, or deleted independently of the image it came from.</p>
+      </figure>
+
+      <!-- 2. docker run: terminal command -> container box appears -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="20" width="70" height="42" rx="3" fill="#1a1a1a" stroke="white" stroke-width="2" transform="rotate(-1,43,41)"/>
+          <text x="16" y="38" fill="#3fb950" font-family="monospace" font-size="8">$ docker run</text>
+          <text x="16" y="50" fill="#3fb950" font-family="monospace" font-size="8">-d -p 8080:80</text>
+          <path d="M80,42 H108" stroke="#ff5ca8" stroke-width="2.5" marker-end="url(#arrI2)"/>
+          <defs><marker id="arrI2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <rect x="112" y="16" width="40" height="50" rx="4" fill="none" stroke="#3fb950" stroke-width="2.2" transform="rotate(2,132,41)"/>
+          <text x="132" y="46" fill="#3fb950" font-family="monospace" font-size="9" text-anchor="middle" font-weight="bold">nginx</text>
+          <line x1="20" y1="90" x2="140" y2="90" stroke="#666" stroke-width="1.3" stroke-dasharray="3,3"/>
+          <text x="80" y="86" fill="#888" font-family="monospace" font-size="8" text-anchor="middle">host:8080</text>
+          <path d="M80,90 V70" stroke="#888" stroke-width="1.3"/>
+          <text x="80" y="128" fill="white" font-family="monospace" font-size="9" text-anchor="middle">one command, one process</text>
+        </svg>
+        <figcaption><b>docker run</b> creates and starts</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">docker run does two things in one shot: it creates a new container from an image, then starts it. The -p flag maps a port on your host machine to a port inside the container, which is the only reason a browser on your host can reach it.</p>
+      </figure>
+
+      <!-- 3. docker ps / logs: magnifying glass over container, scrolling lines -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="26" y="20" width="70" height="60" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <line x1="34" y1="34" x2="88" y2="34" stroke="#3fb950" stroke-width="2"/>
+          <line x1="34" y1="46" x2="80" y2="46" stroke="#3fb950" stroke-width="2"/>
+          <line x1="34" y1="58" x2="84" y2="58" stroke="#3fb950" stroke-width="2"/>
+          <line x1="34" y1="70" x2="70" y2="70" stroke="#3fb950" stroke-width="2"/>
+          <circle cx="122" cy="90" r="18" fill="none" stroke="#ff5ca8" stroke-width="3"/>
+          <line x1="134" y1="102" x2="148" y2="116" stroke="#ff5ca8" stroke-width="4" stroke-linecap="round"/>
+          <text x="80" y="128" fill="white" font-family="monospace" font-size="9" text-anchor="middle">ps shows it, logs explain it</text>
+        </svg>
+        <figcaption><b>ps</b> + <b>logs</b> = what's happening</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">docker ps -a lists every container and its current status, running or stopped. docker logs &lt;container&gt; streams whatever that process wrote to stdout/stderr — usually the first place to look when something isn't behaving.</p>
+      </figure>
+
+      <!-- 4. Bind mount: host folder <-> container folder, two-way live arrows -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12,30 h30 l6,8 h30 v26 h-66 z" fill="none" stroke="#888" stroke-width="2"/>
+          <text x="45" y="52" fill="#888" font-family="monospace" font-size="8" text-anchor="middle">./data</text>
+          <path d="M78,44 H108" stroke="#ff5ca8" stroke-width="2.2" marker-end="url(#arrI4a)"/>
+          <path d="M108,54 H78" stroke="#ff5ca8" stroke-width="2.2" marker-end="url(#arrI4b)"/>
+          <defs>
+            <marker id="arrI4a" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker>
+            <marker id="arrI4b" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="8,0 0,4 8,8" fill="#ff5ca8"/></marker>
+          </defs>
+          <rect x="112" y="18" width="40" height="52" rx="4" fill="none" stroke="#3fb950" stroke-width="2.2"/>
+          <text x="132" y="48" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">html/</text>
+          <text x="80" y="100" fill="white" font-family="monospace" font-size="9" text-anchor="middle">edit locally,</text>
+          <text x="80" y="112" fill="white" font-family="monospace" font-size="9" text-anchor="middle">see it instantly</text>
+          <text x="80" y="132" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle">-v $(pwd)/data:/usr/share/nginx/html</text>
+        </svg>
+        <figcaption><b>bind mount</b> — host owns the files</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A bind mount links a specific folder on your host directly into the container's filesystem. Nothing is copied — the container reads and writes the exact same files that live on your host, so an edit you save locally shows up immediately.</p>
+      </figure>
+
+      <!-- 5. Named volume: persistent box outside container, container X'd out but box remains -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="16" y="20" width="50" height="46" rx="4" fill="none" stroke="#666" stroke-width="2"/>
+          <line x1="20" y1="24" x2="62" y2="62" stroke="#f85149" stroke-width="2.6"/>
+          <line x1="62" y1="24" x2="20" y2="62" stroke="#f85149" stroke-width="2.6"/>
+          <text x="41" y="80" fill="#666" font-family="monospace" font-size="8" text-anchor="middle">container</text>
+          <text x="41" y="90" fill="#666" font-family="monospace" font-size="8" text-anchor="middle">removed</text>
+          <path d="M70,42 H100" stroke="#888" stroke-width="1.6" stroke-dasharray="2,3"/>
+          <ellipse cx="128" cy="30" rx="24" ry="8" fill="none" stroke="#3fb950" stroke-width="2.2"/>
+          <path d="M104,30 v30 a24,8 0 0 0 48,0 v-30" fill="none" stroke="#3fb950" stroke-width="2.2"/>
+          <line x1="104" y1="45" x2="152" y2="45" stroke="#3fb950" stroke-width="1.2" stroke-dasharray="2,2"/>
+          <text x="128" y="72" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="middle">mysql-data</text>
+          <text x="80" y="130" fill="white" font-family="monospace" font-size="9" text-anchor="middle">volume outlives the container</text>
+        </svg>
+        <figcaption><b>named volume</b> — managed by Docker</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A named volume is storage that Docker itself creates and manages, independent of any one container. Deleting the container that used it does not delete the volume — the data keeps existing until you explicitly remove the volume.</p>
+      </figure>
+
+      <!-- 6. Prove persistence: old container gone, new container reads same data cylinder -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="60" width="36" height="40" rx="4" fill="none" stroke="#666" stroke-width="1.8" stroke-dasharray="3,3"/>
+          <text x="28" y="112" fill="#666" font-family="monospace" font-size="7" text-anchor="middle">v1 (gone)</text>
+          <rect x="114" y="60" width="36" height="40" rx="4" fill="none" stroke="#3fb950" stroke-width="2.2"/>
+          <text x="132" y="112" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">v2 (new)</text>
+          <ellipse cx="80" cy="26" rx="26" ry="8" fill="none" stroke="#ff5ca8" stroke-width="2.2"/>
+          <path d="M54,26 v20 a26,8 0 0 0 52,0 v-20" fill="none" stroke="#ff5ca8" stroke-width="2.2"/>
+          <path d="M46,80 Q60,40 78,34" fill="none" stroke="#666" stroke-width="1.4" stroke-dasharray="2,3"/>
+          <path d="M114,80 Q100,40 82,34" fill="none" stroke="#3fb950" stroke-width="1.6" marker-end="url(#arrI6)"/>
+          <defs><marker id="arrI6" markerWidth="7" markerHeight="7" refX="3" refY="3" orient="auto"><polygon points="0,0 7,3 0,7" fill="#3fb950"/></marker></defs>
+          <text x="80" y="130" fill="white" font-family="monospace" font-size="9" text-anchor="middle">same data, new container</text>
+        </svg>
+        <figcaption>row you inserted is still there</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Remove the MySQL container entirely, start a brand new one pointed at the same named volume, and the rows you inserted are still there. This is the actual proof that persistence lives in the volume, not in the container process.</p>
+      </figure>
+
+      <!-- 7. Network: two containers connected via bridge, resolve by name -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="50" width="40" height="34" rx="4" fill="none" stroke="#3fb950" stroke-width="2.2"/>
+          <text x="28" y="70" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">mysql-lab</text>
+          <rect x="112" y="50" width="40" height="34" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2"/>
+          <text x="132" y="70" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">php-lab</text>
+          <ellipse cx="80" cy="67" rx="30" ry="14" fill="none" stroke="#888" stroke-width="1.6" stroke-dasharray="4,3"/>
+          <text x="80" y="30" fill="#888" font-family="monospace" font-size="8" text-anchor="middle">lab-net</text>
+          <path d="M48,67 H50" stroke="#888"/>
+          <path d="M110,67 H112" stroke="#888"/>
+          <text x="80" y="120" fill="white" font-family="monospace" font-size="9" text-anchor="middle">"mysql-lab" resolves by name</text>
+        </svg>
+        <figcaption><b>network</b> gives containers DNS</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A user-defined network gives every attached container automatic DNS resolution by its --name. php-lab can connect to a host literally called mysql-lab instead of hunting for an IP address, and nothing on that network is exposed to the outside world unless you publish a port.</p>
+      </figure>
+
+      <!-- 8. Next session teaser: single containers -> compose file connecting them -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="56" width="26" height="26" rx="3" fill="none" stroke="#666" stroke-width="1.8"/>
+          <rect x="42" y="56" width="26" height="26" rx="3" fill="none" stroke="#666" stroke-width="1.8"/>
+          <path d="M74,69 H100" stroke="#ff5ca8" stroke-width="2.5" stroke-dasharray="5,4" marker-end="url(#arrI8)"/>
+          <defs><marker id="arrI8" markerWidth="9" markerHeight="9" refX="4" refY="4" orient="auto"><polygon points="0,0 9,4 0,9" fill="#ff5ca8"/></marker></defs>
+          <rect x="104" y="42" width="42" height="54" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2" transform="rotate(1,125,69)"/>
+          <line x1="112" y1="54" x2="138" y2="54" stroke="#ff5ca8" stroke-width="1.4"/>
+          <line x1="112" y1="62" x2="132" y2="62" stroke="#ff5ca8" stroke-width="1.4"/>
+          <line x1="112" y1="70" x2="138" y2="70" stroke="#ff5ca8" stroke-width="1.4"/>
+          <text x="125" y="110" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">compose.yml</text>
+          <text x="80" y="132" fill="white" font-family="monospace" font-size="9" text-anchor="middle">one file, two services</text>
+        </svg>
+        <figcaption>next: Docker Compose</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Session 02 takes the exact same run/mount/network primitives you used by hand today and expresses them as one declarative YAML file, so a whole multi-container application starts with a single command.</p>
+      </figure>
+
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>1. Learning Objectives</h2>
+    <div class="card">
+      <ol class="objectives-list">
+        <li><span class="obj-num">1/5</span><span>Explain the difference between an <span class="anchor">image</span> and a <span class="anchor">container</span>, and run a container with <span class="anchor">docker run</span></span></li>
+        <li><span class="obj-num">2/5</span><span>Inspect running and stopped containers with <span class="anchor">docker ps</span> and read their output with <span class="anchor">docker logs</span></span></li>
+        <li><span class="obj-num">3/5</span><span>Serve live host files into a container using a <span class="anchor">bind mount</span></span></li>
+        <li><span class="obj-num">4/5</span><span>Create a <span class="anchor">named volume</span> and prove that data in it <span class="anchor">survives</span> a container being removed and recreated</span></li>
+        <li><span class="obj-num">5/5</span><span>Create a <span class="anchor">Docker network</span> so two containers can reach each other by <span class="anchor">name</span> instead of IP</span></li>
+      </ol>
+    </div>
+
+    <h2>2. Pre-Coding Quiz</h2>
+    <p>Answer before reading the concept. Need 4/5 to proceed.</p>
+
+    <div id="pre-quiz">
+      <div class="quiz-question" data-question="0" data-answer="c">
+        <div class="question-num">Question 1 of 5</div>
+        <p>What is a Docker image, most precisely?</p>
+        <label class="quiz-option" data-val="a">A running process with its own network address</label>
+        <label class="quiz-option" data-val="b">A virtual machine with a full guest kernel</label>
+        <label class="quiz-option" data-val="c">A read-only template used to create containers</label>
+        <label class="quiz-option" data-val="d">A backup snapshot of a container's memory</label>
+        <div class="explanation">An image is a static, read-only blueprint on disk. It doesn't run on its own — a container is what you get when Docker starts a process from it.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="b">
+        <div class="question-num">Question 2 of 5</div>
+        <p>You stop a container without removing it. What happens to it?</p>
+        <label class="quiz-option" data-val="a">It is deleted immediately along with its image</label>
+        <label class="quiz-option" data-val="b">It still exists and shows up in <code>docker ps -a</code></label>
+        <label class="quiz-option" data-val="c">Docker automatically restarts it after 30 seconds</label>
+        <label class="quiz-option" data-val="d">Its bind-mounted files are deleted from the host</label>
+        <div class="explanation">Stopping a container only halts its process. The container object itself, and anything written to its own writable layer, still exists until you explicitly run docker rm.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="a">
+        <div class="question-num">Question 3 of 5</div>
+        <p>What is the actual effect of <code>-v "$(pwd)/data:/usr/share/nginx/html"</code>?</p>
+        <label class="quiz-option" data-val="a">The container reads and writes the same files that live in the host's ./data folder</label>
+        <label class="quiz-option" data-val="b">Docker copies ./data into the image at build time, once</label>
+        <label class="quiz-option" data-val="c">It creates a brand new named volume called data</label>
+        <label class="quiz-option" data-val="d">It only works the first time the container starts</label>
+        <div class="explanation">This is a bind mount: it links an exact host path directly into the container's filesystem, so both sides see the identical files live, with no copying involved.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="d">
+        <div class="question-num">Question 4 of 5</div>
+        <p>You remove a MySQL container that was using a named volume, then start a new MySQL container pointed at that same volume. What happens to the data?</p>
+        <label class="quiz-option" data-val="a">It is gone, because the container that wrote it no longer exists</label>
+        <label class="quiz-option" data-val="b">Only the table structure survives, not the rows</label>
+        <label class="quiz-option" data-val="c">It survives only if the container was stopped, not removed</label>
+        <label class="quiz-option" data-val="d">It is still there, because the volume is independent of any container</label>
+        <div class="explanation">A named volume is managed by Docker itself, outside the container's lifecycle. Removing the container never touches the volume's contents.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="b">
+        <div class="question-num">Question 5 of 5</div>
+        <p>Two containers are attached to the same user-defined Docker network, <code>lab-net</code>. How can one reach the other?</p>
+        <label class="quiz-option" data-val="a">Only by publishing a port with -p and using localhost</label>
+        <label class="quiz-option" data-val="b">By its container name, resolved automatically via built-in DNS</label>
+        <label class="quiz-option" data-val="c">They cannot communicate unless both expose ports to the host</label>
+        <label class="quiz-option" data-val="d">Only by hardcoding the container's internal IP address</label>
+        <div class="explanation">A user-defined network gives every attached container automatic name-based DNS resolution — no port publishing or IP hunting required, and nothing is exposed outside the network unless you choose to.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Pre-Quiz</button>
+      <div class="quiz-result" id="pre-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>3. The Concept — Containers, Storage, and Networking</h2>
+
+    <h3>Why Docker exists</h3>
+    <p>
+      Before containers, "it works on my machine" was a permanent problem: an
+      application depended on a specific OS version, a specific set of
+      libraries, and a specific runtime, and none of that traveled with the
+      code. Docker packages an application together with everything it needs
+      to run into a single portable unit, so the exact same thing runs on a
+      laptop, a CI server, and a production host.
+    </p>
+
+    <h3>The hierarchy: host, daemon, images, containers, volumes</h3>
+    <p>
+      Everything Docker manages lives inside one background service on your
+      machine, the Docker daemon. The daemon builds and stores images,
+      starts and stops containers from those images, and manages volumes
+      that live on the host's own disk.
+    </p>
+    <svg viewBox="0 0 640 260" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:560px;display:block;margin:16px auto;">
+      <rect x="10" y="10" width="620" height="240" rx="8" fill="none" stroke="#555" stroke-width="2"/>
+      <text x="30" y="34" fill="#aaa" font-family="monospace" font-size="13">Host Machine</text>
+      <rect x="30" y="50" width="580" height="160" rx="6" fill="none" stroke="#888" stroke-width="1.8"/>
+      <text x="46" y="72" fill="#ccc" font-family="monospace" font-size="12">Docker Daemon (dockerd)</text>
+      <rect x="50" y="86" width="150" height="60" rx="5" fill="none" stroke="#3fb950" stroke-width="2"/>
+      <text x="125" y="112" fill="#3fb950" font-family="monospace" font-size="11" text-anchor="middle">Images</text>
+      <text x="125" y="128" fill="#8b949e" font-family="monospace" font-size="9" text-anchor="middle">(blueprints)</text>
+      <rect x="230" y="86" width="150" height="60" rx="5" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+      <text x="305" y="112" fill="#ff5ca8" font-family="monospace" font-size="11" text-anchor="middle">Containers</text>
+      <text x="305" y="128" fill="#8b949e" font-family="monospace" font-size="9" text-anchor="middle">(running apps)</text>
+      <rect x="410" y="86" width="180" height="60" rx="5" fill="none" stroke="#d29922" stroke-width="2"/>
+      <text x="500" y="112" fill="#d29922" font-family="monospace" font-size="11" text-anchor="middle">Volumes</text>
+      <text x="500" y="128" fill="#8b949e" font-family="monospace" font-size="9" text-anchor="middle">(persist on host)</text>
+      <path d="M500,146 V186" stroke="#d29922" stroke-width="2" marker-end="url(#arrD1)"/>
+      <defs><marker id="arrD1" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#d29922"/></marker></defs>
+      <text x="500" y="200" fill="#8b949e" font-family="monospace" font-size="9" text-anchor="middle">data actually lives on the host disk</text>
+    </svg>
+    <p>
+      Volumes are the one box in this diagram that reaches back outside the
+      daemon: the daemon tracks and mounts them, but the bytes themselves sit
+      on the host's real filesystem, which is exactly why they outlive any
+      single container.
+    </p>
+
+    <h3>docker run, docker ps, docker logs</h3>
+    <pre><code>docker run -d -p 8080:80 nginx:alpine
+docker ps -a
+docker logs &lt;container-name-or-id&gt;</code></pre>
+    <p>
+      <code>docker run</code> pulls the image if it isn't already cached
+      locally, creates a container from it, and starts it — the
+      <code>-d</code> flag runs it detached, in the background, and
+      <code>-p 8080:80</code> maps host port 8080 to port 80 inside the
+      container. <code>docker ps -a</code> lists every container, running or
+      stopped, and <code>docker logs</code> shows whatever that process has
+      written to stdout and stderr, which is normally the first thing worth
+      checking when a container isn't behaving as expected.
+    </p>
+
+    <h3>Bind mounts: live host files inside a container</h3>
+    <pre><code>mkdir -p data
+echo "&lt;h1&gt;Hello from a bind mount&lt;/h1&gt;" &gt; data/index.html
+docker run -d -p 8081:80 -v "$(pwd)/data:/usr/share/nginx/html" nginx:alpine</code></pre>
+    <p>
+      A bind mount points a container's directory directly at a directory on
+      your host. Nothing is copied at container start — the container reads
+      and writes the same files that already exist on the host. Edit
+      <code>data/index.html</code> locally, refresh the browser, and the
+      change is there immediately, with no rebuild step.
+    </p>
+
+    <h3>Named volumes: storage that outlives the container</h3>
+    <pre><code>docker volume create mysql-data
+docker run -d --name mysql-lab \
+  -e MYSQL_ROOT_PASSWORD=changeme \
+  -v mysql-data:/var/lib/mysql \
+  mysql:8</code></pre>
+    <p>
+      A named volume is different from a bind mount in one important way:
+      Docker creates and owns it, rather than pointing at an existing host
+      folder you manage yourself. The volume's actual files live under
+      Docker's own storage area on the host, but from the container's point
+      of view <code>/var/lib/mysql</code> just behaves like a normal
+      directory that happens to survive container removal.
+    </p>
+
+    <!-- bind mount vs named volume, side by side -->
+    <div class="concept-grid" style="grid-template-columns:repeat(2,1fr);max-width:460px;">
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 120" xmlns="http://www.w3.org/2000/svg">
+          <rect x="16" y="12" width="60" height="40" rx="4" fill="none" stroke="#888" stroke-width="2"/>
+          <text x="46" y="35" fill="#888" font-family="monospace" font-size="8" text-anchor="middle">./data</text>
+          <path d="M80,32 H104" stroke="#ff5ca8" stroke-width="2" marker-end="url(#arrB1)"/>
+          <defs><marker id="arrB1" markerWidth="7" markerHeight="7" refX="3" refY="3" orient="auto"><polygon points="0,0 7,3 0,7" fill="#ff5ca8"/></marker></defs>
+          <rect x="108" y="12" width="40" height="40" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <text x="80" y="76" fill="white" font-family="monospace" font-size="9" text-anchor="middle">you manage the folder</text>
+          <text x="80" y="100" fill="#8b949e" font-family="monospace" font-size="8" text-anchor="middle">good for source code</text>
+        </svg>
+        <figcaption>bind mount</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">You choose the exact host path. Great for editing code or static files live, but the path is specific to your machine and layout.</p>
+      </figure>
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 120" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="46" cy="20" rx="22" ry="7" fill="none" stroke="#d29922" stroke-width="2"/>
+          <path d="M24,20 v20 a22,7 0 0 0 44,0 v-20" fill="none" stroke="#d29922" stroke-width="2"/>
+          <path d="M80,42 H104" stroke="#ff5ca8" stroke-width="2" marker-end="url(#arrB2)"/>
+          <defs><marker id="arrB2" markerWidth="7" markerHeight="7" refX="3" refY="3" orient="auto"><polygon points="0,0 7,3 0,7" fill="#ff5ca8"/></marker></defs>
+          <rect x="108" y="20" width="40" height="40" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <text x="80" y="76" fill="white" font-family="monospace" font-size="9" text-anchor="middle">Docker manages storage</text>
+          <text x="80" y="100" fill="#8b949e" font-family="monospace" font-size="8" text-anchor="middle">good for databases</text>
+        </svg>
+        <figcaption>named volume</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Docker owns and tracks the storage location for you. Portable across machines by name, and the standard choice for database data directories.</p>
+      </figure>
+    </div>
+
+    <h3>Networks: containers finding each other by name</h3>
+    <pre><code>docker network create lab-net
+docker run -d --name mysql-lab --network lab-net \
+  -e MYSQL_ROOT_PASSWORD=changeme \
+  -v mysql-data:/var/lib/mysql \
+  mysql:8</code></pre>
+    <p>
+      By default, containers are isolated from one another. Creating a
+      user-defined network and attaching containers to it gives every
+      container on that network automatic DNS: a container can reach another
+      simply by its <code>--name</code>, with no manual IP address lookup and
+      nothing exposed to the outside world unless a port is explicitly
+      published with <code>-p</code>.
+    </p>
+
+    <div class="alert alert-warning">
+      <strong>Containers are disposable, volumes are not.</strong> Treat a
+      container the same way you treat a process: fine to kill, fine to
+      recreate. Only the data explicitly placed in a named volume (or a bind
+      mount) survives that. This one distinction is the foundation for
+      almost every storage decision made later in this course.
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>4. Lab</h2>
+    <div class="alert alert-success">
+      <strong>Lab objective:</strong> Run and inspect a basic container, serve
+      a file via bind mount, create a named volume for MySQL and prove it
+      survives container removal, then connect two containers on a shared
+      network.
+    </div>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <p><strong>Verify Docker is installed</strong></p>
+        <pre><code>docker --version</code></pre>
+        <p>Confirm you see a version string back. If this fails, install Docker Desktop (or Docker Engine on native Linux/WSL2) before continuing.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <p><strong>Run a basic NGINX container</strong></p>
+        <pre><code>docker run -d -p 8080:80 nginx:alpine</code></pre>
+        <p>Before opening the browser: predict what you'll see at <code>http://localhost:8080</code>. Now open it and confirm — this is NGINX's built-in default page, coming from inside the container's own ephemeral filesystem.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <p><strong>Inspect containers and logs</strong></p>
+        <pre><code>docker ps -a
+docker logs &lt;container-id-or-name&gt;</code></pre>
+        <p>Note the container's name, status, and mapped ports. Stop it with <code>docker stop &lt;name&gt;</code>, run <code>docker ps -a</code> again, and confirm it still appears — just with a different status.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <p><strong>Serve static HTML via bind mount</strong></p>
+        <pre><code>mkdir -p data
+echo "&lt;h1&gt;Hello from a bind mount&lt;/h1&gt;" &gt; data/index.html
+docker run -d -p 8081:80 -v "$(pwd)/data:/usr/share/nginx/html" nginx:alpine</code></pre>
+        <p>Visit <code>http://localhost:8081</code> and confirm you see your own HTML, not the NGINX default page. Edit <code>data/index.html</code>, refresh, and confirm the change appears with no restart.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <p><strong>Create a named volume and run MySQL with it</strong></p>
+        <pre><code>docker volume create mysql-data
+docker run -d --name mysql-lab \
+  -e MYSQL_ROOT_PASSWORD=changeme \
+  -v mysql-data:/var/lib/mysql \
+  mysql:8</code></pre>
+        <p>Give MySQL a few seconds to finish its first-time initialization before connecting. Check <code>docker logs mysql-lab</code> for a "ready for connections" message.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <p><strong>Predict, then prove persistence</strong></p>
+        <p>Before doing anything: write down what you expect to happen to a row you insert if the container is deleted and a fresh one is started against the same volume.</p>
+        <pre><code>docker exec -it mysql-lab mysql -uroot -pchangeme \
+  -e "CREATE DATABASE labdb; \
+      CREATE TABLE labdb.notes (msg VARCHAR(50)); \
+      INSERT INTO labdb.notes VALUES ('still here');"
+
+docker rm -f mysql-lab
+
+docker run -d --name mysql-lab \
+  -e MYSQL_ROOT_PASSWORD=changeme \
+  -v mysql-data:/var/lib/mysql \
+  mysql:8
+
+docker exec -it mysql-lab mysql -uroot -pchangeme -e "SELECT * FROM labdb.notes;"</code></pre>
+        <p>Was your prediction right? The row should still be there — the container was fully removed and recreated, but the volume never was.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">7</div>
+      <div class="step-body">
+        <p><strong>Create a network and recreate MySQL inside it</strong></p>
+        <pre><code>docker network create lab-net
+
+docker rm -f mysql-lab
+
+docker run -d --name mysql-lab --network lab-net \
+  -e MYSQL_ROOT_PASSWORD=changeme \
+  -v mysql-data:/var/lib/mysql \
+  mysql:8</code></pre>
+        <p>This MySQL container now exposes no port to your host at all — it doesn't need to, since Session 02's PHP container will reach it by name over <code>lab-net</code> instead.</p>
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>5. Expected Files Changed</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Action</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><code>data/index.html</code></td><td>Created</td><td>Bind-mounted static page served by the second NGINX container</td></tr>
+          <tr><td>Docker volume <code>mysql-data</code></td><td>Created</td><td>Persistent storage for MySQL, independent of any one container</td></tr>
+          <tr><td>Docker network <code>lab-net</code></td><td>Created</td><td>Lets MySQL and next session's PHP container resolve each other by name</td></tr>
+          <tr><td><code>sessions/session-01/index.html</code></td><td>Created</td><td>This session document</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>6. Commit Checkpoint</h2>
+    <pre><code>git add data/index.html
+git commit -m "session-01: bind-mounted static page, persistent MySQL volume, lab-net network"</code></pre>
+
+    <h2>7. Code Review Checklist</h2>
+    <div class="card">
+      <div class="checklist-item"><input type="checkbox" id="c1"/><label for="c1">I can state, without looking it up, the difference between an image and a container</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c2"/><label for="c2">The bind-mounted page at localhost:8081 reflects a live edit to data/index.html without restarting the container</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c3"/><label for="c3">mysql-data was created with docker volume create, not left as an anonymous volume</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c4"/><label for="c4">I removed and recreated the MySQL container and confirmed the inserted row survived</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c5"/><label for="c5">mysql-lab is attached to lab-net and no longer publishes a port to the host</label></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>8. Post-Coding Quiz</h2>
+    <div id="post-quiz" data-pass-post="Proceed to Session 02 (Docker Compose) after ≥ 80%.">
+      <div class="quiz-question" data-question="0" data-answer="d">
+        <div class="question-num">Question 1 of 5</div>
+        <p>You run <code>docker rm -f mysql-lab</code> and then start a brand new container with a different name, mounting the same <code>mysql-data</code> volume. What do you see when you query the old table?</p>
+        <label class="quiz-option" data-val="a">An error — the volume is bound permanently to its original container name</label>
+        <label class="quiz-option" data-val="b">An empty database, because removing a container wipes its volumes</label>
+        <label class="quiz-option" data-val="c">Only the schema, not the row data</label>
+        <label class="quiz-option" data-val="d">The same rows, because the volume was never tied to that container name</label>
+        <div class="explanation">A named volume has no permanent link to the container name that first used it. Any container that mounts mysql-data sees the exact same data on disk.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="a">
+        <div class="question-num">Question 2 of 5</div>
+        <p>What is the practical difference between a bind mount and a named volume?</p>
+        <label class="quiz-option" data-val="a">A bind mount points at a host path you choose; a named volume is storage Docker creates and manages for you</label>
+        <label class="quiz-option" data-val="b">A named volume only works with MySQL images</label>
+        <label class="quiz-option" data-val="c">A bind mount is deleted automatically when the container stops</label>
+        <label class="quiz-option" data-val="d">There is no real difference; they are two names for the same feature</label>
+        <div class="explanation">Both persist data outside the container's own writable layer, but a bind mount is anchored to a host path you control, while a named volume's storage location is owned and tracked by Docker.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="c">
+        <div class="question-num">Question 3 of 5</div>
+        <p>After running <code>docker network create lab-net</code> and attaching both mysql-lab and a future php-lab container to it with <code>--network lab-net</code>, how does php-lab reach MySQL?</p>
+        <label class="quiz-option" data-val="a">Through a port published to the host, like localhost:3306</label>
+        <label class="quiz-option" data-val="b">It cannot — MySQL must always publish a port to be reachable</label>
+        <label class="quiz-option" data-val="c">By connecting to the hostname mysql-lab, resolved automatically by the network's DNS</label>
+        <label class="quiz-option" data-val="d">Only after manually editing /etc/hosts inside php-lab</label>
+        <div class="explanation">Containers on the same user-defined network get automatic DNS resolution by container name — no port publishing or manual host file edits required.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="b">
+        <div class="question-num">Question 4 of 5</div>
+        <p><code>docker ps</code> with no flags shows nothing, even though you just ran a container. Why?</p>
+        <label class="quiz-option" data-val="a">The image failed to download</label>
+        <label class="quiz-option" data-val="b">docker ps only lists running containers; the container has stopped or exited</label>
+        <label class="quiz-option" data-val="c">docker ps requires the -a flag to show anything at all</label>
+        <label class="quiz-option" data-val="d">The daemon needs to be restarted</label>
+        <div class="explanation">docker ps alone shows only currently running containers. docker ps -a includes stopped and exited ones too, which is why the lab used -a for inspection.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="c">
+        <div class="question-num">Question 5 of 5</div>
+        <p>Session 02 will focus on:</p>
+        <label class="quiz-option" data-val="a">Writing Kubernetes deployment manifests</label>
+        <label class="quiz-option" data-val="b">Setting up a CI/CD pipeline for this repository</label>
+        <label class="quiz-option" data-val="c">Expressing today's manual containers as a single Docker Compose file</label>
+        <label class="quiz-option" data-val="d">Replacing MySQL with a managed cloud database</label>
+        <div class="explanation">Session 02 takes the exact primitives from today — containers, mounts, and the network — and expresses them declaratively in docker-compose.yml so a whole multi-service app starts with one command.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Post-Quiz</button>
+      <div class="quiz-result" id="post-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>9. Reflection Questions</h2>
+    <div class="card">
+      <ol>
+        <li>Before removing and recreating the MySQL container, did you correctly predict the data would survive? What made you confident either way?</li>
+        <li>Why do you think Docker chose to make containers disposable by default instead of automatically persisting everything a container writes?</li>
+        <li>What kind of application data would you deliberately choose <em>not</em> to put in a volume?</li>
+      </ol>
+    </div>
+
+    <h2>10. What Breaks If This Knowledge Is Missing?</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Skip named volumes entirely:</strong> Any container restart, redeploy, or crash silently wipes application data — a database that "randomly loses everything" is almost always this exact mistake.</li>
+        <li><strong>Confuse a bind mount with a volume:</strong> Deployments break when a hardcoded host path from a developer's laptop doesn't exist on a server, because bind mounts are not portable the way named volumes are.</li>
+        <li><strong>Skip the network step and rely on published ports between your own containers:</strong> Every internal service ends up unnecessarily exposed to the host and possibly the internet, widening the attack surface for no real benefit.</li>
+      </ul>
+    </div>
+
+    <h2>11. What We Learned</h2>
+    <div class="card" style="border-color:var(--green);">
+      <p><strong>Today you learned: images are read-only templates and containers are the disposable running instances of them, docker ps/logs are your primary inspection tools, bind mounts share live host files while named volumes are Docker-managed persistent storage, and a user-defined network gives containers name-based DNS instead of manual IP tracking.</strong></p>
+      <p><strong>Next:</strong> <a href="../session-02/index.html">Session 02 — Multi-Container Apps with Docker Compose</a>.</p>
+    </div>
+
+    <p style="margin-top:24px;"><span style="color:var(--text-muted);">← This is the first session</span> · <a href="../../syllabus/index.html">Syllabus</a> · <a href="../session-02/index.html">Session 02 →</a></p>
+
+  </div>
+</main>
+
+<script src="../../quiz.js" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    setupQuiz('pre');
+    setupQuiz('post');
+
+    document.querySelectorAll('.concept-explanation-toggle').forEach(function (button) {
+      button.addEventListener('click', function () {
+        const card = button.closest('.concept-card');
+        const isRevealed = card.classList.toggle('explanation-revealed');
+        button.setAttribute('aria-expanded', String(isRevealed));
+        button.querySelector('.concept-explanation-hint').textContent = isRevealed
+          ? 'Click to blur'
+          : 'Click to reveal';
+      });
+    });
+  });
+</script>
+<script src="../../notes-widget.js" defer></script>
+<script src="../../bookmark-widget.js" defer></script>
+
+</body>
+</html>

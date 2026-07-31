@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Session 17 — Capstone: CI Pipeline with GitHub Actions</title>
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="stylesheet" href="../../notes-widget.css" />
+  <link rel="stylesheet" href="../../bookmark-widget.css" />
+  <link rel="stylesheet" href="../../quiz-explain-modal.css" />
+  <style>
+    .quiz-option{display:block;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:8px;cursor:pointer;font-size:14px;transition:border-color .15s,background .15s;user-select:none;}
+    .quiz-option:hover{border-color:var(--accent);background:var(--surface);}
+    .quiz-option.selected{border-color:var(--accent);background:rgba(255,92,168,.1);}
+    .quiz-option.correct{border-color:var(--green);background:rgba(63,185,80,.1);}
+    .quiz-option.wrong{border-color:var(--red);background:rgba(248,81,73,.1);}
+    .quiz-question{margin-bottom:28px;}
+    .quiz-question p{font-weight:600;margin-bottom:10px;font-size:15px;}
+    .question-num{color:var(--text-muted);font-size:12px;font-weight:400;margin-bottom:4px;}
+    .quiz-result{display:none;padding:16px 20px;border-radius:var(--radius);margin-top:16px;font-size:15px;font-weight:600;}
+    .quiz-result.pass{background:rgba(63,185,80,.12);border:1px solid var(--green);color:var(--green);}
+    .quiz-result.fail{background:rgba(248,81,73,.12);border:1px solid var(--red);color:var(--red);}
+    .explanation{display:none;font-size:13px;color:var(--text-muted);margin-top:6px;padding:8px 12px;background:var(--surface-2);border-radius:var(--radius);border-left:2px solid var(--border);}
+    .submit-btn{background:var(--accent);color:#0d1117;border:none;border-radius:var(--radius);padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;}
+    .submit-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .step{display:flex;gap:16px;margin-bottom:20px;}
+    .step-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#0d1117;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:2px;}
+    .step-body{flex:1;}
+    .step-body p{margin-bottom:6px;}
+    .section-divider{border:none;border-top:2px solid var(--border);margin:40px 0;}
+    .checklist-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;}
+    .checklist-item input[type="checkbox"]{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;}
+
+    /* Comic-panel concept grid — image teaches first, caption only reinforces */
+    .concept-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0;}
+    @media (max-width:760px){.concept-grid{grid-template-columns:repeat(2,1fr);}}
+    .concept-card{background:#111111;border:1px solid #2a2a2a;border-radius:8px;padding:8px 8px 10px;}
+    .concept-card svg{display:block;width:100%;height:auto;}
+    .concept-card figcaption{margin-top:6px;font-family:monospace;font-size:10.5px;line-height:1.3;color:#c9c9c9;text-align:center;}
+    .concept-card figcaption b{color:#ff5ca8;}
+    .concept-explanation-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin-top:10px;padding:7px 8px;border:1px solid #3a3a3a;border-radius:5px;background:#1a1a1a;color:#ff5ca8;font-family:monospace;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;}
+    .concept-explanation-toggle:hover,.concept-explanation-toggle:focus-visible{border-color:#ff5ca8;outline:none;}
+    .concept-explanation-hint{color:#8b949e;font-size:8px;font-weight:400;letter-spacing:0;text-transform:none;}
+    .concept-explanation-text{margin:7px 2px 0;font-size:11px;line-height:1.45;color:#d8d8d8;filter:blur(4px);user-select:none;transition:filter .2s ease;}
+    .concept-card.explanation-revealed .concept-explanation-text{filter:none;user-select:text;}
+    .concept-card.explanation-revealed .concept-explanation-hint{color:#3fb950;}
+    .anchor{color:#ff5ca8;font-weight:700;}
+    .objectives-list{list-style:none;padding-left:0;}
+    .objectives-list li{display:flex;gap:12px;align-items:baseline;margin-bottom:12px;font-size:15px;}
+    .obj-num{flex-shrink:0;min-width:34px;color:#ff5ca8;font-family:monospace;font-weight:700;font-size:12px;background:rgba(255,92,168,.1);border:1px solid rgba(255,92,168,.4);border-radius:10px;padding:2px 6px;text-align:center;}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="../../index.html" class="brand">⚙ DevOps Learning</a>
+    <a href="../../syllabus/index.html">Syllabus</a>
+    <a href="../../sessions/index.html" class="active">Sessions</a>
+    <a href="../../quizzes/index.html">Quizzes</a>
+    <a href="../../labs/index.html">Labs</a>
+  </div>
+</nav>
+
+<main>
+  <div class="container">
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+      <span class="badge badge-layer">Layer 7</span>
+      <span class="badge badge-current">Session 17</span>
+      <span style="color:var(--text-muted);font-size:13px;">Capstone: Ship a Real App</span>
+    </div>
+    <h1>Capstone: CI Pipeline with GitHub Actions</h1>
+    <p class="subtitle">
+      Session 16 built the Text Masker app — a small Node/Express API paired
+      with a static client — and packaged both halves into Docker images by
+      hand, running <code>docker build</code> yourself every time something
+      changed. Today that manual step disappears. A GitHub Actions workflow
+      is wired up so that every push to <code>main</code> automatically
+      builds both images fresh and pushes them to a container registry,
+      with no local <code>docker build</code> required ever again.
+    </p>
+    <div class="alert alert-info">Estimated time: 35–45 minutes</div>
+    <p style="color:var(--text-muted);font-size:13px;">Flow: Pre-quiz → Concept → Lab → Commit → Post-quiz</p>
+
+    <!-- Comic-panel concept grid: image teaches first, caption only reinforces -->
+    <div class="concept-grid">
+
+      <!-- 1. git push triggers a workflow -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="46" width="42" height="28" rx="4" fill="none" stroke="white" stroke-width="2" transform="rotate(-2,25,60)"/>
+          <circle cx="14" cy="60" r="3" fill="#ff5ca8"/>
+          <circle cx="25" cy="60" r="3" fill="#ff5ca8"/>
+          <circle cx="36" cy="60" r="3" fill="#ff5ca8"/>
+          <text x="25" y="46" fill="white" font-family="monospace" font-size="8" text-anchor="middle">push</text>
+          <path d="M48,60 H92" stroke="#ff5ca8" stroke-width="2.5" marker-end="url(#arr1)"/>
+          <defs><marker id="arr1" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <circle cx="118" cy="60" r="22" fill="none" stroke="white" stroke-width="2"/>
+          <circle cx="118" cy="60" r="7" fill="none" stroke="white" stroke-width="2"/>
+          <line x1="118" y1="38" x2="118" y2="30" stroke="white" stroke-width="2"/>
+          <line x1="118" y1="82" x2="118" y2="90" stroke="white" stroke-width="2"/>
+          <line x1="96" y1="60" x2="88" y2="60" stroke="white" stroke-width="2"/>
+          <line x1="140" y1="60" x2="148" y2="60" stroke="white" stroke-width="2"/>
+          <text x="80" y="118" fill="white" font-family="monospace" font-size="9" text-anchor="middle">a robot wakes up</text>
+          <text x="80" y="132" fill="white" font-family="monospace" font-size="9" text-anchor="middle">and starts working</text>
+        </svg>
+        <figcaption><b>git push</b> starts the workflow</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A GitHub Actions workflow does nothing by itself. Pushing a commit to the branch it's watching is the event that wakes it up and starts the run.</p>
+      </figure>
+
+      <!-- 2. on: push: branches: [main] -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="24" y="18" width="112" height="60" rx="5" fill="none" stroke="white" stroke-width="2"/>
+          <text x="80" y="36" fill="white" font-family="monospace" font-size="9" text-anchor="middle">on:</text>
+          <text x="80" y="50" fill="#ff5ca8" font-family="monospace" font-size="9" text-anchor="middle">push:</text>
+          <text x="80" y="64" fill="#3fb950" font-family="monospace" font-size="9" text-anchor="middle">branches: [main]</text>
+          <path d="M80,78 V96" stroke="#ff5ca8" stroke-width="2" marker-end="url(#arr2)"/>
+          <defs><marker id="arr2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <rect x="52" y="98" width="56" height="6" rx="3" fill="#3fb950"/>
+          <text x="80" y="128" fill="white" font-family="monospace" font-size="9" text-anchor="middle">only main matters</text>
+        </svg>
+        <figcaption>the <b>trigger</b> filters which pushes count</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">The `on:` block is the trigger. Setting `push: branches: [main]` means only commits landing on main fire the workflow — pushes to any other branch are ignored.</p>
+      </figure>
+
+      <!-- 3. jobs and steps as an ordered checklist -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="30" y="14" width="100" height="112" rx="5" fill="none" stroke="white" stroke-width="2"/>
+          <rect x="40" y="26" width="10" height="10" fill="none" stroke="#3fb950" stroke-width="1.6"/>
+          <path d="M42,31 l3,3 5,-6" fill="none" stroke="#3fb950" stroke-width="1.6" stroke-linecap="round"/>
+          <text x="56" y="35" fill="white" font-family="monospace" font-size="7">checkout</text>
+          <rect x="40" y="46" width="10" height="10" fill="none" stroke="#3fb950" stroke-width="1.6"/>
+          <path d="M42,51 l3,3 5,-6" fill="none" stroke="#3fb950" stroke-width="1.6" stroke-linecap="round"/>
+          <text x="56" y="55" fill="white" font-family="monospace" font-size="7">buildx</text>
+          <rect x="40" y="66" width="10" height="10" fill="none" stroke="#3fb950" stroke-width="1.6"/>
+          <path d="M42,71 l3,3 5,-6" fill="none" stroke="#3fb950" stroke-width="1.6" stroke-linecap="round"/>
+          <text x="56" y="75" fill="white" font-family="monospace" font-size="7">login</text>
+          <rect x="40" y="86" width="10" height="10" fill="none" stroke="#ff5ca8" stroke-width="1.6"/>
+          <text x="56" y="95" fill="#ff5ca8" font-family="monospace" font-size="7">build+push</text>
+          <rect x="40" y="106" width="10" height="10" fill="none" stroke="#666" stroke-width="1.6"/>
+          <text x="56" y="115" fill="#666" font-family="monospace" font-size="7">...</text>
+          <text x="80" y="140" fill="white" font-family="monospace" font-size="9" text-anchor="middle">steps run in order</text>
+        </svg>
+        <figcaption>a <b>job</b> is a list of <b>steps</b></figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A workflow has one or more jobs, and each job runs its steps top to bottom on a fresh virtual machine — checkout, then setup, then login, then build and push.</p>
+      </figure>
+
+      <!-- 4. GitHub Secrets as a locked vault feeding a workflow -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="40" width="46" height="42" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <circle cx="37" cy="58" r="7" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <line x1="37" y1="65" x2="37" y2="72" stroke="#ff5ca8" stroke-width="2"/>
+          <path d="M25,40 v-8 a12,12 0 0 1 24,0 v8" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="37" y="30" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle"></text>
+          <path d="M62,60 H100" stroke="#3fb950" stroke-width="2.5" stroke-dasharray="4,3" marker-end="url(#arr4)"/>
+          <defs><marker id="arr4" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker></defs>
+          <rect x="104" y="40" width="46" height="42" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <text x="127" y="58" fill="white" font-family="monospace" font-size="7" text-anchor="middle">secrets.</text>
+          <text x="127" y="70" fill="#3fb950" font-family="monospace" font-size="6.5" text-anchor="middle">DOCKERHUB_*</text>
+          <text x="80" y="118" fill="white" font-family="monospace" font-size="9" text-anchor="middle">vault → workflow</text>
+          <text x="80" y="132" fill="white" font-family="monospace" font-size="9" text-anchor="middle">never printed in logs</text>
+        </svg>
+        <figcaption><b>GitHub Secrets</b> feed the workflow</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Secrets like DOCKERHUB_USERNAME and DOCKERHUB_TOKEN are stored encrypted on GitHub, never in the repo itself, and are injected into the workflow at run time through the `secrets.` context.</p>
+      </figure>
+
+      <!-- 5. login-action + build-push-action pushing image into registry cloud -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="16" y="60" width="34" height="28" rx="3" fill="none" stroke="white" stroke-width="2"/>
+          <text x="33" y="78" fill="white" font-family="monospace" font-size="8" text-anchor="middle">img</text>
+          <path d="M52,68 Q76,44 96,58" fill="none" stroke="#ff5ca8" stroke-width="2.5" marker-end="url(#arr5)"/>
+          <defs><marker id="arr5" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <ellipse cx="120" cy="46" rx="30" ry="18" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <ellipse cx="100" cy="54" rx="20" ry="13" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <text x="112" y="50" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">registry</text>
+          <text x="80" y="118" fill="white" font-family="monospace" font-size="9" text-anchor="middle">login-action, then</text>
+          <text x="80" y="132" fill="white" font-family="monospace" font-size="9" text-anchor="middle">build-push-action</text>
+        </svg>
+        <figcaption>image lands in the <b>registry cloud</b></figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">docker/login-action authenticates using the secrets, then docker/build-push-action builds the image and uploads it to Docker Hub in the same step — no manual docker push required.</p>
+      </figure>
+
+      <!-- 6. reproducible builds: same commit -> same image -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="50" width="30" height="18" rx="3" fill="none" stroke="white" stroke-width="1.8"/>
+          <text x="25" y="63" fill="white" font-family="monospace" font-size="7" text-anchor="middle">a1b2c3</text>
+          <path d="M40,59 H68" stroke="#ff5ca8" stroke-width="2" marker-end="url(#arr6)"/>
+          <defs><marker id="arr6" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <rect x="72" y="30" width="34" height="22" rx="3" fill="none" stroke="#3fb950" stroke-width="1.8"/>
+          <text x="89" y="44" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">image A</text>
+          <rect x="72" y="66" width="34" height="22" rx="3" fill="none" stroke="#3fb950" stroke-width="1.8"/>
+          <text x="89" y="80" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">image A</text>
+          <path d="M40,59 H68" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="120" y="41" fill="#666" font-family="monospace" font-size="10">=</text>
+          <text x="120" y="77" fill="#666" font-family="monospace" font-size="10">=</text>
+          <text x="80" y="118" fill="white" font-family="monospace" font-size="9" text-anchor="middle">same commit, run twice</text>
+          <text x="80" y="132" fill="white" font-family="monospace" font-size="9" text-anchor="middle">→ same image</text>
+        </svg>
+        <figcaption>builds are <b>reproducible</b></figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Because the workflow always builds from the same Dockerfile and source at a given commit, running it again against that same commit produces an equivalent image, not a random one-off.</p>
+      </figure>
+
+      <!-- 7. Next session teaser -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="40" cy="40" rx="26" ry="16" fill="none" stroke="#666" stroke-width="1.8"/>
+          <text x="40" y="44" fill="#666" font-family="monospace" font-size="7" text-anchor="middle">registry</text>
+          <path d="M40,58 V90" stroke="#ff5ca8" stroke-width="2.5" stroke-dasharray="5,4" marker-end="url(#arr7)"/>
+          <defs><marker id="arr7" markerWidth="9" markerHeight="9" refX="4" refY="4" orient="auto"><polygon points="0,0 9,4 0,9" fill="#ff5ca8"/></marker></defs>
+          <g transform="translate(100,70)">
+            <circle cx="0" cy="0" r="9" fill="none" stroke="white" stroke-width="1.8"/>
+            <line x1="0" y1="9" x2="0" y2="28" stroke="white" stroke-width="1.8"/>
+            <line x1="0" y1="14" x2="-9" y2="20" stroke="white" stroke-width="1.8"/>
+            <line x1="0" y1="14" x2="9" y2="20" stroke="white" stroke-width="1.8"/>
+            <line x1="0" y1="28" x2="-7" y2="42" stroke="white" stroke-width="1.8"/>
+            <line x1="0" y1="28" x2="7" y2="42" stroke="white" stroke-width="1.8"/>
+          </g>
+          <rect x="16" y="96" width="48" height="24" rx="3" fill="none" stroke="#3fb950" stroke-width="1.8"/>
+          <text x="40" y="112" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="middle">pull</text>
+          <text x="80" y="138" fill="white" font-family="monospace" font-size="9" text-anchor="middle">next: auto-run locally</text>
+        </svg>
+        <figcaption>session 18: pull + run <b>automatically</b></figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Today's pipeline ends at the registry. Session 18 adds continuous deployment: pulling the freshly built image down and running it locally without a manual docker pull.</p>
+      </figure>
+
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>1. Learning Objectives</h2>
+    <div class="card">
+      <ol class="objectives-list">
+        <li><span class="obj-num">1/5</span><span>Explain what a <span class="anchor">workflow trigger</span> is and why <code>on: push: branches: [main]</code> controls when a workflow runs</span></li>
+        <li><span class="obj-num">2/5</span><span>Describe the relationship between <span class="anchor">jobs</span> and <span class="anchor">steps</span> inside a GitHub Actions workflow file</span></li>
+        <li><span class="obj-num">3/5</span><span>Store credentials as <span class="anchor">GitHub Secrets</span> using the <code>gh</code> CLI instead of hardcoding them in the repo</span></li>
+        <li><span class="obj-num">4/5</span><span>Write a working <code>ci-cd.yml</code> that uses <span class="anchor">docker/build-push-action</span> to build and push two separate images</span></li>
+        <li><span class="obj-num">5/5</span><span>Push to <code>main</code>, watch the run in the <span class="anchor">Actions tab</span>, and verify the pushed images by pulling them locally</span></li>
+      </ol>
+    </div>
+
+    <h2>2. Pre-Coding Quiz</h2>
+    <p>Answer before reading the concept. Need 4/5 to proceed.</p>
+
+    <div id="pre-quiz">
+      <div class="quiz-question" data-question="0" data-answer="c">
+        <div class="question-num">Question 1 of 5</div>
+        <p>What is a workflow "trigger" in GitHub Actions?</p>
+        <label class="quiz-option" data-val="a">The name shown at the top of the YAML file</label>
+        <label class="quiz-option" data-val="b">A manual button someone has to click every time</label>
+        <label class="quiz-option" data-val="c">The event, like a push, that causes the workflow to run</label>
+        <label class="quiz-option" data-val="d">The Docker image the workflow eventually produces</label>
+        <div class="explanation">The `on:` block defines the trigger — the event GitHub watches for, such as a push to a specific branch, that starts the workflow run.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="a">
+        <div class="question-num">Question 2 of 5</div>
+        <p>Inside a job, what is a "step"?</p>
+        <label class="quiz-option" data-val="a">One action or shell command executed in order</label>
+        <label class="quiz-option" data-val="b">A separate virtual machine running in parallel</label>
+        <label class="quiz-option" data-val="c">A tag applied to the finished Docker image</label>
+        <label class="quiz-option" data-val="d">A copy of the workflow file itself</label>
+        <div class="explanation">A job runs its steps sequentially, top to bottom, on one runner — checkout, then setup, then login, then build and push are each a step.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="d">
+        <div class="question-num">Question 3 of 5</div>
+        <p>Why use GitHub Secrets instead of writing the Docker Hub password directly in the workflow file?</p>
+        <label class="quiz-option" data-val="a">Secrets make the workflow run noticeably faster</label>
+        <label class="quiz-option" data-val="b">YAML files cannot contain quoted strings</label>
+        <label class="quiz-option" data-val="c">Docker Hub rejects any workflow with a password in it</label>
+        <label class="quiz-option" data-val="d">Hardcoded credentials would be visible to anyone who reads the repo</label>
+        <div class="explanation">A workflow file is committed to the repo history for anyone with read access to see. Secrets stay encrypted on GitHub and are only injected at run time.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="b">
+        <div class="question-num">Question 4 of 5</div>
+        <p>What does <code>docker/build-push-action</code> do?</p>
+        <label class="quiz-option" data-val="a">It only pushes an image that was already built elsewhere</label>
+        <label class="quiz-option" data-val="b">It builds the image from a Dockerfile and pushes it to a registry</label>
+        <label class="quiz-option" data-val="c">It runs the app's test suite before anything else</label>
+        <label class="quiz-option" data-val="d">It deletes old images from the registry to save space</label>
+        <div class="explanation">build-push-action combines the build and push into a single step, using the context and Dockerfile you point it at, then uploading the result.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="a">
+        <div class="question-num">Question 5 of 5</div>
+        <p>Once the workflow is committed, what happens on every future push to <code>main</code>?</p>
+        <label class="quiz-option" data-val="a">Both images are rebuilt and pushed automatically</label>
+        <label class="quiz-option" data-val="b">Nothing, until someone manually re-triggers it</label>
+        <label class="quiz-option" data-val="c">Only the server image rebuilds, never the client</label>
+        <label class="quiz-option" data-val="d">The workflow file itself gets rewritten each time</label>
+        <div class="explanation">That's the entire point of CI here: any push landing on main re-triggers the workflow, which rebuilds and re-pushes both images without anyone touching Docker locally.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Pre-Quiz</button>
+      <div class="quiz-result" id="pre-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>3. The Concept — Automating the Build You Did By Hand</h2>
+
+    <h3>What CI means for this app</h3>
+    <p>
+      Session 16 ended with two Docker images built manually, on demand,
+      whenever there was time to remember to run <code>docker build</code>
+      again. Continuous integration replaces that habit with a machine that
+      never forgets: a GitHub Actions workflow watches the repository, and
+      the moment a commit lands on <code>main</code>, it checks out that
+      exact code, builds both the server and client images from it, and
+      pushes the results to a registry — every time, the same way, without
+      anyone having to remember to do it.
+    </p>
+
+    <h3>Anatomy of a workflow file</h3>
+    <p>
+      Every workflow file under <code>.github/workflows/</code> follows the
+      same three-part shape: a <span class="anchor">trigger</span> (when to
+      run), one or more <span class="anchor">jobs</span> (what runs, and on
+      what kind of machine), and each job's ordered
+      <span class="anchor">steps</span> (the individual actions or commands
+      that make up the job).
+    </p>
+    <pre><code>on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      # ...more steps below</code></pre>
+    <p>
+      <code>runs-on: ubuntu-latest</code> tells GitHub to spin up a fresh
+      Ubuntu virtual machine for this job — nothing is left over from any
+      previous run, which is exactly what makes the build reproducible.
+    </p>
+
+    <h3>Storing credentials with <code>gh secret set</code></h3>
+    <p>
+      Pushing an image to Docker Hub requires a username and an access
+      token. Neither belongs in the repository. The GitHub CLI (<code>gh</code>)
+      can create encrypted repository secrets directly from the terminal,
+      once authenticated:
+    </p>
+    <pre><code># Confirm gh is authenticated first
+gh auth status
+
+# Store the two secrets the workflow will reference
+gh secret set DOCKERHUB_USERNAME
+gh secret set DOCKERHUB_TOKEN
+
+# Confirm they were created
+gh secret list</code></pre>
+    <p>
+      Running <code>gh secret set NAME</code> without <code>--body</code>
+      prompts for the value interactively, which keeps it out of shell
+      history. Once set, <code>gh secret list</code> should show both
+      names — never the values themselves, since GitHub does not display
+      secret contents back to anyone once they're stored.
+    </p>
+
+    <h3>The actual workflow: <code>.github/workflows/ci-cd.yml</code></h3>
+    <p>
+      With the repository created (for example under
+      <code>your-org/masker-lab</code>) and both secrets in place, the
+      workflow itself ties everything together: check out the code, set up
+      Buildx, log in to Docker Hub using the two secrets, then build and
+      push the server image followed by the client image.
+    </p>
+    <pre><code>name: Build and Push Masker Images
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build &amp; push masker-server
+        uses: docker/build-push-action@v6
+        with:
+          context: ./server
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/masker-server:latest
+
+      - name: Build &amp; push masker-client
+        uses: docker/build-push-action@v6
+        with:
+          context: ./client
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/masker-client:latest</code></pre>
+    <p>
+      Each <code>docker/build-push-action</code> step is independent: one
+      points its <code>context</code> at <code>./server</code>, the other
+      at <code>./client</code>, so the two images build from their own
+      Dockerfiles without interfering with each other.
+    </p>
+
+    <h3>Why secrets keep credentials out of the repo</h3>
+    <p>
+      Notice that the token never appears anywhere in <code>ci-cd.yml</code>
+      itself — only the reference <code>${{ secrets.DOCKERHUB_TOKEN }}</code>
+      does. GitHub substitutes the real value at run time and also masks it
+      out of any log output automatically, so even a public repository's
+      Actions logs never leak the actual credential.
+    </p>
+
+    <h3>Monitoring runs in the Actions tab</h3>
+    <p>
+      After pushing, the <strong>Actions</strong> tab on the GitHub
+      repository page lists every workflow run, newest first. Clicking a
+      run shows each job, and clicking a job expands every step with its
+      own live log — the fastest way to see exactly which step failed if
+      something goes wrong.
+    </p>
+
+    <h3>Optional enhancement: tagging by commit SHA</h3>
+    <p>
+      Tagging every push as <code>:latest</code> works, but it overwrites
+      history — there's no way to tell which commit produced the image
+      currently running. Swapping the tag for <code>${{ github.sha }}</code>
+      ties each image version back to the exact commit that built it:
+    </p>
+    <pre><code>tags: ${{ secrets.DOCKERHUB_USERNAME }}/masker-server:${{ github.sha }}</code></pre>
+    <p>
+      This is not required for today's lab, but it's the natural next step
+      once the basic pipeline is working.
+    </p>
+
+    <hr class="section-divider" />
+
+    <h2>4. Lab</h2>
+    <div class="alert alert-success">
+      <strong>Lab objective:</strong> Store Docker Hub credentials as GitHub
+      Secrets, write a working <code>ci-cd.yml</code>, push it, and confirm
+      both the server and client images land in the registry.
+    </div>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <p><strong>Verify gh CLI authentication</strong></p>
+        <pre><code>gh auth status</code></pre>
+        <p>If it reports not logged in, run <code>gh auth login</code> and follow the prompts: GitHub.com → HTTPS → "Login with a web browser".</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <p><strong>Add the two GitHub secrets via CLI</strong></p>
+        <pre><code>gh secret set DOCKERHUB_USERNAME
+gh secret set DOCKERHUB_TOKEN
+gh secret list</code></pre>
+        <p>Expect to see both names confirmed as created, with no values printed.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <p><strong>Create the workflow folder</strong></p>
+        <pre><code>mkdir -p .github/workflows</code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <p><strong>Write <code>.github/workflows/ci-cd.yml</code></strong></p>
+        <p>Use the full workflow shown in the concept section above — checkout, Buildx setup, Docker Hub login, then two separate build-push-action steps, one for <code>./server</code> and one for <code>./client</code>.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <p><strong>Predict, then push</strong></p>
+        <p>Before running <code>git push</code>, write down a prediction: in the Actions tab, how many jobs will this run show, and how many build-push steps will appear inside that job?</p>
+        <pre><code>git add .github/workflows/ci-cd.yml
+git commit -m "session-17: add CI workflow to build and push Docker images"
+git push</code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <p><strong>Watch it run in the Actions tab</strong></p>
+        <p>Open the repository on GitHub and click <strong>Actions</strong>. Find the newest run of "Build and Push Masker Images," open it, and expand each step's log as it completes. Compare the result to your prediction from step 5.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">7</div>
+      <div class="step-body">
+        <p><strong>Verify by pulling the images locally</strong></p>
+        <pre><code>docker pull $env:DOCKERHUB_USERNAME/masker-server:latest
+docker pull $env:DOCKERHUB_USERNAME/masker-client:latest
+
+docker run -d --name masker-server -p 8080:8080 $env:DOCKERHUB_USERNAME/masker-server:latest
+docker run -d --name masker-client -p 30080:80 $env:DOCKERHUB_USERNAME/masker-client:latest</code></pre>
+        <p>Visit <code>http://localhost:8080/health</code> and <code>http://localhost:30080</code> to confirm both containers came from the pipeline, not from a local build. When done, clean up with <code>docker rm -f masker-server masker-client</code>.</p>
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>5. Expected Files Changed</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Action</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><code>.github/workflows/ci-cd.yml</code></td><td>Created</td><td>Defines the trigger, job, and steps that build and push both Docker images on every push to main</td></tr>
+          <tr><td><code>sessions/session-17/index.html</code></td><td>Updated</td><td>This session document</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>6. Commit Checkpoint</h2>
+    <pre><code>git add .github/workflows/ci-cd.yml
+git commit -m "session-17: add CI workflow to build and push Docker images"</code></pre>
+
+    <h2>7. Code Review Checklist</h2>
+    <div class="card">
+      <div class="checklist-item"><input type="checkbox" id="c1"/><label for="c1">ci-cd.yml lives at .github/workflows/ci-cd.yml, not some other path</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c2"/><label for="c2">The trigger is on: push: branches: [main], not left to run on every branch</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c3"/><label for="c3">DOCKERHUB_USERNAME and DOCKERHUB_TOKEN are referenced as ${{ secrets.* }}, never written as literal values</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c4"/><label for="c4">There are two separate build-push-action steps, one per image context (./server and ./client)</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c5"/><label for="c5">The Actions tab shows a successful run, and both images are visible in the registry afterward</label></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>8. Post-Coding Quiz</h2>
+    <div id="post-quiz" data-pass-post="Proceed to Session 18 (CD to Local Docker) after ≥ 80%.">
+      <div class="quiz-question" data-question="0" data-answer="b">
+        <div class="question-num">Question 1 of 5</div>
+        <p>The repository is public and the images are pushed to a public Docker Hub repository. What does that mean in practice?</p>
+        <label class="quiz-option" data-val="a">Only collaborators added to the repo can pull the images</label>
+        <label class="quiz-option" data-val="b">Anyone can pull the images, whether or not they have repo access</label>
+        <label class="quiz-option" data-val="c">The images are automatically deleted after 30 days</label>
+        <label class="quiz-option" data-val="d">Docker Hub blocks public pulls unless a token is supplied</label>
+        <div class="explanation">A public Docker Hub repository is pullable by anyone with docker pull, regardless of who can see the source code — private repositories exist for exactly this reason.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="c">
+        <div class="question-num">Question 2 of 5</div>
+        <p>What is GitHub Container Registry (GHCR), in relation to Docker Hub?</p>
+        <label class="quiz-option" data-val="a">A tool that replaces docker/build-push-action entirely</label>
+        <label class="quiz-option" data-val="b">A required step before any image can be pushed anywhere</label>
+        <label class="quiz-option" data-val="c">An alternative registry, integrated with GitHub, images can be pushed to instead</label>
+        <label class="quiz-option" data-val="d">A local-only cache Docker Desktop maintains automatically</label>
+        <div class="explanation">GHCR is a registry hosted by GitHub itself. Switching to it is mostly a matter of changing the login target and the tags: line — the rest of the workflow stays the same shape.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="a">
+        <div class="question-num">Question 3 of 5</div>
+        <p>The workflow references <code>secrets.DOCKERHUB_TOKEN</code>, but the secret was actually created as <code>DOCKERHUB_TOKEM</code> (typo). What happens?</p>
+        <label class="quiz-option" data-val="a">The login step fails because the secret resolves to empty</label>
+        <label class="quiz-option" data-val="b">GitHub silently corrects the typo for you</label>
+        <label class="quiz-option" data-val="c">The workflow uses the DOCKERHUB_USERNAME value instead</label>
+        <label class="quiz-option" data-val="d">The build step succeeds but the push step is skipped</label>
+        <div class="explanation">A misspelled secret name simply doesn't match anything, so the reference resolves to an empty string, and docker/login-action fails to authenticate with an empty password.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="d">
+        <div class="question-num">Question 4 of 5</div>
+        <p>Why does the workflow include a "Set up Docker Buildx" step before building?</p>
+        <label class="quiz-option" data-val="a">Buildx is required to check out the repository code</label>
+        <label class="quiz-option" data-val="b">It replaces the need for a Dockerfile entirely</label>
+        <label class="quiz-option" data-val="c">It automatically writes the DOCKERHUB_TOKEN secret</label>
+        <label class="quiz-option" data-val="d">It sets up the builder that build-push-action relies on</label>
+        <div class="explanation">docker/build-push-action builds through Buildx, so setup-buildx-action prepares that builder on the runner before any build-push step can run.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="c">
+        <div class="question-num">Question 5 of 5</div>
+        <p>Session 18 will focus on:</p>
+        <label class="quiz-option" data-val="a">Writing unit tests for the Express API</label>
+        <label class="quiz-option" data-val="b">Migrating the workflow from Docker Hub to GHCR</label>
+        <label class="quiz-option" data-val="c">Automatically pulling and running the pushed images locally</label>
+        <label class="quiz-option" data-val="d">Adding a second workflow that runs on pull requests</label>
+        <div class="explanation">Session 18 picks up right where the registry left off: continuous deployment, pulling the freshly built images down and running them without a manual docker pull.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Post-Quiz</button>
+      <div class="quiz-result" id="post-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>9. Reflection Questions</h2>
+    <div class="card">
+      <ol>
+        <li>Before pushing, did you correctly predict how many build-push steps would show up in the Actions run? What made that easy or hard to guess?</li>
+        <li>Why does it matter that the DOCKERHUB_TOKEN never appears as plain text anywhere in ci-cd.yml, even though the workflow clearly needs it to authenticate?</li>
+        <li>If this repository and its Docker Hub images were switched to private, what would break for someone trying to pull the images without credentials?</li>
+      </ol>
+    </div>
+
+    <h2>10. What Breaks If This Knowledge Is Missing?</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Hardcoding the token in ci-cd.yml instead of using secrets:</strong> the credential becomes visible to anyone who can read the repository or its commit history, defeating the entire purpose of keeping it out of source control.</li>
+        <li><strong>Getting the trigger wrong (or leaving it off branch filtering):</strong> the workflow either never runs when it should, or runs on every branch push, burning Actions minutes and pushing half-finished work to the registry.</li>
+        <li><strong>Not knowing where to look when a run fails:</strong> without understanding that the Actions tab breaks a run down into jobs and steps with their own logs, a failed login or build step looks like an unexplainable dead end instead of a two-minute diagnosis.</li>
+      </ul>
+    </div>
+
+    <h2>11. What We Learned</h2>
+    <div class="card" style="border-color:var(--green);">
+      <p><strong>Today you learned: a GitHub Actions workflow is triggered by an event like a push to main, runs as an ordered list of jobs and steps on a fresh runner, authenticates using encrypted GitHub Secrets rather than hardcoded credentials, and uses docker/build-push-action to build and push each image straight to a registry — turning a manual docker build habit into a reproducible pipeline.</strong></p>
+      <p><strong>Next:</strong> <a href="../session-18/index.html">Session 18 — Capstone: CD to Local Docker</a>.</p>
+    </div>
+
+    <p style="margin-top:24px;"><a href="../session-16/index.html">← Session 16</a> · <a href="../../syllabus/index.html">Syllabus</a> · <a href="../session-18/index.html">Session 18 →</a></p>
+
+  </div>
+</main>
+
+<script src="../../quiz.js" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    setupQuiz('pre');
+    setupQuiz('post');
+
+    document.querySelectorAll('.concept-explanation-toggle').forEach(function (button) {
+      button.addEventListener('click', function () {
+        const card = button.closest('.concept-card');
+        const isRevealed = card.classList.toggle('explanation-revealed');
+        button.setAttribute('aria-expanded', String(isRevealed));
+        button.querySelector('.concept-explanation-hint').textContent = isRevealed
+          ? 'Click to blur'
+          : 'Click to reveal';
+      });
+    });
+  });
+</script>
+<script src="../../notes-widget.js" defer></script>
+<script src="../../bookmark-widget.js" defer></script>
+
+</body>
+</html>

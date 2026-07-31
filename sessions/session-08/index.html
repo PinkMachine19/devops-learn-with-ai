@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Session 08 — Terraform with Kubernetes and Helm Providers</title>
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="stylesheet" href="../../notes-widget.css" />
+  <link rel="stylesheet" href="../../bookmark-widget.css" />
+  <link rel="stylesheet" href="../../quiz-explain-modal.css" />
+  <style>
+    .quiz-option{display:block;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:8px;cursor:pointer;font-size:14px;transition:border-color .15s,background .15s;user-select:none;}
+    .quiz-option:hover{border-color:var(--accent);background:var(--surface);}
+    .quiz-option.selected{border-color:var(--accent);background:rgba(255,92,168,.1);}
+    .quiz-option.correct{border-color:var(--green);background:rgba(63,185,80,.1);}
+    .quiz-option.wrong{border-color:var(--red);background:rgba(248,81,73,.1);}
+    .quiz-question{margin-bottom:28px;}
+    .quiz-question p{font-weight:600;margin-bottom:10px;font-size:15px;}
+    .question-num{color:var(--text-muted);font-size:12px;font-weight:400;margin-bottom:4px;}
+    .quiz-result{display:none;padding:16px 20px;border-radius:var(--radius);margin-top:16px;font-size:15px;font-weight:600;}
+    .quiz-result.pass{background:rgba(63,185,80,.12);border:1px solid var(--green);color:var(--green);}
+    .quiz-result.fail{background:rgba(248,81,73,.12);border:1px solid var(--red);color:var(--red);}
+    .explanation{display:none;font-size:13px;color:var(--text-muted);margin-top:6px;padding:8px 12px;background:var(--surface-2);border-radius:var(--radius);border-left:2px solid var(--border);}
+    .submit-btn{background:var(--accent);color:#0d1117;border:none;border-radius:var(--radius);padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;}
+    .submit-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .step{display:flex;gap:16px;margin-bottom:20px;}
+    .step-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#0d1117;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:2px;}
+    .step-body{flex:1;}
+    .step-body p{margin-bottom:6px;}
+    .section-divider{border:none;border-top:2px solid var(--border);margin:40px 0;}
+    .checklist-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;}
+    .checklist-item input[type="checkbox"]{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;}
+
+    /* Comic-panel concept grid — image teaches first, caption only reinforces */
+    .concept-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0;}
+    @media (max-width:760px){.concept-grid{grid-template-columns:repeat(2,1fr);}}
+    .concept-card{background:#111111;border:1px solid #2a2a2a;border-radius:8px;padding:8px 8px 10px;}
+    .concept-card svg{display:block;width:100%;height:auto;}
+    .concept-card figcaption{margin-top:6px;font-family:monospace;font-size:10.5px;line-height:1.3;color:#c9c9c9;text-align:center;}
+    .concept-card figcaption b{color:#ff5ca8;}
+    .concept-explanation-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin-top:10px;padding:7px 8px;border:1px solid #3a3a3a;border-radius:5px;background:#1a1a1a;color:#ff5ca8;font-family:monospace;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;}
+    .concept-explanation-toggle:hover,.concept-explanation-toggle:focus-visible{border-color:#ff5ca8;outline:none;}
+    .concept-explanation-hint{color:#8b949e;font-size:8px;font-weight:400;letter-spacing:0;text-transform:none;}
+    .concept-explanation-text{margin:7px 2px 0;font-size:11px;line-height:1.45;color:#d8d8d8;filter:blur(4px);user-select:none;transition:filter .2s ease;}
+    .concept-card.explanation-revealed .concept-explanation-text{filter:none;user-select:text;}
+    .concept-card.explanation-revealed .concept-explanation-hint{color:#3fb950;}
+    .anchor{color:#ff5ca8;font-weight:700;}
+    .objectives-list{list-style:none;padding-left:0;}
+    .objectives-list li{display:flex;gap:12px;align-items:baseline;margin-bottom:12px;font-size:15px;}
+    .obj-num{flex-shrink:0;min-width:34px;color:#ff5ca8;font-family:monospace;font-weight:700;font-size:12px;background:rgba(255,92,168,.1);border:1px solid rgba(255,92,168,.4);border-radius:10px;padding:2px 6px;text-align:center;}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="../../index.html" class="brand">⚙ DevOps Learning</a>
+    <a href="../../syllabus/index.html">Syllabus</a>
+    <a href="../../sessions/index.html" class="active">Sessions</a>
+    <a href="../../quizzes/index.html">Quizzes</a>
+    <a href="../../labs/index.html">Labs</a>
+  </div>
+</nav>
+
+<main>
+  <div class="container">
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+      <span class="badge badge-layer">Layer 3</span>
+      <span class="badge badge-current">Session 08</span>
+      <span class="badge badge-gate">Gate</span>
+      <span style="color:var(--text-muted);font-size:13px;">Packaging & Infrastructure as Code</span>
+    </div>
+    <h1>Terraform with Kubernetes and Helm Providers</h1>
+    <p class="subtitle">
+      Session 07 proved Terraform can provision a network and a bare
+      endpoint. Session 06 proved Helm can package and release an
+      application into a cluster that already exists. This session closes
+      Layer 3 by pointing Terraform directly at Kubernetes and Helm: one
+      <code>terraform apply</code> creates a namespace and installs a Helm
+      release into it, tracked in the same state file as any other resource.
+      This is the Layer 3 gate — passing it confirms you can drive both
+      infrastructure and application deployment from a single tool.
+    </p>
+    <div class="alert alert-info">Estimated time: 55–65 minutes</div>
+    <p style="color:var(--text-muted);font-size:13px;">Pre-quiz → Concept → Lab → Commit → Post-quiz</p>
+
+    <!-- Comic-panel concept grid -->
+    <div class="concept-grid">
+
+      <!-- 1. Two providers, one apply -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="30" y="10" width="100" height="26" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <text x="80" y="27" fill="white" font-family="monospace" font-size="8" text-anchor="middle">terraform apply</text>
+          <path d="M60,36 V52" stroke="#ff5ca8" stroke-width="2" marker-end="url(#arrK1)"/>
+          <path d="M100,36 V52" stroke="#3fb950" stroke-width="2" marker-end="url(#arrK1)"/>
+          <defs><marker id="arrK1" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#999"/></marker></defs>
+          <rect x="20" y="54" width="60" height="26" rx="3" fill="none" stroke="#ff5ca8" stroke-width="1.8"/>
+          <text x="50" y="70" fill="#ff5ca8" font-family="monospace" font-size="7.5" text-anchor="middle">kubernetes</text>
+          <rect x="82" y="54" width="58" height="26" rx="3" fill="none" stroke="#3fb950" stroke-width="1.8"/>
+          <text x="111" y="70" fill="#3fb950" font-family="monospace" font-size="7.5" text-anchor="middle">helm</text>
+          <text x="80" y="105" fill="white" font-family="monospace" font-size="8" text-anchor="middle">two providers</text>
+          <text x="80" y="118" fill="white" font-family="monospace" font-size="8" text-anchor="middle">one state file</text>
+        </svg>
+        <figcaption><b>k8s + helm</b> providers together</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Terraform can configure multiple providers in one config. The kubernetes provider manages raw objects like namespaces, while the helm provider manages chart releases — both tracked in the same apply.</p>
+      </figure>
+
+      <!-- 2. kubernetes_namespace resource -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="40" y="16" width="80" height="28" rx="3" fill="none" stroke="white" stroke-width="2"/>
+          <text x="80" y="34" fill="white" font-family="monospace" font-size="8" text-anchor="middle">k8s provider</text>
+          <path d="M80,44 V60" stroke="#ff5ca8" stroke-width="2" marker-end="url(#arrK2)"/>
+          <defs><marker id="arrK2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <path d="M46,62 L114,62 L114,92 L46,92 Z" fill="none" stroke="#ff5ca8" stroke-width="2" stroke-dasharray="4,3"/>
+          <text x="80" y="80" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle">namespace</text>
+          <text x="80" y="90" fill="#999" font-family="monospace" font-size="6.5" text-anchor="middle">"dev"</text>
+          <text x="80" y="118" fill="white" font-family="monospace" font-size="8" text-anchor="middle">a raw k8s object, via terraform</text>
+        </svg>
+        <figcaption><b>kubernetes_namespace</b> resource</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">The kubernetes provider can create any raw Kubernetes object as a Terraform resource — a namespace is the simplest one, and proves the provider is correctly talking to the cluster.</p>
+      </figure>
+
+      <!-- 3. helm_release resource -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="40" y="12" width="80" height="26" rx="3" fill="none" stroke="white" stroke-width="2"/>
+          <text x="80" y="29" fill="white" font-family="monospace" font-size="8" text-anchor="middle">helm provider</text>
+          <path d="M80,40 V56" stroke="#3fb950" stroke-width="2" marker-end="url(#arrK3)"/>
+          <defs><marker id="arrK3" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker></defs>
+          <rect x="30" y="58" width="100" height="30" rx="3" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <text x="80" y="74" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="middle">helm_release</text>
+          <text x="80" y="85" fill="#999" font-family="monospace" font-size="6.5" text-anchor="middle">"nginx" chart</text>
+          <path d="M80,88 V104" stroke="white" stroke-width="1.8" marker-end="url(#arrK4)"/>
+          <defs><marker id="arrK4" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="white"/></marker></defs>
+          <rect x="50" y="106" width="60" height="24" rx="3" fill="none" stroke="white" stroke-width="1.6"/>
+          <text x="80" y="122" fill="white" font-family="monospace" font-size="7" text-anchor="middle">"dev" ns</text>
+        </svg>
+        <figcaption><b>helm_release</b> as a resource</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">helm_release is a Terraform resource type that wraps a full Helm install/upgrade lifecycle — name, chart, repository, and namespace are all declared the same way any other resource is.</p>
+      </figure>
+
+      <!-- 4. values file passed through terraform -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="30" width="60" height="26" rx="3" fill="none" stroke="white" stroke-width="1.8"/>
+          <text x="40" y="47" fill="white" font-family="monospace" font-size="7.5" text-anchor="middle">dev.yaml</text>
+          <path d="M72,43 H90" stroke="#ff5ca8" stroke-width="2" marker-end="url(#arrK5)"/>
+          <defs><marker id="arrK5" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <text x="80" y="34" fill="#ff5ca8" font-family="monospace" font-size="6.5" text-anchor="middle">file()</text>
+          <rect x="92" y="30" width="58" height="26" rx="3" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="121" y="47" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">helm_release</text>
+          <text x="80" y="90" fill="white" font-family="monospace" font-size="8" text-anchor="middle">replicaCount: 2</text>
+          <text x="80" y="104" fill="white" font-family="monospace" font-size="8" text-anchor="middle">service.type: NodePort</text>
+        </svg>
+        <figcaption>values loaded via <b>file()</b></figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A helm_release resource's values argument can load an external YAML file with file(), overriding the chart's own defaults exactly the way -f values.yaml would on the CLI.</p>
+      </figure>
+
+      <!-- 5. modules per environment -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="55" y="10" width="50" height="24" rx="3" fill="none" stroke="white" stroke-width="1.8"/>
+          <text x="80" y="26" fill="white" font-family="monospace" font-size="7.5" text-anchor="middle">root</text>
+          <path d="M60,34 L30,54" stroke="#666" stroke-width="1.5"/>
+          <path d="M80,34 V54" stroke="#666" stroke-width="1.5"/>
+          <path d="M100,34 L130,54" stroke="#666" stroke-width="1.5"/>
+          <rect x="8" y="56" width="44" height="22" rx="3" fill="none" stroke="#ff5ca8" stroke-width="1.6"/>
+          <text x="30" y="70" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">dev</text>
+          <rect x="58" y="56" width="44" height="22" rx="3" fill="none" stroke="#ff5ca8" stroke-width="1.6"/>
+          <text x="80" y="70" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">stage</text>
+          <rect x="108" y="56" width="44" height="22" rx="3" fill="none" stroke="#ff5ca8" stroke-width="1.6"/>
+          <text x="130" y="70" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">prod</text>
+          <path d="M30,78 V96" stroke="#666" stroke-width="1.3"/>
+          <path d="M80,78 V96" stroke="#666" stroke-width="1.3"/>
+          <path d="M130,78 V96" stroke="#666" stroke-width="1.3"/>
+          <rect x="30" y="98" width="100" height="22" rx="3" fill="none" stroke="#3fb950" stroke-width="1.8"/>
+          <text x="80" y="112" fill="#3fb950" font-family="monospace" font-size="7.5" text-anchor="middle">shared module</text>
+        </svg>
+        <figcaption>one <b>module</b>, three environments</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A Terraform module packages the namespace and helm_release pattern once. Dev, stage, and prod each call it with different variable values instead of duplicating the resource blocks three times.</p>
+      </figure>
+
+      <!-- 6. drift detection -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="30" y="14" width="100" height="26" rx="3" fill="none" stroke="white" stroke-width="1.8"/>
+          <text x="80" y="31" fill="white" font-family="monospace" font-size="8" text-anchor="middle">terraform state</text>
+          <path d="M80,40 V56" stroke="#ff5ca8" stroke-width="2" marker-end="url(#arrK6)"/>
+          <defs><marker id="arrK6" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <rect x="20" y="58" width="120" height="24" rx="3" fill="none" stroke="#ff5ca8" stroke-width="1.8"/>
+          <text x="80" y="74" fill="#ff5ca8" font-family="monospace" font-size="7.5" text-anchor="middle">compare with cluster</text>
+          <path d="M80,82 V96" stroke="white" stroke-width="1.6" marker-end="url(#arrK7)"/>
+          <defs><marker id="arrK7" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="white"/></marker></defs>
+          <text x="80" y="110" fill="#f85149" font-family="monospace" font-size="8" text-anchor="middle">drift? someone kubectl'd</text>
+          <text x="80" y="124" fill="white" font-family="monospace" font-size="8" text-anchor="middle">plan shows the difference</text>
+        </svg>
+        <figcaption>Terraform detects <b>drift</b></figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">If someone manually edits a namespace or release with kubectl or helm outside of Terraform, the next plan compares state against the cluster and surfaces the difference as drift.</p>
+      </figure>
+
+      <!-- 7. destroy tears down both -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="30" y="14" width="100" height="26" rx="3" fill="none" stroke="#f85149" stroke-width="2"/>
+          <text x="80" y="31" fill="#f85149" font-family="monospace" font-size="8" text-anchor="middle">terraform destroy</text>
+          <path d="M55,40 L35,58" stroke="#666" stroke-width="1.5"/>
+          <path d="M105,40 L125,58" stroke="#666" stroke-width="1.5"/>
+          <rect x="8" y="60" width="56" height="24" rx="3" fill="none" stroke="#666" stroke-width="1.6"/>
+          <text x="36" y="76" fill="#666" font-family="monospace" font-size="7" text-anchor="middle">helm release</text>
+          <rect x="96" y="60" width="56" height="24" rx="3" fill="none" stroke="#666" stroke-width="1.6"/>
+          <text x="124" y="76" fill="#666" font-family="monospace" font-size="7" text-anchor="middle">namespace</text>
+          <text x="80" y="108" fill="white" font-family="monospace" font-size="8" text-anchor="middle">one command,</text>
+          <text x="80" y="122" fill="white" font-family="monospace" font-size="8" text-anchor="middle">both torn down</text>
+        </svg>
+        <figcaption><b>destroy</b> covers both providers</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Because both the namespace and the Helm release are Terraform resources in the same state, one terraform destroy removes both — proving Terraform fully owns their lifecycle.</p>
+      </figure>
+
+      <!-- 8. Next session -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="58" width="46" height="34" rx="4" fill="none" stroke="#666" stroke-width="1.8" transform="rotate(-2,37,75)"/>
+          <text x="37" y="79" fill="#666" font-family="monospace" font-size="10" text-anchor="middle">08</text>
+          <path d="M64,75 H108" stroke="#ff5ca8" stroke-width="2.5" stroke-dasharray="5,4" marker-end="url(#arrK8)"/>
+          <defs><marker id="arrK8" markerWidth="9" markerHeight="9" refX="4" refY="4" orient="auto"><polygon points="0,0 9,4 0,9" fill="#ff5ca8"/></marker></defs>
+          <rect x="112" y="52" width="42" height="46" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2" transform="rotate(2,133,75)"/>
+          <text x="133" y="80" fill="#ff5ca8" font-family="monospace" font-size="14" text-anchor="middle" font-weight="bold">09</text>
+          <line x1="120" y1="105" x2="146" y2="105" stroke="white" stroke-width="1.6"/>
+          <line x1="140" y1="101" x2="146" y2="105" stroke="white" stroke-width="1.6"/>
+          <line x1="140" y1="109" x2="146" y2="105" stroke="white" stroke-width="1.6"/>
+          <text x="80" y="128" fill="white" font-family="monospace" font-size="9" text-anchor="middle">routing traffic in, next</text>
+        </svg>
+        <figcaption>next: Ingress routing</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Session 09 opens Layer 4, focused on routing external traffic into the cluster with Ingress — configured through raw Kubernetes, Helm, and Terraform in turn.</p>
+      </figure>
+
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>1. Learning Objectives</h2>
+    <div class="card">
+      <ol class="objectives-list">
+        <li><span class="obj-num">1/5</span><span>Configure both the <span class="anchor">kubernetes</span> and <span class="anchor">helm</span> providers in a single Terraform config</span></li>
+        <li><span class="obj-num">2/5</span><span>Create a raw <span class="anchor">kubernetes_namespace</span> resource and verify it with <code>kubectl</code></span></li>
+        <li><span class="obj-num">3/5</span><span>Declare a <span class="anchor">helm_release</span> resource and pass it custom values from a file</span></li>
+        <li><span class="obj-num">4/5</span><span>Explain why Terraform-managed Helm releases are more <span class="anchor">reproducible</span> than plain <code>helm install</code></span></li>
+        <li><span class="obj-num">5/5</span><span>Structure resources into a reusable <span class="anchor">module</span> so dev/stage/prod can share one definition</span></li>
+      </ol>
+    </div>
+
+    <h2>2. Pre-Coding Quiz</h2>
+    <p>Answer before reading the concept. Need 4/5 to proceed.</p>
+
+    <div id="pre-quiz">
+      <div class="quiz-question" data-question="0" data-answer="b">
+        <div class="question-num">Question 1 of 5</div>
+        <p>Can a single Terraform configuration use both the kubernetes provider and the helm provider at the same time?</p>
+        <label class="quiz-option" data-val="a">No, only one provider can be configured per config file</label>
+        <label class="quiz-option" data-val="b">Yes, a config can declare and configure multiple providers together</label>
+        <label class="quiz-option" data-val="c">Only if they target different clusters</label>
+        <label class="quiz-option" data-val="d">Only inside separate terraform init calls</label>
+        <div class="explanation">Terraform configs commonly combine multiple providers. Here, kubernetes manages raw objects and helm manages chart releases, both against the same cluster.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="c">
+        <div class="question-num">Question 2 of 5</div>
+        <p>What does a helm_release Terraform resource actually correspond to?</p>
+        <label class="quiz-option" data-val="a">A single Kubernetes Pod definition</label>
+        <label class="quiz-option" data-val="b">A Terraform module written entirely in HCL</label>
+        <label class="quiz-option" data-val="c">A full Helm install/upgrade lifecycle for one chart release</label>
+        <label class="quiz-option" data-val="d">A read-only snapshot of an existing manual helm install</label>
+        <div class="explanation">helm_release wraps the same install/upgrade behavior as the Helm CLI, but tracked and managed as a Terraform-owned resource in state.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="a">
+        <div class="question-num">Question 3 of 5</div>
+        <p>Why is a Terraform-managed Helm release generally considered more reproducible than running helm install manually from a terminal?</p>
+        <label class="quiz-option" data-val="a">It's declared in version-controlled config and tracked in state, so the exact same apply can be repeated</label>
+        <label class="quiz-option" data-val="b">Terraform installs charts faster than the Helm CLI does</label>
+        <label class="quiz-option" data-val="c">Manual helm install commands cannot be scripted at all</label>
+        <label class="quiz-option" data-val="d">Terraform always uses a newer chart version automatically</label>
+        <div class="explanation">Reproducibility comes from the config living in source control and Terraform tracking exactly what it applied — not from any speed or version difference.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="d">
+        <div class="question-num">Question 4 of 5</div>
+        <p>What is Terraform "drift," in the context of a namespace or Helm release it manages?</p>
+        <label class="quiz-option" data-val="a">A network delay between plan and apply</label>
+        <label class="quiz-option" data-val="b">A required flag for the kubernetes provider</label>
+        <label class="quiz-option" data-val="c">An error that only occurs during terraform init</label>
+        <label class="quiz-option" data-val="d">A mismatch between Terraform's state and the real, possibly manually changed, cluster</label>
+        <div class="explanation">Drift happens when someone or something changes a Terraform-managed resource outside of Terraform — for example, editing a namespace label directly with kubectl.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="b">
+        <div class="question-num">Question 5 of 5</div>
+        <p>Why would you refactor namespace + helm_release resources into a reusable module instead of copy-pasting them for dev, stage, and prod?</p>
+        <label class="quiz-option" data-val="a">Modules are required before terraform destroy will work</label>
+        <label class="quiz-option" data-val="b">One definition can be reused with different variables per environment, avoiding duplication</label>
+        <label class="quiz-option" data-val="c">Modules automatically encrypt the state file</label>
+        <label class="quiz-option" data-val="d">Copy-pasting resources is not valid HCL syntax</label>
+        <div class="explanation">A module is Terraform's mechanism for reuse — the same resource pattern gets called multiple times with different inputs instead of being duplicated three times over.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Pre-Quiz</button>
+      <div class="quiz-result" id="pre-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>3. The Concept — One Control Plane for Infra and Apps</h2>
+
+    <h3>Why point Terraform at Kubernetes and Helm at all</h3>
+    <p>
+      Real applications rarely live on a single VM anymore — they are
+      packaged as containers, deployed on Kubernetes, and released with
+      Helm. Session 06 drove that release step with the Helm CLI directly;
+      session 07 drove infrastructure with Terraform directly. This session
+      merges both under Terraform: the same <code>init → plan → apply →
+      destroy</code> loop now manages a Kubernetes namespace and a Helm
+      release together, producing one consistent, repeatable deployment
+      across environments.
+    </p>
+
+    <h3>Configuring both providers</h3>
+    <pre><code>terraform {
+  required_providers {
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.27"
+    }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.13"
+    }
+  }
+}
+
+provider "kubernetes" {
+  config_path    = pathexpand("~/.kube/config")
+  config_context = "docker-desktop"
+}
+
+provider "helm" {
+  kubernetes {
+    config_path    = pathexpand("~/.kube/config")
+    config_context = "docker-desktop"
+  }
+}</code></pre>
+    <p>
+      Both providers point at the same cluster through the same kubeconfig,
+      but they operate through separate APIs — <code>kubernetes</code> talks
+      to the Kubernetes API server directly, while <code>helm</code> drives
+      the same install/upgrade logic the Helm CLI uses internally.
+    </p>
+
+    <h3>A raw Kubernetes resource: the namespace</h3>
+    <pre><code>resource "kubernetes_namespace" "dev" {
+  metadata {
+    name = "dev"
+  }
+}</code></pre>
+    <p>
+      This is the simplest possible proof that the kubernetes provider is
+      correctly authenticated and talking to the right cluster — before
+      layering anything more complex on top, confirm this one resource
+      applies cleanly.
+    </p>
+
+    <h3>A Helm release as a Terraform resource</h3>
+    <pre><code>resource "helm_release" "nginx" {
+  name       = "nginx"
+  repository = "https://charts.bitnami.com/bitnami"
+  chart      = "nginx"
+  version    = "15.0.0"
+  namespace  = kubernetes_namespace.dev.metadata[0].name
+
+  values = [
+    file("${path.module}/values/dev.yaml")
+  ]
+}</code></pre>
+    <p>
+      <code>kubernetes_namespace.dev.metadata[0].name</code> reaches into the
+      namespace resource's computed attributes to reuse its name — the
+      <code>[0]</code> is there because <code>metadata</code> is a Terraform
+      block, which is represented internally as a list with one element.
+      This reference also creates an implicit dependency: Terraform creates
+      the namespace before attempting the Helm release inside it.
+    </p>
+    <p>
+      The values file works exactly like <code>-f values.yaml</code> on the
+      Helm CLI, just loaded through Terraform's <code>file()</code>
+      function:
+    </p>
+    <pre><code># values/dev.yaml
+replicaCount: 2
+service:
+  type: NodePort
+image:
+  tag: latest</code></pre>
+
+    <h3>Helm CLI vs. terraform helm_release</h3>
+    <pre><code>helm install (CLI)              terraform helm_release
+──────────────────              ───────────────────────
+manual, one cluster at a time    tracked in Terraform state
+not versioned as code by itself  lives in version control as HCL
+easy to forget what was run      reproducible via plan/apply
+                                  works alongside other infra resources</code></pre>
+    <p>
+      Nothing about the underlying chart changes — the difference is entirely
+      in how the release is declared, tracked, and reproduced.
+    </p>
+
+    <h3>Drift detection</h3>
+    <p>
+      If someone runs <code>kubectl edit namespace dev</code> or
+      <code>helm upgrade nginx</code> manually outside of Terraform, the
+      cluster no longer matches what Terraform's state file recorded. The
+      next <code>terraform plan</code> compares state against the live
+      cluster and surfaces that mismatch as proposed changes — this is how
+      Terraform-managed infrastructure catches manual, out-of-band edits.
+    </p>
+    <pre><code>[ Terraform State ] ---compare---> [ Live Cluster ]
+                          |
+                    drift found?
+                          |
+                 terraform plan shows it</code></pre>
+
+    <h3>Modules: one definition, many environments</h3>
+    <p>
+      Once the namespace-plus-release pattern works for one environment, the
+      next step is extracting it into a module so dev, staging, and
+      production can each call it with different inputs instead of
+      duplicating the resource blocks three times:
+    </p>
+    <pre><code># modules/app/variables.tf
+variable "namespace" { type = string }
+variable "replica_count" { type = number }
+
+# modules/app/main.tf
+resource "kubernetes_namespace" "this" {
+  metadata { name = var.namespace }
+}
+
+resource "helm_release" "nginx" {
+  name       = "nginx"
+  repository = "https://charts.bitnami.com/bitnami"
+  chart      = "nginx"
+  namespace  = kubernetes_namespace.this.metadata[0].name
+  set {
+    name  = "replicaCount"
+    value = var.replica_count
+  }
+}</code></pre>
+    <pre><code># environments/dev/main.tf
+module "app" {
+  source        = "../../modules/app"
+  namespace     = "dev"
+  replica_count = 2
+}</code></pre>
+
+    <hr class="section-divider" />
+
+    <h2>4. Lab</h2>
+    <div class="alert alert-success">
+      <strong>Lab objective:</strong> Use Terraform's kubernetes and helm
+      providers together to create a namespace and install a Helm release
+      into it, verify both in the cluster, then destroy them as one unit.
+    </div>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <p><strong>Set up the providers</strong></p>
+        <pre><code># versions.tf
+terraform {
+  required_version = ">= 1.6.0"
+  required_providers {
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.27"
+    }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.13"
+    }
+  }
+}</code></pre>
+        <pre><code># providers.tf
+provider "kubernetes" {
+  config_path    = pathexpand("~/.kube/config")
+  config_context = "docker-desktop"
+}
+
+provider "helm" {
+  kubernetes {
+    config_path    = pathexpand("~/.kube/config")
+    config_context = "docker-desktop"
+  }
+}</code></pre>
+        <pre><code>terraform init</code></pre>
+        <p><strong>Predict before running:</strong> which two provider plugins do you expect init to download?</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <p><strong>Create the namespace resource and apply it alone first</strong></p>
+        <pre><code># main.tf
+resource "kubernetes_namespace" "dev" {
+  metadata {
+    name = "dev"
+  }
+}</code></pre>
+        <pre><code>terraform plan
+terraform apply
+kubectl get ns dev</code></pre>
+        <p>Confirm the namespace exists in the cluster before adding the Helm release.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <p><strong>Add the values file and the helm_release resource</strong></p>
+        <pre><code># values/dev.yaml
+replicaCount: 2
+service:
+  type: NodePort
+image:
+  tag: latest</code></pre>
+        <pre><code># append to main.tf
+resource "helm_release" "nginx" {
+  name       = "nginx"
+  repository = "https://charts.bitnami.com/bitnami"
+  chart      = "nginx"
+  version    = "15.0.0"
+  namespace  = kubernetes_namespace.dev.metadata[0].name
+
+  values = [
+    file("${path.module}/values/dev.yaml")
+  ]
+}</code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <p><strong>Plan and apply, then verify</strong></p>
+        <pre><code>terraform plan -out=tfplan
+terraform apply tfplan</code></pre>
+        <p><strong>Stop and think:</strong> the plan should show the namespace as unchanged (already applied) and only the helm_release as an addition. If it shows the namespace being recreated, something in step 2 was not applied cleanly — check before continuing.</p>
+        <pre><code>kubectl get ns
+kubectl get pods -n dev
+helm list -n dev</code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <p><strong>Change a value through Terraform, not through Helm directly</strong></p>
+        <p>Edit <code>values/dev.yaml</code> to set <code>replicaCount: 3</code>, then run <code>terraform plan</code> again.</p>
+        <p><strong>Predict before running:</strong> will Terraform show the helm_release resource as changed, and will the namespace resource show any change at all?</p>
+        <pre><code>terraform apply</code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <p><strong>Clean up everything Terraform manages</strong></p>
+        <pre><code>terraform destroy</code></pre>
+        <p>Confirm both the Helm release and the namespace are gone:</p>
+        <pre><code>helm list -n dev
+kubectl get ns dev</code></pre>
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>5. Expected Files Changed</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Action</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><code>tf-k8s-helm/versions.tf</code></td><td>Created</td><td>Declares required kubernetes and helm providers</td></tr>
+          <tr><td><code>tf-k8s-helm/providers.tf</code></td><td>Created</td><td>Configures both providers against the local cluster context</td></tr>
+          <tr><td><code>tf-k8s-helm/main.tf</code></td><td>Created</td><td>kubernetes_namespace and helm_release resources</td></tr>
+          <tr><td><code>tf-k8s-helm/values/dev.yaml</code></td><td>Created</td><td>Helm values overrides passed through Terraform</td></tr>
+          <tr><td><code>sessions/session-08/index.html</code></td><td>Updated</td><td>This session document</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>6. Commit Checkpoint</h2>
+    <pre><code>git add tf-k8s-helm/versions.tf tf-k8s-helm/providers.tf tf-k8s-helm/main.tf tf-k8s-helm/values/dev.yaml sessions/session-08/index.html
+git commit -m "session-08: manage a namespace and Helm release together through Terraform"</code></pre>
+
+    <h2>7. Code Review Checklist</h2>
+    <div class="card">
+      <div class="checklist-item"><input type="checkbox" id="c1"/><label for="c1">Both the kubernetes and helm providers are configured against the same cluster context</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c2"/><label for="c2">The helm_release resource's namespace references the kubernetes_namespace resource, not a hardcoded string</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c3"/><label for="c3">Values are passed through a file() call, not inlined as a giant string</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c4"/><label for="c4">I verified the namespace and release both exist with kubectl and helm list</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c5"/><label for="c5">terraform destroy removed both the release and the namespace, confirmed independently</label></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>8. Post-Coding Quiz</h2>
+    <div id="post-quiz" data-pass-post="Proceed to Session 09 (Ingress Routing) after ≥ 80%. This is the Layer 3 gate.">
+      <div class="quiz-question" data-question="0" data-answer="a">
+        <div class="question-num">Question 1 of 5</div>
+        <p>Why does the lab apply the kubernetes_namespace resource before adding the helm_release resource, rather than writing both at once from the start?</p>
+        <label class="quiz-option" data-val="a">To confirm the kubernetes provider works correctly in isolation before adding complexity</label>
+        <label class="quiz-option" data-val="b">Because Terraform cannot apply two new resource types in the same apply</label>
+        <label class="quiz-option" data-val="c">Because helm_release requires a manually pre-existing namespace outside Terraform</label>
+        <label class="quiz-option" data-val="d">Because the helm provider must be installed after the kubernetes provider</label>
+        <div class="explanation">This is a debugging strategy, not a technical requirement — isolating the simpler resource first makes it much easier to tell which provider is misconfigured if something fails.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="c">
+        <div class="question-num">Question 2 of 5</div>
+        <p>After changing values/dev.yaml and reapplying, what does terraform plan show for the kubernetes_namespace.dev resource?</p>
+        <label class="quiz-option" data-val="a">It is destroyed and recreated along with the release</label>
+        <label class="quiz-option" data-val="b">It is upgraded to match the new replicaCount</label>
+        <label class="quiz-option" data-val="c">No change — only the helm_release resource is affected</label>
+        <label class="quiz-option" data-val="d">Terraform refuses to plan until the namespace is manually deleted</label>
+        <div class="explanation">The namespace and the release are independent resources. A values file change only affects the helm_release resource that reads it.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="d">
+        <div class="question-num">Question 3 of 5</div>
+        <p>Someone on your team runs helm upgrade nginx manually against the dev namespace, bypassing Terraform. What happens on the next terraform plan?</p>
+        <label class="quiz-option" data-val="a">Terraform automatically adopts the manual change with no output</label>
+        <label class="quiz-option" data-val="b">terraform plan crashes and requires a state file rebuild</label>
+        <label class="quiz-option" data-val="c">Nothing — Terraform only checks Kubernetes objects, never Helm releases</label>
+        <label class="quiz-option" data-val="d">Terraform detects the drift and proposes changes to bring it back to the declared config</label>
+        <div class="explanation">This is exactly the drift scenario from the concept section — Terraform compares its state against the live release and surfaces the mismatch.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="b">
+        <div class="question-num">Question 4 of 5</div>
+        <p>What is the main benefit of extracting the namespace + helm_release pattern into a reusable module?</p>
+        <label class="quiz-option" data-val="a">Modules run faster than inline resource blocks</label>
+        <label class="quiz-option" data-val="b">The same definition can be called with different variables for dev, stage, and prod</label>
+        <label class="quiz-option" data-val="c">Modules remove the need for a values.yaml file entirely</label>
+        <label class="quiz-option" data-val="d">Modules are required for the helm provider to function at all</label>
+        <div class="explanation">Reuse is the entire point — one module definition, called three times with different inputs, replaces three near-duplicate copies of the same resource blocks.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="c">
+        <div class="question-num">Question 5 of 5</div>
+        <p>Session 09 (next, Layer 4) focuses on:</p>
+        <label class="quiz-option" data-val="a">Writing more Terraform modules for storage resources</label>
+        <label class="quiz-option" data-val="b">Migrating this lab's provider versions to the latest release</label>
+        <label class="quiz-option" data-val="c">Routing external traffic into the cluster with Ingress, across raw Kubernetes, Helm, and Terraform</label>
+        <label class="quiz-option" data-val="d">Setting up a remote Terraform backend for team collaboration</label>
+        <div class="explanation">Session 09 opens Layer 4 by tackling Ingress routing the same way this layer covered packaging — first with raw manifests, then Helm, then Terraform.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Post-Quiz</button>
+      <div class="quiz-result" id="post-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>9. Reflection Questions</h2>
+    <div class="card">
+      <ol>
+        <li>What would you lose by keeping infrastructure in Terraform but continuing to install Helm charts manually with the CLI, outside of Terraform's tracking?</li>
+        <li>How does the kubernetes_namespace.dev.metadata[0].name reference change how you think about resource dependencies compared to Session 07's docker_network reference?</li>
+        <li>If you were setting this up for a real team with dev, stage, and prod environments, what would you parameterize in the module beyond just replica_count?</li>
+      </ol>
+    </div>
+
+    <h2>10. What Breaks If This Knowledge Is Missing?</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Managing the namespace with Terraform but the Helm release manually:</strong> the two lifecycles fall out of sync — destroying the namespace with Terraform can strand or orphan a release Terraform never knew about.</li>
+        <li><strong>Hardcoding the namespace name in helm_release instead of referencing the resource:</strong> if the namespace name ever changes, the release silently keeps pointing at a namespace that may no longer exist or no longer match.</li>
+        <li><strong>Skipping modules for multi-environment setups:</strong> dev, stage, and prod configs drift apart from hand-maintained copies, and a fix applied to one is easy to forget applying to the others.</li>
+      </ul>
+    </div>
+
+    <h2>11. What We Learned</h2>
+    <div class="card" style="border-color:var(--green);">
+      <p><strong>Today you learned: Terraform can configure the kubernetes and helm providers together, manage a namespace and a helm_release as resources in the same state, detect drift when changes happen outside Terraform, and reuse a resource pattern across environments with modules. This closes Layer 3 — Packaging and Infrastructure as Code.</strong></p>
+      <p><strong>Next:</strong> <a href="../session-09/index.html">Session 09 — Ingress Routing (Raw Kubernetes, Helm, and Terraform)</a>.</p>
+    </div>
+
+    <p style="margin-top:24px;"><a href="../session-07/index.html">← Session 07</a> · <a href="../../syllabus/index.html">Syllabus</a> · <a href="../session-09/index.html">Session 09 →</a></p>
+
+  </div>
+</main>
+
+<script src="../../quiz.js" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    setupQuiz('pre');
+    setupQuiz('post');
+
+    document.querySelectorAll('.concept-explanation-toggle').forEach(function (button) {
+      button.addEventListener('click', function () {
+        const card = button.closest('.concept-card');
+        const isRevealed = card.classList.toggle('explanation-revealed');
+        button.setAttribute('aria-expanded', String(isRevealed));
+        button.querySelector('.concept-explanation-hint').textContent = isRevealed
+          ? 'Click to blur'
+          : 'Click to reveal';
+      });
+    });
+  });
+</script>
+<script src="../../notes-widget.js" defer></script>
+<script src="../../bookmark-widget.js" defer></script>
+
+</body>
+</html>

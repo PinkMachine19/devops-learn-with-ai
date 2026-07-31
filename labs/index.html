@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Labs — DevOps Learning</title>
+  <link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="../index.html" class="brand">⚙ DevOps Learning</a>
+    <a href="../syllabus/index.html">Syllabus</a>
+    <a href="../sessions/index.html">Sessions</a>
+    <a href="../quizzes/index.html">Quizzes</a>
+    <a href="../labs/index.html" class="active">Labs</a>
+  </div>
+</nav>
+
+<main>
+  <div class="container">
+
+    <h1>Lab Reference Index</h1>
+    <p class="subtitle">
+      Labs are the hands-on portion of each session. Each lab has a small, specific objective.
+      Labs are embedded in the session doc — this page is an index for quick lookup.
+    </p>
+
+    <div class="alert alert-info">
+      Labs are designed to be completed in under 20 minutes. The rest of the session is
+      spent reading the concept, quizzing, and reviewing the commit. Session 15 has no lab
+      by design — it is a discussion-only session.
+    </div>
+
+    <h2>Lab Objectives by Session</h2>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Lab Objective</th>
+            <th>Files/Resources Touched</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><a href="../sessions/session-01/index.html">01</a></td><td>Run a container, persist data through a bind mount and a named volume, connect two containers on a bridge network</td><td><code>docker run</code>, <code>docker volume</code>, <code>docker network</code></td><td><span class="badge badge-current">Current</span></td></tr>
+          <tr><td>02</td><td>Run a PHP + MySQL app with a single <code>docker compose up</code></td><td><code>docker-compose.yml</code></td><td><span class="badge badge-locked">Locked</span></td></tr>
+          <tr><td>03</td><td>Deploy, scale, roll out an update, and roll back a Deployment</td><td><code>deployment.yaml</code>, <code>service.yaml</code></td><td><span class="badge badge-locked">Locked</span></td></tr>
+          <tr><td>04</td><td>Create namespaces with enforced ResourceQuota and LimitRange</td><td><code>namespace.yaml</code>, <code>resourcequota.yaml</code></td><td><span class="badge badge-locked">Locked</span></td></tr>
+          <tr><td>05</td><td>Externalize config into a ConfigMap and credentials into a Secret</td><td><code>configmap.yaml</code>, <code>secret.yaml</code></td><td><span class="badge badge-locked">Locked</span></td></tr>
+          <tr><td>06</td><td>Convert raw manifests into a Helm chart and install/upgrade it</td><td><code>Chart.yaml</code>, <code>values.yaml</code>, <code>templates/</code></td><td><span class="badge badge-locked">Locked</span></td></tr>
+          <tr><td>07</td><td>Write and apply a first Terraform configuration with plan/apply</td><td><code>main.tf</code>, <code>variables.tf</code></td><td><span class="badge badge-locked">Locked</span></td></tr>
+          <tr><td>08</td><td>Deploy the Helm chart from Session 06 entirely through Terraform</td><td><code>main.tf</code> (kubernetes + helm providers)</td><td><span class="badge badge-locked">Locked</span></td></tr>
+          <tr><td>09</td><td>Route one hostname to the app using raw YAML, then Helm, then Terraform</td><td><code>ingress.yaml</code>, chart templates, <code>.tf</code> files</td><td><span class="badge badge-locked">Locked</span></td></tr>
+          <tr><td>10</td><td>Serve the app over HTTPS using a cert-manager-issued certificate</td><td><code>clusterissuer.yaml</code>, <code>ingress.yaml</code></td><td><span class="badge badge-locked">Locked</span></td></tr>
+          <tr><td>11</td><td>Cut traffic between a blue and a green version with zero downtime</td><td>blue/green Deployments, Service selector</td><td><span class="badge badge-locked">Locked</span></td></tr>
+          <tr><td>12</td><td>Add liveness/readiness probes and an HPA that reacts to load</td><td><code>deployment.yaml</code>, <code>hpa.yaml</code></td><td><span class="badge badge-locked">Locked</span></td></tr>
+          <tr><td>13</td><td>Shift traffic gradually from an old version to a new one</td><td>weighted Ingress/Service rules</td><td><span class="badge badge-locked">Locked</span></td></tr>
+          <tr><td>14</td><td>Install Prometheus + Grafana and build one dashboard for the app</td><td>Helm values, Grafana dashboard JSON</td><td><span class="badge badge-locked">Locked</span></td></tr>
+          <tr><td>15</td><td><em>No lab — discussion session mapping the DevOps tool landscape</em></td><td>—</td><td><span class="badge badge-locked">Locked</span></td></tr>
+          <tr><td>16</td><td>Build and containerize the Text Masker app</td><td><code>Dockerfile</code>, app source</td><td><span class="badge badge-locked">Locked</span></td></tr>
+          <tr><td>17</td><td>Add a GitHub Actions workflow that builds and tests on every push</td><td><code>.github/workflows/ci.yml</code></td><td><span class="badge badge-locked">Locked</span></td></tr>
+          <tr><td>18</td><td>Extend the pipeline to deploy the built image to local Docker</td><td><code>.github/workflows/cd-docker.yml</code></td><td><span class="badge badge-locked">Locked</span></td></tr>
+          <tr><td>19</td><td>Extend the pipeline to deploy to a local Kubernetes cluster</td><td><code>.github/workflows/cd-k8s.yml</code>, manifests</td><td><span class="badge badge-locked">Locked</span></td></tr>
+          <tr><td>20</td><td>Extend the pipeline to deploy to a managed cloud cluster</td><td><code>.github/workflows/cd-cloud.yml</code>, cluster credentials</td><td><span class="badge badge-locked">Locked</span></td></tr>
+          <tr><td>21</td><td>Apply blue-green cutover to the real pipeline</td><td>workflow + blue/green manifests</td><td><span class="badge badge-locked">Locked</span></td></tr>
+          <tr><td>22</td><td>Apply canary rollout to the real pipeline</td><td>workflow + weighted routing manifests</td><td><span class="badge badge-locked">Locked</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</main>
+
+</body>
+</html>

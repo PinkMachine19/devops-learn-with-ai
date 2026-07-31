@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DevOps Learning Environment</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="index.html" class="brand active">⚙ DevOps Learning</a>
+    <a href="syllabus/index.html">Syllabus</a>
+    <a href="sessions/index.html">Sessions</a>
+    <a href="quizzes/index.html">Quizzes</a>
+    <a href="labs/index.html">Labs</a>
+  </div>
+</nav>
+
+<main>
+  <div class="container">
+
+    <h1>DevOps Learning Environment</h1>
+    <p class="subtitle">
+      A structured, documentation-first curriculum for learning Docker, Kubernetes, Helm,
+      Terraform, ingress/TLS, release strategies, and observability — then shipping one real
+      application through a full CI/CD pipeline.
+    </p>
+
+    <!-- Progress Overview -->
+    <div class="card">
+      <div class="card-title">Overall Progress</div>
+      <div class="progress-wrap">
+        <div class="progress-label">
+          <span>Sessions completed</span>
+          <span id="progress-text">0 / 22</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar" style="width: 0%"></div>
+        </div>
+      </div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:10px;">
+        <span class="badge badge-complete">Complete: 0</span>
+        <span class="badge badge-current">Active: Session 1</span>
+        <span class="badge badge-locked">Locked: 21</span>
+      </div>
+    </div>
+
+    <!-- Active Session Banner -->
+    <div class="alert alert-info" style="margin-bottom: 32px;">
+      <strong>Active session:</strong>
+      <a href="sessions/session-01/index.html">Session 01 — Container Lifecycle, Bind Mounts, Volumes, and Networks</a>
+      &nbsp;·&nbsp; Layer 1: Docker Foundations
+    </div>
+
+    <!-- Navigation Grid -->
+    <h2>Documentation Sections</h2>
+
+    <div class="nav-grid">
+      <a class="nav-card" href="syllabus/index.html">
+        <div class="nav-card-title">Syllabus</div>
+        <div class="nav-card-desc">All 22 sessions, layer breakdown, unlock gates, and dependency ordering.</div>
+      </a>
+      <a class="nav-card" href="sessions/index.html">
+        <div class="nav-card-title">Sessions</div>
+        <div class="nav-card-desc">Individual lesson docs — objectives, quizzes, labs, and commit checkpoints.</div>
+      </a>
+      <a class="nav-card" href="quizzes/index.html">
+        <div class="nav-card-title">Quizzes</div>
+        <div class="nav-card-desc">Quiz bank and score tracker. Must score 80% to advance each layer.</div>
+      </a>
+      <a class="nav-card" href="labs/index.html">
+        <div class="nav-card-title">Labs</div>
+        <div class="nav-card-desc">Lab reference index. Step-by-step hands-on exercises per session.</div>
+      </a>
+    </div>
+
+    <!-- Learning Layers -->
+    <h2>Curriculum Layers</h2>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Layer</th>
+            <th>Topic</th>
+            <th>Sessions</th>
+            <th>Status</th>
+            <th>Unlock Condition</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-layer">1</span></td>
+            <td>Docker Foundations</td>
+            <td>01 – 02</td>
+            <td><span class="badge badge-current">Active</span></td>
+            <td>None — starting point</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-layer">2</span></td>
+            <td>Kubernetes Basics</td>
+            <td>03 – 05</td>
+            <td><span class="badge badge-locked">Locked</span></td>
+            <td>Session 02 quiz ≥ 80%</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-layer">3</span></td>
+            <td>Packaging &amp; Infrastructure as Code</td>
+            <td>06 – 08</td>
+            <td><span class="badge badge-locked">Locked</span></td>
+            <td>Session 05 quiz ≥ 80%</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-layer">4</span></td>
+            <td>Ingress &amp; TLS</td>
+            <td>09 – 10</td>
+            <td><span class="badge badge-locked">Locked</span></td>
+            <td>Session 08 quiz ≥ 80%</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-layer">5</span></td>
+            <td>Release Strategies</td>
+            <td>11 – 13</td>
+            <td><span class="badge badge-locked">Locked</span></td>
+            <td>Session 10 quiz ≥ 80%</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-layer">6</span></td>
+            <td>Observability &amp; Landscape</td>
+            <td>14 – 15</td>
+            <td><span class="badge badge-locked">Locked</span></td>
+            <td>Session 13 quiz ≥ 80%</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-layer">7</span></td>
+            <td>Capstone: Ship a Real App</td>
+            <td>16 – 22</td>
+            <td><span class="badge badge-locked">Locked</span></td>
+            <td>Session 15 quiz ≥ 80%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Rules reminder -->
+    <h2>Rules We Follow</h2>
+    <div class="card">
+      <ol>
+        <li>Linux-first mindset — most infrastructure runs on Linux, so we reason about systems the way they actually behave, not through a GUI.</li>
+        <li>Mock or local infrastructure before cloud — every concept is proven on a local Docker or Kind/Minikube cluster before it ever touches a paid cloud resource.</li>
+        <li>One session equals one small slice equals one commit — no session bundles unrelated changes.</li>
+        <li>Code and configuration must stay beginner-readable — no clever one-liners that trade clarity for brevity.</li>
+        <li>Score below 80% on a quiz means repeat the lesson before moving on.</li>
+        <li>Never jump ahead — concepts are taught in strict dependency order across layers.</li>
+        <li>Always understand a tool's raw form (plain manifests, plain CLI) before adopting the abstraction that wraps it (Helm, Terraform).</li>
+        <li>Every session ends with the same shape: concept, lab, commit, review — so progress is always inspectable in git history.</li>
+        <li>Secrets and credentials never get committed — they are referenced, generated, or mocked, never hardcoded into tracked files.</li>
+        <li>Prefer understanding the failure mode over memorizing the happy path — labs include predict-then-observe steps for exactly this reason.</li>
+        <li>Every changed file gets reviewed before it is considered part of the session.</li>
+        <li>The capstone is not a new curriculum — it is the same fundamentals, applied once, end-to-end, on one real application.</li>
+      </ol>
+    </div>
+
+    <p class="subtitle" style="margin-top: 32px;">
+      Runtime: <code>Docker</code> &nbsp;·&nbsp;
+      Orchestration: <code>Kubernetes (Kind/Minikube)</code> &nbsp;·&nbsp;
+      Packaging: <code>Helm + Terraform</code> &nbsp;·&nbsp;
+      CI/CD: <code>GitHub Actions</code>
+    </p>
+
+  </div>
+</main>
+
+</body>
+</html>

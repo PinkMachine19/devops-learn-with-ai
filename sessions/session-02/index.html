@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Session 02 — Multi-Container Apps with Docker Compose (PHP + MySQL)</title>
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="stylesheet" href="../../notes-widget.css" />
+  <link rel="stylesheet" href="../../bookmark-widget.css" />
+  <link rel="stylesheet" href="../../quiz-explain-modal.css" />
+  <style>
+    .quiz-option{display:block;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:8px;cursor:pointer;font-size:14px;transition:border-color .15s,background .15s;user-select:none;}
+    .quiz-option:hover{border-color:var(--accent);background:var(--surface);}
+    .quiz-option.selected{border-color:var(--accent);background:rgba(255,92,168,.1);}
+    .quiz-option.correct{border-color:var(--green);background:rgba(63,185,80,.1);}
+    .quiz-option.wrong{border-color:var(--red);background:rgba(248,81,73,.1);}
+    .quiz-question{margin-bottom:28px;}
+    .quiz-question p{font-weight:600;margin-bottom:10px;font-size:15px;}
+    .question-num{color:var(--text-muted);font-size:12px;font-weight:400;margin-bottom:4px;}
+    .quiz-result{display:none;padding:16px 20px;border-radius:var(--radius);margin-top:16px;font-size:15px;font-weight:600;}
+    .quiz-result.pass{background:rgba(63,185,80,.12);border:1px solid var(--green);color:var(--green);}
+    .quiz-result.fail{background:rgba(248,81,73,.12);border:1px solid var(--red);color:var(--red);}
+    .explanation{display:none;font-size:13px;color:var(--text-muted);margin-top:6px;padding:8px 12px;background:var(--surface-2);border-radius:var(--radius);border-left:2px solid var(--border);}
+    .submit-btn{background:var(--accent);color:#0d1117;border:none;border-radius:var(--radius);padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;}
+    .submit-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .step{display:flex;gap:16px;margin-bottom:20px;}
+    .step-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#0d1117;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:2px;}
+    .step-body{flex:1;}
+    .step-body p{margin-bottom:6px;}
+    .section-divider{border:none;border-top:2px solid var(--border);margin:40px 0;}
+    .checklist-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;}
+    .checklist-item input[type="checkbox"]{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;}
+
+    /* Comic-panel concept grid — image teaches first, caption only reinforces */
+    .concept-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0;}
+    @media (max-width:760px){.concept-grid{grid-template-columns:repeat(2,1fr);}}
+    .concept-card{background:#111111;border:1px solid #2a2a2a;border-radius:8px;padding:8px 8px 10px;}
+    .concept-card svg{display:block;width:100%;height:auto;}
+    .concept-card figcaption{margin-top:6px;font-family:monospace;font-size:10.5px;line-height:1.3;color:#c9c9c9;text-align:center;}
+    .concept-card figcaption b{color:#ff5ca8;}
+    .concept-explanation-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin-top:10px;padding:7px 8px;border:1px solid #3a3a3a;border-radius:5px;background:#1a1a1a;color:#ff5ca8;font-family:monospace;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;}
+    .concept-explanation-toggle:hover,.concept-explanation-toggle:focus-visible{border-color:#ff5ca8;outline:none;}
+    .concept-explanation-hint{color:#8b949e;font-size:8px;font-weight:400;letter-spacing:0;text-transform:none;}
+    .concept-explanation-text{margin:7px 2px 0;font-size:11px;line-height:1.45;color:#d8d8d8;filter:blur(4px);user-select:none;transition:filter .2s ease;}
+    .concept-card.explanation-revealed .concept-explanation-text{filter:none;user-select:text;}
+    .concept-card.explanation-revealed .concept-explanation-hint{color:#3fb950;}
+    .anchor{color:#ff5ca8;font-weight:700;}
+    .objectives-list{list-style:none;padding-left:0;}
+    .objectives-list li{display:flex;gap:12px;align-items:baseline;margin-bottom:12px;font-size:15px;}
+    .obj-num{flex-shrink:0;min-width:34px;color:#ff5ca8;font-family:monospace;font-weight:700;font-size:12px;background:rgba(255,92,168,.1);border:1px solid rgba(255,92,168,.4);border-radius:10px;padding:2px 6px;text-align:center;}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="../../index.html" class="brand">⚙ DevOps Learning</a>
+    <a href="../../syllabus/index.html">Syllabus</a>
+    <a href="../../sessions/index.html" class="active">Sessions</a>
+    <a href="../../quizzes/index.html">Quizzes</a>
+    <a href="../../labs/index.html">Labs</a>
+  </div>
+</nav>
+
+<main>
+  <div class="container">
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+      <span class="badge badge-layer">Layer 1</span>
+      <span class="badge badge-current">Session 02</span>
+      <span style="color:var(--text-muted);font-size:13px;">Docker Foundations — Gate</span>
+    </div>
+    <h1>Multi-Container Apps with Docker Compose (PHP + MySQL)</h1>
+    <p class="subtitle">
+      Session 01 ran one container at a time by hand — a manual
+      <code>docker network create</code>, a manual <code>-v</code>, a manual
+      <code>--network</code> flag repeated on every command. That already
+      got tedious with just two containers. Today you build a real
+      two-service application, a PHP page backed by a MySQL database, first
+      by wiring it up manually to feel the pain, then by collapsing the
+      entire setup into one <code>docker-compose.yml</code> file and a single
+      command. This session is the gate for Layer 1: everything from here on
+      assumes multi-container thinking is second nature.
+    </p>
+    <div class="alert alert-info">Estimated time: 85–95 minutes</div>
+
+    <!-- Comic-panel concept grid: image teaches first, caption only reinforces -->
+    <div class="concept-grid">
+
+      <!-- 1. Recap: manual multi-container pain -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="20" width="90" height="70" rx="3" fill="#1a1a1a" stroke="white" stroke-width="2"/>
+          <text x="16" y="34" fill="#f85149" font-family="monospace" font-size="7">$ docker run --name mysql-lab</text>
+          <text x="16" y="46" fill="#f85149" font-family="monospace" font-size="7">--network lab-net -v ...</text>
+          <text x="16" y="60" fill="#f85149" font-family="monospace" font-size="7">$ docker run --name php-lab</text>
+          <text x="16" y="72" fill="#f85149" font-family="monospace" font-size="7">--network lab-net -p ...</text>
+          <text x="16" y="84" fill="#666" font-family="monospace" font-size="7">... repeat every time</text>
+          <text x="80" y="112" fill="white" font-family="monospace" font-size="9" text-anchor="middle">two commands, easy to</text>
+          <text x="80" y="124" fill="white" font-family="monospace" font-size="9" text-anchor="middle">get out of sync</text>
+        </svg>
+        <figcaption>manual multi-container is fragile</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Session 01's flags worked for one database container, but a real application usually needs several containers agreeing on the same network, volumes, and startup order — retyping long docker run commands correctly, every time, does not scale.</p>
+      </figure>
+
+      <!-- 2. docker-compose.yml: single file describing services -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="46" y="10" width="68" height="86" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2"/>
+          <text x="80" y="26" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle" font-weight="bold">compose.yml</text>
+          <line x1="54" y1="36" x2="106" y2="36" stroke="#ccc" stroke-width="1.3"/>
+          <text x="54" y="48" fill="#3fb950" font-family="monospace" font-size="7">services:</text>
+          <text x="60" y="58" fill="#ccc" font-family="monospace" font-size="7">web:</text>
+          <text x="60" y="68" fill="#ccc" font-family="monospace" font-size="7">db:</text>
+          <text x="54" y="82" fill="#3fb950" font-family="monospace" font-size="7">volumes:</text>
+          <text x="80" y="120" fill="white" font-family="monospace" font-size="9" text-anchor="middle">one file, whole app described</text>
+        </svg>
+        <figcaption><b>docker-compose.yml</b> is the source of truth</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Compose lets you declare every service, its image or build context, its ports, its volumes, and its network in one YAML file, checked into version control alongside the code it runs.</p>
+      </figure>
+
+      <!-- 3. docker compose up: one command, multiple containers spun up -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="6" y="52" width="70" height="26" rx="3" fill="#1a1a1a" stroke="white" stroke-width="2"/>
+          <text x="41" y="69" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="middle">$ docker compose up</text>
+          <path d="M78,65 H100" stroke="#ff5ca8" stroke-width="2.5" marker-end="url(#arrC3)"/>
+          <defs><marker id="arrC3" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <rect x="104" y="18" width="24" height="24" rx="3" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <rect x="132" y="18" width="24" height="24" rx="3" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <rect x="104" y="48" width="24" height="24" rx="3" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <rect x="132" y="48" width="24" height="24" rx="3" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <text x="80" y="118" fill="white" font-family="monospace" font-size="9" text-anchor="middle">every service, one command</text>
+        </svg>
+        <figcaption><b>docker compose up</b> builds it all</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A single docker compose up reads the YAML file and creates the network, the volumes, and every container it declares, wired together exactly as described — the same result as Session 01's manual commands, generated for you.</p>
+      </figure>
+
+      <!-- 4. Auto network + service discovery -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="52" width="42" height="34" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2"/>
+          <text x="31" y="72" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">web</text>
+          <rect x="108" y="52" width="42" height="34" rx="4" fill="none" stroke="#3fb950" stroke-width="2.2"/>
+          <text x="129" y="72" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">db</text>
+          <ellipse cx="80" cy="69" rx="34" ry="16" fill="none" stroke="#888" stroke-width="1.6" stroke-dasharray="4,3"/>
+          <text x="80" y="30" fill="#888" font-family="monospace" font-size="8" text-anchor="middle">auto-created network</text>
+          <text x="80" y="120" fill="white" font-family="monospace" font-size="9" text-anchor="middle">web connects to host "db"</text>
+        </svg>
+        <figcaption>service names become hostnames</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Compose creates a project-scoped network automatically and joins every service to it. The service name from the YAML file — db, web, whatever you called it — becomes the hostname other services use to reach it, no manual docker network create required.</p>
+      </figure>
+
+      <!-- 5. PHP -> MySQL via PDO -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="40" width="50" height="40" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2"/>
+          <text x="35" y="64" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle" font-weight="bold">PHP</text>
+          <path d="M62,60 H98" stroke="white" stroke-width="2.2" marker-end="url(#arrC5)"/>
+          <defs><marker id="arrC5" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="white"/></marker></defs>
+          <text x="80" y="52" fill="white" font-family="monospace" font-size="7" text-anchor="middle">PDO</text>
+          <rect x="102" y="40" width="48" height="40" rx="4" fill="none" stroke="#3fb950" stroke-width="2.2"/>
+          <text x="126" y="64" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="middle" font-weight="bold">MySQL</text>
+          <text x="80" y="112" fill="white" font-family="monospace" font-size="9" text-anchor="middle">SELECT message FROM notes</text>
+        </svg>
+        <figcaption>PDO is the driver that connects them</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">PHP's default Apache image does not ship with a MySQL driver. The php:apache image needs the pdo_mysql extension installed via a Dockerfile before index.php can open a database connection at all.</p>
+      </figure>
+
+      <!-- 6. Env vars for config -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="20" y="16" width="120" height="60" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <text x="30" y="34" fill="#3fb950" font-family="monospace" font-size="7">MYSQL_DATABASE=labdb</text>
+          <text x="30" y="46" fill="#3fb950" font-family="monospace" font-size="7">MYSQL_USER=labuser</text>
+          <text x="30" y="58" fill="#3fb950" font-family="monospace" font-size="7">MYSQL_PASSWORD=***</text>
+          <text x="30" y="70" fill="#3fb950" font-family="monospace" font-size="7">MYSQL_ROOT_PASSWORD=***</text>
+          <text x="80" y="102" fill="white" font-family="monospace" font-size="9" text-anchor="middle">no secrets baked into the image</text>
+        </svg>
+        <figcaption>environment: <b>config</b>, not code</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Environment variables in the compose file configure MySQL's initial database, user, and passwords at container start, so credentials live in config rather than being hardcoded into an image.</p>
+      </figure>
+
+      <!-- 7. Full stack verify checkmark -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="16" width="40" height="26" rx="4" fill="none" stroke="white" stroke-width="1.8"/>
+          <text x="28" y="33" fill="white" font-family="monospace" font-size="7" text-anchor="middle">browser</text>
+          <path d="M28,42 V60" stroke="#888" stroke-width="1.6" marker-end="url(#arrC7a)"/>
+          <rect x="8" y="64" width="40" height="26" rx="4" fill="none" stroke="#ff5ca8" stroke-width="1.8"/>
+          <text x="28" y="81" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">php</text>
+          <path d="M48,77 H100" stroke="#888" stroke-width="1.6" marker-end="url(#arrC7b)"/>
+          <defs>
+            <marker id="arrC7a" markerWidth="7" markerHeight="7" refX="3" refY="3" orient="auto"><polygon points="0,0 7,3 0,7" fill="#888"/></marker>
+            <marker id="arrC7b" markerWidth="7" markerHeight="7" refX="3" refY="3" orient="auto"><polygon points="0,0 7,3 0,7" fill="#888"/></marker>
+          </defs>
+          <rect x="104" y="64" width="44" height="26" rx="4" fill="none" stroke="#3fb950" stroke-width="1.8"/>
+          <text x="126" y="81" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">mysql</text>
+          <circle cx="126" cy="112" r="14" fill="none" stroke="#3fb950" stroke-width="2.2"/>
+          <path d="M119,112 l5,6 10,-12" fill="none" stroke="#3fb950" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <text x="60" y="132" fill="white" font-family="monospace" font-size="9" text-anchor="middle">row displayed = stack works</text>
+        </svg>
+        <figcaption>verify end to end, not per-container</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Every container reporting "healthy" individually isn't proof the application works. The real test is opening the browser and confirming the value that only exists in the database actually renders on the page.</p>
+      </figure>
+
+      <!-- 8. Next session teaser -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="58" width="46" height="34" rx="4" fill="none" stroke="#666" stroke-width="1.8" transform="rotate(-2,37,75)"/>
+          <text x="37" y="79" fill="#666" font-family="monospace" font-size="10" text-anchor="middle">02</text>
+          <path d="M64,75 H108" stroke="#ff5ca8" stroke-width="2.5" stroke-dasharray="5,4" marker-end="url(#arrC8)"/>
+          <defs><marker id="arrC8" markerWidth="9" markerHeight="9" refX="4" refY="4" orient="auto"><polygon points="0,0 9,4 0,9" fill="#ff5ca8"/></marker></defs>
+          <rect x="112" y="52" width="42" height="46" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2" transform="rotate(2,133,75)"/>
+          <text x="133" y="80" fill="#ff5ca8" font-family="monospace" font-size="14" text-anchor="middle" font-weight="bold">03</text>
+          <text x="80" y="122" fill="white" font-family="monospace" font-size="9" text-anchor="middle">scaling replicas, rolling updates</text>
+        </svg>
+        <figcaption>next: Deployments &amp; scaling</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Session 03 moves from Compose on a single machine to orchestrating containers across a cluster — Deployments, Services, scaling replicas, rolling updates, and rollback.</p>
+      </figure>
+
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>1. Learning Objectives</h2>
+    <div class="card">
+      <ol class="objectives-list">
+        <li><span class="obj-num">1/5</span><span>Explain why manually running multiple related containers is <span class="anchor">error-prone</span> and hard to reproduce</span></li>
+        <li><span class="obj-num">2/5</span><span>Write a <span class="anchor">docker-compose.yml</span> describing a PHP service and a MySQL service, with volumes and environment variables</span></li>
+        <li><span class="obj-num">3/5</span><span>Build a custom PHP image with the <span class="anchor">pdo_mysql</span> driver so it can talk to MySQL</span></li>
+        <li><span class="obj-num">4/5</span><span>Bring up the whole stack with <span class="anchor">docker compose up</span> and understand the network Compose creates automatically</span></li>
+        <li><span class="obj-num">5/5</span><span>Verify a full request path end to end: browser → PHP → MySQL → back to the browser</span></li>
+      </ol>
+    </div>
+
+    <h2>2. Pre-Coding Quiz</h2>
+    <p>Answer before reading the concept. Need 4/5 to proceed.</p>
+
+    <div id="pre-quiz">
+      <div class="quiz-question" data-question="0" data-answer="b">
+        <div class="question-num">Question 1 of 5</div>
+        <p>What problem does Docker Compose primarily solve?</p>
+        <label class="quiz-option" data-val="a">It replaces the need for Docker images entirely</label>
+        <label class="quiz-option" data-val="b">It lets you declare and start a multi-container application from one file instead of many manual commands</label>
+        <label class="quiz-option" data-val="c">It automatically writes application code for you</label>
+        <label class="quiz-option" data-val="d">It is only usable in production Kubernetes clusters</label>
+        <div class="explanation">Compose turns the sequence of docker run / docker network create / docker volume create commands from Session 01 into one declarative YAML file and one command.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="c">
+        <div class="question-num">Question 2 of 5</div>
+        <p>In a docker-compose.yml with services named <code>web</code> and <code>db</code>, how does the web service typically reach the db service?</p>
+        <label class="quiz-option" data-val="a">Through a published host port, using localhost</label>
+        <label class="quiz-option" data-val="b">Only by hardcoding db's container ID</label>
+        <label class="quiz-option" data-val="c">By connecting to the hostname db, resolved on the network Compose creates automatically</label>
+        <label class="quiz-option" data-val="d">It cannot — separate services can never talk to each other</label>
+        <div class="explanation">Compose creates a project network and joins every service to it, and each service's name in the YAML file becomes its hostname on that network.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="a">
+        <div class="question-num">Question 3 of 5</div>
+        <p>Why does a plain php:apache image fail to connect to MySQL out of the box?</p>
+        <label class="quiz-option" data-val="a">It is missing the pdo_mysql extension needed to speak to a MySQL server</label>
+        <label class="quiz-option" data-val="b">PHP cannot run inside Docker containers at all</label>
+        <label class="quiz-option" data-val="c">Apache blocks all outbound network connections by default</label>
+        <label class="quiz-option" data-val="d">MySQL only accepts connections from Python clients</label>
+        <div class="explanation">The base php:apache image doesn't include MySQL drivers. A Dockerfile has to install pdo_mysql before index.php's PDO connection can succeed.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="d">
+        <div class="question-num">Question 4 of 5</div>
+        <p>You run <code>docker compose up -d</code>. What does the <code>-d</code> flag do here, consistent with Session 01's usage of the same flag?</p>
+        <label class="quiz-option" data-val="a">It deletes any previous containers before starting</label>
+        <label class="quiz-option" data-val="b">It downloads all images before building anything</label>
+        <label class="quiz-option" data-val="c">It disables the network Compose would otherwise create</label>
+        <label class="quiz-option" data-val="d">It runs every service detached, in the background</label>
+        <div class="explanation">-d means detached, the same meaning it had for a single docker run in Session 01 — the containers keep running after the command returns your terminal.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="b">
+        <div class="question-num">Question 5 of 5</div>
+        <p>Every container in your stack shows "Up" in <code>docker compose ps</code>. Is the application definitely working correctly?</p>
+        <label class="quiz-option" data-val="a">Yes, "Up" status guarantees the application logic is correct</label>
+        <label class="quiz-option" data-val="b">Not necessarily — you still need to verify the actual request path end to end in the browser</label>
+        <label class="quiz-option" data-val="c">Only MySQL's status matters; PHP's status is irrelevant</label>
+        <label class="quiz-option" data-val="d">Only if docker compose ps also prints "OK"</label>
+        <div class="explanation">A container being "Up" just means its process hasn't exited. It doesn't confirm PHP can actually query MySQL and render a correct page — that requires an end-to-end check.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Pre-Quiz</button>
+      <div class="quiz-result" id="pre-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>3. The Concept — From Manual Containers to Docker Compose</h2>
+
+    <h3>Where manual multi-container setups break down</h3>
+    <p>
+      Session 01 ended with two commands: create a network, then start MySQL
+      attached to it with a volume and an environment variable. Add a second
+      service — a PHP application that needs its own image build, its own
+      port mapping, and the same network — and the number of flags to get
+      right, in the right order, every single time, grows fast. Typos and
+      forgotten flags are the normal failure mode here, not the exception.
+    </p>
+
+    <h3>docker-compose.yml: the whole application in one file</h3>
+    <pre><code>services:
+  db:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: changeme
+      MYSQL_DATABASE: labdb
+      MYSQL_USER: labuser
+      MYSQL_PASSWORD: labpass
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  web:
+    build: ./php
+    ports:
+      - "8082:80"
+    volumes:
+      - ./php:/var/www/html
+    depends_on:
+      - db
+
+volumes:
+  mysql-data:</code></pre>
+    <p>
+      This single file declares everything Session 01 did by hand: an
+      image for each service (or a <code>build</code> context, for the PHP
+      service that needs a custom Dockerfile), the volumes each one needs,
+      the port mapping for the service that should be reachable from the
+      host, and <code>depends_on</code> to hint at startup order. Compose
+      also creates a project-scoped network automatically and attaches
+      every service to it — no separate <code>docker network create</code>
+      required.
+    </p>
+
+    <h3>Building a PHP image that can talk to MySQL</h3>
+    <pre><code># php/Dockerfile
+FROM php:8.2-apache
+RUN docker-php-ext-install pdo pdo_mysql</code></pre>
+    <p>
+      The stock <code>php:apache</code> image runs PHP and Apache, but it
+      has no MySQL driver installed. <code>docker-php-ext-install
+      pdo pdo_mysql</code> adds the PDO extension and its MySQL driver at
+      build time, which is what makes a <code>new PDO(...)</code> call in
+      <code>index.php</code> actually able to reach a MySQL server.
+    </p>
+
+    <h3>Service discovery: names, not IPs</h3>
+    <pre><code>$pdo = new PDO(
+  "mysql:host=db;dbname=labdb",
+  "labuser",
+  "labpass"
+);</code></pre>
+    <p>
+      Notice the host is literally the string <code>db</code> — the service
+      name from <code>docker-compose.yml</code>, not an IP address. This is
+      the exact same name-based resolution from Session 01's
+      <code>lab-net</code>, except Compose sets up the network and the DNS
+      for you automatically, keyed off whatever you named each service.
+    </p>
+
+    <!-- manual docker run vs compose, side by side -->
+    <div class="concept-grid" style="grid-template-columns:repeat(2,1fr);max-width:460px;">
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 120" xmlns="http://www.w3.org/2000/svg">
+          <rect x="12" y="10" width="136" height="70" rx="4" fill="#1a1a1a" stroke="#f85149" stroke-width="1.8"/>
+          <text x="20" y="26" fill="#f85149" font-family="monospace" font-size="7">$ docker network create ...</text>
+          <text x="20" y="38" fill="#f85149" font-family="monospace" font-size="7">$ docker run --name db ...</text>
+          <text x="20" y="50" fill="#f85149" font-family="monospace" font-size="7">$ docker build -t web ...</text>
+          <text x="20" y="62" fill="#f85149" font-family="monospace" font-size="7">$ docker run --name web ...</text>
+          <text x="20" y="74" fill="#666" font-family="monospace" font-size="7">4+ commands, exact order matters</text>
+        </svg>
+        <figcaption>Session 01: manual</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Works, but every flag has to be retyped correctly, in the right order, on every machine that runs it.</p>
+      </figure>
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 120" xmlns="http://www.w3.org/2000/svg">
+          <rect x="12" y="10" width="136" height="70" rx="4" fill="#1a1a1a" stroke="#3fb950" stroke-width="1.8"/>
+          <text x="20" y="30" fill="#3fb950" font-family="monospace" font-size="8">$ docker compose up -d</text>
+          <text x="20" y="50" fill="#888" font-family="monospace" font-size="7">reads docker-compose.yml</text>
+          <text x="20" y="62" fill="#888" font-family="monospace" font-size="7">creates network, volumes,</text>
+          <text x="20" y="74" fill="#888" font-family="monospace" font-size="7">both containers</text>
+        </svg>
+        <figcaption>Session 02: Compose</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">One committed file, one command, identical result on any machine with Docker installed.</p>
+      </figure>
+    </div>
+
+    <div class="alert alert-warning">
+      <strong>depends_on controls start order, not readiness.</strong>
+      Compose will start the <code>db</code> container before <code>web</code>,
+      but MySQL can take a few seconds to finish initializing after its
+      process starts. A PHP request that arrives too early can still fail to
+      connect — production setups typically add a retry loop or a proper
+      healthcheck, which is outside the scope of today's lab but worth
+      knowing about.
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>4. Lab</h2>
+    <div class="alert alert-success">
+      <strong>Lab objective:</strong> Build a custom PHP image with the MySQL
+      driver, connect it to MySQL manually first, then replace the manual
+      setup with a single docker-compose.yml and verify the full stack in a
+      browser.
+    </div>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <p><strong>Build a PHP + Apache image with the MySQL driver</strong></p>
+        <pre><code># php/Dockerfile
+FROM php:8.2-apache
+RUN docker-php-ext-install pdo pdo_mysql</code></pre>
+        <pre><code>docker build -t php-with-mysql ./php</code></pre>
+        <p>Before running it: predict whether this container alone, with no network flag, will be able to reach the mysql-lab container from Session 01. Confirm your prediction once you get to step 2.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <p><strong>Run the PHP container connected to MySQL manually</strong></p>
+        <pre><code>docker run -d --name php-lab --network lab-net -p 8082:80 \
+  -v "$(pwd)/php":/var/www/html \
+  php-with-mysql</code></pre>
+        <p>This reuses the <code>lab-net</code> network and <code>mysql-lab</code> container from Session 01. Without <code>--network lab-net</code>, php-lab would have no way to resolve the hostname <code>mysql-lab</code> at all — confirm this matches what you predicted in step 1.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <p><strong>Write the final index.php</strong></p>
+        <pre><code>&lt;?php
+$pdo = new PDO(
+  "mysql:host=mysql-lab;dbname=labdb",
+  "root",
+  "changeme"
+);
+$stmt = $pdo-&gt;query("SELECT msg FROM notes LIMIT 1");
+$row = $stmt-&gt;fetch();
+echo "&lt;h1&gt;" . htmlspecialchars($row['msg']) . "&lt;/h1&gt;";</code></pre>
+        <p>Save this as <code>php/index.php</code>, then visit <code>http://localhost:8082</code>. You should see the row you inserted back in Session 01's persistence experiment.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <p><strong>Tear down the manual containers</strong></p>
+        <pre><code>docker rm -f php-lab mysql-lab</code></pre>
+        <p>The volume and network stay — only the containers are removed. This sets up the next step: proving Compose reproduces the same working application from a clean slate.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <p><strong>Write docker-compose.yml</strong></p>
+        <pre><code>services:
+  db:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: changeme
+      MYSQL_DATABASE: labdb
+      MYSQL_USER: labuser
+      MYSQL_PASSWORD: labpass
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  web:
+    build: ./php
+    ports:
+      - "8082:80"
+    volumes:
+      - ./php:/var/www/html
+    depends_on:
+      - db
+
+volumes:
+  mysql-data:</code></pre>
+        <p>Update <code>php/index.php</code>'s host from <code>mysql-lab</code> to <code>db</code>, matching the service name in this file, before continuing.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <p><strong>Bring the whole stack up with one command</strong></p>
+        <pre><code>docker compose up -d
+docker compose ps</code></pre>
+        <p>Before checking the browser: predict whether the row from Session 01 will appear immediately, given that mysql-data already contains it. Then visit <code>http://localhost:8082</code> and confirm.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">7</div>
+      <div class="step-body">
+        <p><strong>Verify the full stack end to end</strong></p>
+        <p>Confirm the message from the database actually renders on the page — not just that <code>docker compose ps</code> shows both services as "Up". This is the difference between containers running and an application working.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">8</div>
+      <div class="step-body">
+        <p><strong>Clean up</strong></p>
+        <pre><code>docker compose down
+docker image prune -a
+docker volume prune</code></pre>
+        <p>Predict which of these commands, if any, would delete the row you've been carrying since Session 01 — then decide whether you actually want to run <code>docker volume prune</code> right now.</p>
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>5. Expected Files Changed</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Action</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><code>php/Dockerfile</code></td><td>Created</td><td>Builds php:apache with the pdo_mysql driver installed</td></tr>
+          <tr><td><code>php/index.php</code></td><td>Created</td><td>Queries MySQL over PDO and renders the result</td></tr>
+          <tr><td><code>docker-compose.yml</code></td><td>Created</td><td>Declares the db and web services, the shared volume, and startup order</td></tr>
+          <tr><td><code>sessions/session-02/index.html</code></td><td>Created</td><td>This session document</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>6. Commit Checkpoint</h2>
+    <pre><code>git add php/Dockerfile php/index.php docker-compose.yml
+git commit -m "session-02: multi-container PHP+MySQL app defined with Docker Compose"</code></pre>
+
+    <h2>7. Code Review Checklist</h2>
+    <div class="card">
+      <div class="checklist-item"><input type="checkbox" id="c1"/><label for="c1">php/Dockerfile installs pdo and pdo_mysql before index.php is expected to connect</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c2"/><label for="c2">docker-compose.yml declares both services, the shared volume, and depends_on</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c3"/><label for="c3">index.php connects using the service name (db), not a container name or IP</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c4"/><label for="c4">docker compose up -d brings up the full stack from a clean docker compose down state</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c5"/><label for="c5">I verified the database row actually renders in the browser, not just that both containers show "Up"</label></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>8. Post-Coding Quiz</h2>
+    <div id="post-quiz" data-pass-post="Proceed to Session 03 (Deployments, Services, Scaling) after ≥ 80%.">
+      <div class="quiz-question" data-question="0" data-answer="c">
+        <div class="question-num">Question 1 of 5</div>
+        <p>In docker-compose.yml, the web service has <code>build: ./php</code> instead of <code>image: ...</code>. What does this mean?</p>
+        <label class="quiz-option" data-val="a">Compose downloads a prebuilt image called php from Docker Hub</label>
+        <label class="quiz-option" data-val="b">The service will not start until manually built with a separate command</label>
+        <label class="quiz-option" data-val="c">Compose builds the image from the Dockerfile found in the ./php directory</label>
+        <label class="quiz-option" data-val="d">It is a syntax error; build and image cannot both exist in a compose file</label>
+        <div class="explanation">build tells Compose to construct the image itself from a Dockerfile in the given directory, rather than pulling an existing image by name.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="a">
+        <div class="question-num">Question 2 of 5</div>
+        <p>You run docker compose down, then docker compose up -d again. What happens to the row stored in mysql-data?</p>
+        <label class="quiz-option" data-val="a">It's still there, since docker compose down doesn't remove named volumes by default</label>
+        <label class="quiz-option" data-val="b">It's gone, because down removes every volume automatically</label>
+        <label class="quiz-option" data-val="c">It's gone, but only the table structure survives</label>
+        <label class="quiz-option" data-val="d">It's duplicated, once per compose up call</label>
+        <div class="explanation">docker compose down stops and removes containers and the default network, but named volumes are preserved unless you explicitly pass the -v flag.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="d">
+        <div class="question-num">Question 3 of 5</div>
+        <p>Why does index.php connect to host "db" instead of "mysql-lab" once the stack is defined in Compose?</p>
+        <label class="quiz-option" data-val="a">"db" is a hardcoded IP address Compose always assigns</label>
+        <label class="quiz-option" data-val="b">MySQL images always rename themselves to db internally</label>
+        <label class="quiz-option" data-val="c">"mysql-lab" stopped working after Session 01 ended</label>
+        <label class="quiz-option" data-val="d">"db" is the service name declared in docker-compose.yml, and that name is what Compose's network resolves</label>
+        <div class="explanation">Compose resolves hostnames by service name as declared in the YAML file, so the connection string has to match whatever the service is actually called there.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="b">
+        <div class="question-num">Question 4 of 5</div>
+        <p>depends_on ensures the db service container starts before web. What does it NOT guarantee?</p>
+        <label class="quiz-option" data-val="a">That the db container's image will be pulled first</label>
+        <label class="quiz-option" data-val="b">That MySQL has finished initializing and is ready to accept connections</label>
+        <label class="quiz-option" data-val="c">That both services join the same Compose-created network</label>
+        <label class="quiz-option" data-val="d">That the db service appears before web in docker compose ps output</label>
+        <div class="explanation">depends_on only sequences container start order, not application-level readiness. MySQL can still be initializing when web's first request arrives.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="a">
+        <div class="question-num">Question 5 of 5</div>
+        <p>Session 03 will focus on:</p>
+        <label class="quiz-option" data-val="a">Deployments, Services, scaling replicas, rolling updates, and rollback</label>
+        <label class="quiz-option" data-val="b">Writing unit tests for the PHP application built today</label>
+        <label class="quiz-option" data-val="c">Migrating MySQL to a managed cloud database</label>
+        <label class="quiz-option" data-val="d">Setting up a reverse proxy in front of NGINX</label>
+        <div class="explanation">Session 03 moves the multi-container thinking from today into orchestrating containers across a cluster with Deployments and Services.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Post-Quiz</button>
+      <div class="quiz-result" id="post-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>9. Reflection Questions</h2>
+    <div class="card">
+      <ol>
+        <li>Before running docker compose up, did you correctly predict the old row would still be there? What told you the answer, given what you already knew about volumes from Session 01?</li>
+        <li>Why do you think Compose separates "start order" (depends_on) from "readiness" instead of just waiting for the database to be fully ready?</li>
+        <li>What would you need to add to this setup before you'd trust it in an actual production environment?</li>
+      </ol>
+    </div>
+
+    <h2>10. What Breaks If This Knowledge Is Missing?</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Skip building a custom PHP image:</strong> index.php's PDO connection fails immediately with a "driver not found" error, because the stock php:apache image has no MySQL support at all.</li>
+        <li><strong>Hardcode "mysql-lab" as the host instead of the Compose service name:</strong> The connection silently fails once the app moves off Session 01's manual containers, since Compose's network only resolves the names declared in docker-compose.yml.</li>
+        <li><strong>Assume depends_on means "ready", not just "started":</strong> Intermittent connection failures appear right after docker compose up, especially on a fresh volume where MySQL needs longer to initialize — a flaky bug that looks random but has a specific, well-understood cause.</li>
+      </ul>
+    </div>
+
+    <h2>11. What We Learned</h2>
+    <div class="card" style="border-color:var(--green);">
+      <p><strong>Today you learned: Docker Compose replaces a sequence of manual docker run/network/volume commands with one declarative YAML file, a service's name in that file becomes its hostname on the network Compose creates automatically, a custom Dockerfile is often needed to add drivers a base image lacks, and depends_on controls start order but never guarantees application readiness.</strong></p>
+      <p><strong>Next:</strong> <a href="../session-03/index.html">Session 03 — Deployments, Services, Scaling, Rolling Updates, and Rollback</a>.</p>
+    </div>
+
+    <p style="margin-top:24px;"><a href="../session-01/index.html">← Session 01</a> · <a href="../../syllabus/index.html">Syllabus</a> · <a href="../session-03/index.html">Session 03 →</a></p>
+
+  </div>
+</main>
+
+<script src="../../quiz.js" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    setupQuiz('pre');
+    setupQuiz('post');
+
+    document.querySelectorAll('.concept-explanation-toggle').forEach(function (button) {
+      button.addEventListener('click', function () {
+        const card = button.closest('.concept-card');
+        const isRevealed = card.classList.toggle('explanation-revealed');
+        button.setAttribute('aria-expanded', String(isRevealed));
+        button.querySelector('.concept-explanation-hint').textContent = isRevealed
+          ? 'Click to blur'
+          : 'Click to reveal';
+      });
+    });
+  });
+</script>
+<script src="../../notes-widget.js" defer></script>
+<script src="../../bookmark-widget.js" defer></script>
+
+</body>
+</html>

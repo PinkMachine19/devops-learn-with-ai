@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Session 16 — Capstone: Building the Text Masker App</title>
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="stylesheet" href="../../notes-widget.css" />
+  <link rel="stylesheet" href="../../bookmark-widget.css" />
+  <link rel="stylesheet" href="../../quiz-explain-modal.css" />
+  <style>
+    .quiz-option{display:block;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:8px;cursor:pointer;font-size:14px;transition:border-color .15s,background .15s;user-select:none;}
+    .quiz-option:hover{border-color:var(--accent);background:var(--surface);}
+    .quiz-option.selected{border-color:var(--accent);background:rgba(255,92,168,.1);}
+    .quiz-option.correct{border-color:var(--green);background:rgba(63,185,80,.1);}
+    .quiz-option.wrong{border-color:var(--red);background:rgba(248,81,73,.1);}
+    .quiz-question{margin-bottom:28px;}
+    .quiz-question p{font-weight:600;margin-bottom:10px;font-size:15px;}
+    .question-num{color:var(--text-muted);font-size:12px;font-weight:400;margin-bottom:4px;}
+    .quiz-result{display:none;padding:16px 20px;border-radius:var(--radius);margin-top:16px;font-size:15px;font-weight:600;}
+    .quiz-result.pass{background:rgba(63,185,80,.12);border:1px solid var(--green);color:var(--green);}
+    .quiz-result.fail{background:rgba(248,81,73,.12);border:1px solid var(--red);color:var(--red);}
+    .explanation{display:none;font-size:13px;color:var(--text-muted);margin-top:6px;padding:8px 12px;background:var(--surface-2);border-radius:var(--radius);border-left:2px solid var(--border);}
+    .submit-btn{background:var(--accent);color:#0d1117;border:none;border-radius:var(--radius);padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;}
+    .submit-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .step{display:flex;gap:16px;margin-bottom:20px;}
+    .step-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#0d1117;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:2px;}
+    .step-body{flex:1;}
+    .step-body p{margin-bottom:6px;}
+    .section-divider{border:none;border-top:2px solid var(--border);margin:40px 0;}
+    .checklist-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;}
+    .checklist-item input[type="checkbox"]{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;}
+
+    /* Comic-panel concept grid — image teaches first, caption only reinforces */
+    .concept-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0;}
+    @media (max-width:760px){.concept-grid{grid-template-columns:repeat(2,1fr);}}
+    .concept-card{background:#111111;border:1px solid #2a2a2a;border-radius:8px;padding:8px 8px 10px;}
+    .concept-card svg{display:block;width:100%;height:auto;}
+    .concept-card figcaption{margin-top:6px;font-family:monospace;font-size:10.5px;line-height:1.3;color:#c9c9c9;text-align:center;}
+    .concept-card figcaption b{color:#ff5ca8;}
+    .concept-explanation-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin-top:10px;padding:7px 8px;border:1px solid #3a3a3a;border-radius:5px;background:#1a1a1a;color:#ff5ca8;font-family:monospace;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;}
+    .concept-explanation-toggle:hover,.concept-explanation-toggle:focus-visible{border-color:#ff5ca8;outline:none;}
+    .concept-explanation-hint{color:#8b949e;font-size:8px;font-weight:400;letter-spacing:0;text-transform:none;}
+    .concept-explanation-text{margin:7px 2px 0;font-size:11px;line-height:1.45;color:#d8d8d8;filter:blur(4px);user-select:none;transition:filter .2s ease;}
+    .concept-card.explanation-revealed .concept-explanation-text{filter:none;user-select:text;}
+    .concept-card.explanation-revealed .concept-explanation-hint{color:#3fb950;}
+    .anchor{color:#ff5ca8;font-weight:700;}
+    .objectives-list{list-style:none;padding-left:0;}
+    .objectives-list li{display:flex;gap:12px;align-items:baseline;margin-bottom:12px;font-size:15px;}
+    .obj-num{flex-shrink:0;min-width:34px;color:#ff5ca8;font-family:monospace;font-weight:700;font-size:12px;background:rgba(255,92,168,.1);border:1px solid rgba(255,92,168,.4);border-radius:10px;padding:2px 6px;text-align:center;}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="../../index.html" class="brand">⚙ DevOps Learning</a>
+    <a href="../../syllabus/index.html">Syllabus</a>
+    <a href="../../sessions/index.html" class="active">Sessions</a>
+    <a href="../../quizzes/index.html">Quizzes</a>
+    <a href="../../labs/index.html">Labs</a>
+  </div>
+</nav>
+
+<main>
+  <div class="container">
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+      <span class="badge badge-layer">Layer 7</span>
+      <span class="badge badge-current">Session 16</span>
+      <span style="color:var(--text-muted);font-size:13px;">Capstone: Ship a Real App</span>
+    </div>
+    <h1>Capstone: Building the Text Masker App</h1>
+    <p class="subtitle">
+      Session 15 closed out the landscape survey and the Layer 6 gate check —
+      the course now moves from talking about tools to actually shipping
+      something. Today's build is the "Text Masker" app: a tiny two-part
+      application made of a Node/Express API that obfuscates text with
+      leet-speak substitutions, and a static HTML/JS client that calls it.
+      Both halves get containerized with Docker from scratch. This exact app
+      carries forward through the next several sessions — automated with a
+      CI pipeline, then deployed to local Docker, then to a local Kubernetes
+      cluster — so getting the plumbing right today pays off repeatedly.
+    </p>
+    <div class="alert alert-info">Estimated time: 45–55 minutes</div>
+    <p style="color:var(--text-muted);font-size:13px;margin-top:-8px;margin-bottom:16px;">Pre-quiz → Concept → Lab → Commit → Post-quiz</p>
+
+    <!-- Comic-panel concept grid: image teaches first, caption only reinforces -->
+    <div class="concept-grid">
+
+      <!-- 1. Client/server split -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="40" width="54" height="40" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <text x="35" y="64" fill="white" font-family="monospace" font-size="9" text-anchor="middle">client</text>
+          <rect x="98" y="40" width="54" height="40" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="125" y="64" fill="#ff5ca8" font-family="monospace" font-size="9" text-anchor="middle">server</text>
+          <path d="M64,52 H96" stroke="#ff5ca8" stroke-width="2.5" marker-end="url(#arr1)"/>
+          <text x="80" y="46" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">POST /mask</text>
+          <path d="M96,70 H64" stroke="#3fb950" stroke-width="2.5" marker-end="url(#arr2)"/>
+          <text x="80" y="86" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">JSON reply</text>
+          <defs>
+            <marker id="arr1" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker>
+            <marker id="arr2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker>
+          </defs>
+          <text x="80" y="118" fill="white" font-family="monospace" font-size="9" text-anchor="middle">two small programs,</text>
+          <text x="80" y="132" fill="white" font-family="monospace" font-size="9" text-anchor="middle">one HTTP conversation</text>
+        </svg>
+        <figcaption><b>client/server</b> split, not one app</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">The client and the server are two independent programs that only ever talk over HTTP. Neither one needs to know how the other is built internally — just the shape of the requests and responses they exchange.</p>
+      </figure>
+
+      <!-- 2. Express routing as signposts -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <line x1="80" y1="20" x2="80" y2="100" stroke="#666" stroke-width="3"/>
+          <g transform="translate(80,44)">
+            <polygon points="0,-9 46,-9 54,0 46,9 0,9" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+            <text x="24" y="4" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle">GET /health</text>
+          </g>
+          <g transform="translate(80,74)">
+            <polygon points="0,-9 -46,-9 -54,0 -46,9 0,9" fill="none" stroke="#3fb950" stroke-width="2"/>
+            <text x="-24" y="4" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="middle">POST /mask</text>
+          </g>
+          <circle cx="80" cy="108" r="8" fill="none" stroke="white" stroke-width="1.8"/>
+          <line x1="80" y1="116" x2="80" y2="128" stroke="white" stroke-width="1.8"/>
+          <line x1="80" y1="120" x2="72" y2="126" stroke="white" stroke-width="1.8"/>
+          <line x1="80" y1="120" x2="88" y2="126" stroke="white" stroke-width="1.8"/>
+          <text x="80" y="144" fill="white" font-family="monospace" font-size="8" text-anchor="middle">app.get / app.post</text>
+        </svg>
+        <figcaption><b>routes</b> are signposts, not magic</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Express matches an incoming request's method and path against the routes you registered with app.get and app.post, then runs the matching handler function. Unmatched requests never reach your code.</p>
+      </figure>
+
+      <!-- 3. app.listen keeps the process alive -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="46" y="30" width="68" height="52" rx="5" fill="none" stroke="white" stroke-width="2"/>
+          <text x="80" y="52" fill="white" font-family="monospace" font-size="9" text-anchor="middle">app.listen</text>
+          <text x="80" y="66" fill="#ff5ca8" font-family="monospace" font-size="11" text-anchor="middle" font-weight="bold">:8080</text>
+          <circle cx="80" cy="98" r="10" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <path d="M75,98 l4,4 8,-9" fill="none" stroke="#3fb950" stroke-width="2" stroke-linecap="round"/>
+          <path d="M80,82 V88" stroke="#666" stroke-width="1.6" stroke-dasharray="2,2"/>
+          <text x="80" y="128" fill="white" font-family="monospace" font-size="9" text-anchor="middle">process stays awake,</text>
+          <text x="80" y="140" fill="white" font-family="monospace" font-size="9" text-anchor="middle">waiting on the port</text>
+        </svg>
+        <figcaption><b>app.listen</b> keeps it running</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Calling app.listen(port) doesn't just print a message — it opens a socket and keeps the Node process alive indefinitely, listening for incoming connections until it's stopped.</p>
+      </figure>
+
+      <!-- 4. POST+JSON vs GET+query -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="6" y="20" width="148" height="16" rx="3" fill="none" stroke="#f85149" stroke-width="1.6"/>
+          <text x="80" y="31" fill="#f85149" font-family="monospace" font-size="7" text-anchor="middle">?text=hi%20there%5C%21</text>
+          <line x1="10" y1="16" x2="150" y2="40" stroke="#f85149" stroke-width="1.4"/>
+          <rect x="26" y="60" width="108" height="44" rx="4" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <text x="80" y="78" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="middle">{ "text": "hi" }</text>
+          <text x="80" y="92" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="middle">body, not URL</text>
+          <text x="80" y="126" fill="white" font-family="monospace" font-size="9" text-anchor="middle">POST + JSON body</text>
+          <text x="80" y="140" fill="white" font-family="monospace" font-size="9" text-anchor="middle">skips URL-encoding pain</text>
+        </svg>
+        <figcaption><b>POST</b> body beats <b>GET</b> query string</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A GET request's data lives in the URL, so special characters need percent-encoding and can end up in server logs and browser history. A POST body carries the same data without either problem.</p>
+      </figure>
+
+      <!-- 5. CORS handshake between origins -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="34" width="54" height="34" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <text x="35" y="55" fill="white" font-family="monospace" font-size="8" text-anchor="middle">:30080</text>
+          <rect x="98" y="34" width="54" height="34" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="125" y="55" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle">:8080</text>
+          <path d="M64,51 H96" stroke="#666" stroke-width="2" stroke-dasharray="3,3"/>
+          <g transform="translate(80,90)">
+            <rect x="-30" y="-12" width="60" height="24" rx="4" fill="none" stroke="#3fb950" stroke-width="1.8"/>
+            <text x="0" y="4" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">Allow-Origin: *</text>
+          </g>
+          <text x="80" y="126" fill="white" font-family="monospace" font-size="9" text-anchor="middle">different ports = different</text>
+          <text x="80" y="140" fill="white" font-family="monospace" font-size="9" text-anchor="middle">origins, need a header</text>
+        </svg>
+        <figcaption><b>CORS</b> permission handshake</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">The browser treats port 30080 and port 8080 as different origins, even on the same machine. Without an Access-Control-Allow-Origin header from the server, the browser blocks the client's fetch response.</p>
+      </figure>
+
+      <!-- 6. Dockerfile as blueprint -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="42" y="16" width="76" height="60" rx="4" fill="none" stroke="white" stroke-width="2" transform="rotate(-2,80,46)"/>
+          <text x="80" y="36" fill="white" font-family="monospace" font-size="7" text-anchor="middle" transform="rotate(-2,80,46)">FROM node</text>
+          <text x="80" y="48" fill="white" font-family="monospace" font-size="7" text-anchor="middle" transform="rotate(-2,80,46)">RUN install</text>
+          <text x="80" y="60" fill="white" font-family="monospace" font-size="7" text-anchor="middle" transform="rotate(-2,80,46)">CMD start</text>
+          <path d="M80,80 V96" stroke="#ff5ca8" stroke-width="2.5" marker-end="url(#arr3)"/>
+          <defs><marker id="arr3" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <rect x="52" y="100" width="56" height="26" rx="4" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <text x="80" y="117" fill="#3fb950" font-family="monospace" font-size="9" text-anchor="middle">image</text>
+          <text x="80" y="140" fill="white" font-family="monospace" font-size="9" text-anchor="middle">same result, every machine</text>
+        </svg>
+        <figcaption><b>Dockerfile</b> = repeatable blueprint</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A Dockerfile lists the exact steps to build a runnable image — base OS, dependencies, files, startup command. Anyone with Docker installed can build the identical image without installing Node locally at all.</p>
+      </figure>
+
+      <!-- 7. Next session teaser -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="58" width="46" height="34" rx="4" fill="none" stroke="#666" stroke-width="1.8" transform="rotate(-2,37,75)"/>
+          <text x="37" y="79" fill="#666" font-family="monospace" font-size="10" text-anchor="middle">16</text>
+          <path d="M64,75 H108" stroke="#ff5ca8" stroke-width="2.5" stroke-dasharray="5,4" marker-end="url(#arr4)"/>
+          <defs><marker id="arr4" markerWidth="9" markerHeight="9" refX="4" refY="4" orient="auto"><polygon points="0,0 9,4 0,9" fill="#ff5ca8"/></marker></defs>
+          <rect x="112" y="52" width="42" height="46" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2" transform="rotate(2,133,75)"/>
+          <text x="133" y="80" fill="#ff5ca8" font-family="monospace" font-size="13" text-anchor="middle" font-weight="bold">CI</text>
+          <line x1="120" y1="105" x2="146" y2="105" stroke="white" stroke-width="1.6"/>
+          <line x1="140" y1="101" x2="146" y2="105" stroke="white" stroke-width="1.6"/>
+          <line x1="140" y1="109" x2="146" y2="105" stroke="white" stroke-width="1.6"/>
+          <text x="80" y="128" fill="white" font-family="monospace" font-size="9" text-anchor="middle">automating this build</text>
+        </svg>
+        <figcaption>next: a CI pipeline runs it</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Session 17 takes the exact build-and-run steps performed by hand today and wires them into a GitHub Actions workflow, so every push triggers the same steps automatically.</p>
+      </figure>
+
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>1. Learning Objectives</h2>
+    <div class="card">
+      <ol class="objectives-list">
+        <li><span class="obj-num">1/5</span><span>Explain what <span class="anchor">Express</span> routing does and why <span class="anchor">app.listen(PORT)</span> keeps the server process alive</span></li>
+        <li><span class="obj-num">2/5</span><span>Justify why this app sends its masking request as a <span class="anchor">POST with a JSON body</span> instead of a GET query string</span></li>
+        <li><span class="obj-num">3/5</span><span>Describe what a <span class="anchor">Dockerfile</span> is and why it produces a <span class="anchor">repeatable</span> build with no local Node install required</span></li>
+        <li><span class="obj-num">4/5</span><span>Explain why the client and server are packaged as <span class="anchor">two separate images</span> instead of one</span></li>
+        <li><span class="obj-num">5/5</span><span>Identify what <span class="anchor">CORS</span> is for and why the two containers, on different ports, need it</span></li>
+      </ol>
+    </div>
+
+    <h2>2. Pre-Coding Quiz</h2>
+    <p>Answer before reading the concept. Need 4/5 to proceed.</p>
+
+    <div id="pre-quiz">
+      <div class="quiz-question" data-question="0" data-answer="c">
+        <div class="question-num">Question 1 of 5</div>
+        <p>What does calling <code>app.listen(PORT)</code> in an Express server actually do?</p>
+        <label class="quiz-option" data-val="a">Prints the port number once and exits</label>
+        <label class="quiz-option" data-val="b">Installs Express as a background service</label>
+        <label class="quiz-option" data-val="c">Opens a socket and keeps the process running, waiting for requests</label>
+        <label class="quiz-option" data-val="d">Restarts the container every time a route is hit</label>
+        <div class="explanation">app.listen opens a socket on that port and keeps the Node process alive indefinitely so it can accept and respond to incoming connections.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="a">
+        <div class="question-num">Question 2 of 5</div>
+        <p>Why is POST with a JSON body preferred over GET with a query string for sending text to <code>/mask</code>?</p>
+        <label class="quiz-option" data-val="a">It avoids URL-encoding special characters and keeps them out of logs</label>
+        <label class="quiz-option" data-val="b">GET requests are not supported by Express at all</label>
+        <label class="quiz-option" data-val="c">JSON bodies are faster to transmit over TCP</label>
+        <label class="quiz-option" data-val="d">POST requests skip the need for a route handler</label>
+        <div class="explanation">Special characters in a URL need percent-encoding and tend to end up in server access logs and browser history; a POST body avoids both issues.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="b">
+        <div class="question-num">Question 3 of 5</div>
+        <p>What is a Dockerfile?</p>
+        <label class="quiz-option" data-val="a">A config file only used after a container is already running</label>
+        <label class="quiz-option" data-val="b">A set of instructions describing how to build a runnable image</label>
+        <label class="quiz-option" data-val="c">A backup copy of the application's source code</label>
+        <label class="quiz-option" data-val="d">A log file Docker writes during a build</label>
+        <div class="explanation">A Dockerfile is a build recipe — base image, install steps, files to copy, and a startup command — that produces the same image on any machine with Docker.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="d">
+        <div class="question-num">Question 4 of 5</div>
+        <p>Why does this lab build the client and server as two separate Docker images instead of one?</p>
+        <label class="quiz-option" data-val="a">Docker only allows one process per image, ever</label>
+        <label class="quiz-option" data-val="b">A single image cannot expose more than one port</label>
+        <label class="quiz-option" data-val="c">Node and Nginx cannot be installed on the same OS</label>
+        <label class="quiz-option" data-val="d">They are different runtimes with different jobs and can scale, deploy, or fail independently</label>
+        <div class="explanation">The server runs Node and the client is served by Nginx as static files — keeping them separate lets each be built, deployed, and scaled on its own.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="c">
+        <div class="question-num">Question 5 of 5</div>
+        <p>What problem does CORS solve here?</p>
+        <label class="quiz-option" data-val="a">It compresses JSON responses to save bandwidth</label>
+        <label class="quiz-option" data-val="b">It encrypts traffic between client and server</label>
+        <label class="quiz-option" data-val="c">It lets the browser allow a page on one origin to read a response from another</label>
+        <label class="quiz-option" data-val="d">It automatically retries a failed fetch request</label>
+        <div class="explanation">The browser blocks a page from reading a cross-origin response unless the server explicitly allows it via a CORS header — that's exactly the situation between ports 30080 and 8080.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Pre-Quiz</button>
+      <div class="quiz-result" id="pre-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>3. The Concept — Two Small Programs, One HTTP Conversation</h2>
+
+    <h3>Architecture of the two-part app</h3>
+    <p>
+      The Text Masker app is deliberately small: a Node/Express API on one
+      side, and a static HTML/JS page on the other. The client never touches
+      the masking logic directly — it sends the user's text to the server
+      over HTTP and displays whatever comes back. This split mirrors real
+      production systems far more than a single monolithic script would, and
+      it's the shape this capstone keeps for the rest of the course: the same
+      two components get automated, containerized differently, and
+      eventually deployed to a cluster, but the client/server boundary never
+      moves.
+    </p>
+
+    <h3>The masking API: routes and JSON body handling</h3>
+    <p>
+      The server exposes three routes: a health check, a GET version of the
+      masking endpoint kept mostly for convenience and comparison, and the
+      POST version the client actually uses. <code>express.json()</code> is
+      registered as middleware so that any POST body sent as JSON is parsed
+      into <code>req.body</code> automatically, before the route handler ever
+      runs.
+    </p>
+    <pre><code>const express = require("express");
+
+const app = express();
+const port = process.env.PORT || 8080;
+
+app.use(express.json()); // parse JSON bodies
+
+// Leet/confusables map — a small set of substitute characters per letter
+const MAP = {
+  a: ["A", "4", "@"], b: ["8", "|3"], c: ["(", "<"],
+  e: ["3", "€"], i: ["1", "!", "|"], o: ["0", "()"],
+  s: ["5", "$"], t: ["7", "+"]
+  // ...remaining letters follow the same pattern
+};
+
+function maskLetter(ch) {
+  if (!ch) return "";
+  const opts = MAP[ch.toLowerCase()];
+  if (opts && opts.length) return opts[Math.floor(Math.random() * opts.length)];
+  return ch;
+}
+
+// Backslash-escape mode: a leading "\" masks only the character after it
+function maskText(text) {
+  let out = "";
+  const chars = Array.from(text);
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i];
+    if (ch === "\\") {
+      if (i + 1 < chars.length) { i++; out += maskLetter(chars[i]); }
+    } else {
+      out += ch;
+    }
+  }
+  return out;
+}
+
+app.get("/health", (_req, res) => res.json({ ok: true }));
+
+// GET convenience route — works, but requires URL-encoding for backslashes
+app.get("/mask", (req, res) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  const text = typeof req.query.text === "string" ? req.query.text : "";
+  const versions = Math.max(1, Math.min(20, parseInt(req.query.versions || "3", 10) || 3));
+  const outputs = Array.from({ length: versions }, () => maskText(text));
+  res.json({ input: text, versions, outputs, method: "GET" });
+});
+
+// POST route — the one the client actually calls
+app.post("/mask", (req, res) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  const text = typeof req.body.text === "string" ? req.body.text : "";
+  const versions = Math.max(1, Math.min(20, parseInt(req.body.versions ?? 3, 10) || 3));
+  const outputs = Array.from({ length: versions }, () => maskText(text));
+  res.json({ input: text, versions, outputs, method: "POST" });
+});
+
+app.listen(port, () => console.log(`Masker API running on ${port}`));</code></pre>
+    <p>
+      Notice that <code>maskLetter</code> picks randomly from a small list of
+      substitute characters, so calling the API twice with the same input
+      produces two different-looking masked strings. The <code>versions</code>
+      parameter controls how many randomized outputs come back in a single
+      response, capped between 1 and 20 so a careless request can't ask the
+      server to generate an unbounded amount of output.
+    </p>
+
+    <h3>Why POST is preferred here</h3>
+    <p>
+      Both a GET and a POST route exist for <code>/mask</code>, but the client
+      only ever calls the POST one. Text data — especially anything containing
+      the backslash-escape syntax this API supports — gets awkward fast in a
+      URL: special characters need percent-encoding, the URL length has
+      practical limits, and query strings tend to get written to server
+      access logs verbatim. A JSON body sidesteps all of that; the exact
+      characters the user typed travel to the server untouched.
+    </p>
+
+    <h3>CORS between the two container ports</h3>
+    <p>
+      The client is served from one container on port 30080, and the API runs
+      in a different container on port 8080. Even though both run on the same
+      machine during local development, the browser treats them as two
+      separate origins because the port differs. Without an explicit
+      <code>Access-Control-Allow-Origin</code> header on the server's
+      response, the browser would block the client's JavaScript from reading
+      that response at all — the request would still reach the server, but
+      the fetch call in the browser would fail. Setting that header on both
+      the GET and POST handlers is what makes the cross-origin fetch work.
+    </p>
+
+    <h3>Dockerfile structure: a Node API vs. an Nginx-served static client</h3>
+    <p>
+      The server needs a JavaScript runtime, so its Dockerfile starts from a
+      Node base image, installs dependencies, copies in the source, and runs
+      <code>node server.js</code> as its startup command:
+    </p>
+    <pre><code>FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install --omit=dev
+COPY . .
+EXPOSE 8080
+CMD ["node", "server.js"]</code></pre>
+    <p>
+      Copying <code>package*.json</code> before the rest of the source and
+      running <code>npm install</code> in its own layer matters for build
+      speed: Docker caches each instruction as a layer, and as long as the
+      package files haven't changed, later builds can reuse the cached
+      install step instead of re-downloading every dependency.
+    </p>
+    <p>
+      The client has no server-side logic at all — it's plain HTML, CSS, and
+      JavaScript that only needs a web server to host the files. Its
+      Dockerfile starts from an Nginx base image and simply copies the static
+      files into Nginx's default web root:
+    </p>
+    <pre><code>FROM nginx:alpine
+COPY . /usr/share/nginx/html
+EXPOSE 80</code></pre>
+    <p>
+      No Node install, no build step, no dependency layer — Nginx already
+      knows how to serve static files the moment the container starts.
+    </p>
+
+    <h3>The client: a fetch call to the server</h3>
+    <pre><code>async function mask() {
+  const text = document.getElementById("inputText").value;
+  const res = await fetch("http://localhost:8080/mask", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, versions: 3 })
+  });
+  const data = await res.json();
+  document.getElementById("output").textContent = (data.outputs || []).join("\n");
+}</code></pre>
+    <p>
+      This is the entire client-side logic: read the input box, POST it to
+      the server as JSON, wait for the JSON response, and print the
+      <code>outputs</code> array to the page. Everything interesting —
+      the actual masking — happens on the server.
+    </p>
+
+    <hr class="section-divider" />
+
+    <h2>4. Lab</h2>
+    <div class="alert alert-success">
+      <strong>Lab objective:</strong> Build the Text Masker server and client
+      from scratch, containerize each with its own Dockerfile, run both
+      locally, and confirm the client can successfully mask text through the
+      API.
+    </div>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <p><strong>Create the project folders</strong></p>
+        <pre><code>mkdir masker-lab; cd masker-lab
+mkdir server, client</code></pre>
+        <p>Two top-level folders: one for the API, one for the static client. Each will get its own Dockerfile.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <p><strong>Write the server: server.js, package.json, Dockerfile</strong></p>
+        <p>
+          Create <code>server/server.js</code> with the Express app shown in
+          the concept section above (health route, GET and POST
+          <code>/mask</code> routes, and <code>app.listen</code>).
+        </p>
+        <p>Create <code>server/package.json</code>:</p>
+        <pre><code>{
+  "name": "masker-server",
+  "version": "1.0.0",
+  "dependencies": { "express": "^4.18.2" },
+  "scripts": { "start": "node server.js" }
+}</code></pre>
+        <p>Create <code>server/Dockerfile</code> exactly as shown above (Node base image, install, copy, expose 8080, run <code>node server.js</code>).</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <p><strong>Build and run the server, then health-check it</strong></p>
+        <pre><code>docker build -t masker-server .\server
+docker rm -f masker-server 2>$null
+docker run -d --name masker-server -p 8080:8080 masker-server
+curl.exe http://localhost:8080/health</code></pre>
+        <p>
+          <strong>Predict, then observe:</strong> before running the curl
+          command, write down what you expect the response body to look
+          like. Then run it and compare — it should return
+          <code>{"ok":true}</code>.
+        </p>
+        <p>Now test the POST route with a real payload:</p>
+        <pre><code>$body = @{ text = "hide these words"; versions = 2 } | ConvertTo-Json
+curl.exe -X POST "http://localhost:8080/mask" -H "Content-Type: application/json" --data $body</code></pre>
+        <p>
+          Predict how many masked strings the response will contain before
+          you run it — the answer should match the <code>versions</code>
+          value sent in the body.
+        </p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <p><strong>Write the client: index.html, app.js, Dockerfile</strong></p>
+        <p>Create <code>client/index.html</code>:</p>
+        <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+  &lt;body&gt;
+    &lt;h2&gt;Text Masker&lt;/h2&gt;
+    &lt;input id="inputText" placeholder="Type text..." /&gt;
+    &lt;button onclick="mask()"&gt;Mask It&lt;/button&gt;
+    &lt;pre id="output"&gt;&lt;/pre&gt;
+    &lt;script src="app.js"&gt;&lt;/script&gt;
+  &lt;/body&gt;
+&lt;/html&gt;</code></pre>
+        <p>Create <code>client/app.js</code> with the <code>mask()</code> function shown in the concept section above.</p>
+        <p>Create <code>client/Dockerfile</code> exactly as shown above (Nginx base image, copy static files, expose 80).</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <p><strong>Build and run the client</strong></p>
+        <pre><code>docker build -t masker-client .\client
+docker rm -f masker-client 2>$null
+docker run -d --name masker-client -p 30080:80 masker-client
+start http://localhost:30080</code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <p><strong>Smoke test in the browser</strong></p>
+        <p>
+          Type any text into the input box and click "Mask It". <strong>Before
+          clicking, predict</strong> whether you expect three masked lines or
+          one — the client requests <code>versions: 3</code> in its fetch
+          call. You should see three randomized masked lines appear in the
+          output box. If nothing appears, open the browser console first —
+          a CORS or network error will show up there.
+        </p>
+      </div>
+    </div>
+
+    <div class="alert alert-warning">
+      <strong>Troubleshooting quickies:</strong>
+      <ul style="margin-top:8px;">
+        <li><strong>Empty reply from server:</strong> check <code>docker logs masker-server</code> for a startup error.</li>
+        <li><strong>Import/module errors:</strong> confirm the server's <code>package.json</code> does not contain <code>"type": "module"</code> — this server is written as CommonJS.</li>
+        <li><strong>Express not found:</strong> rebuild without the cache: <code>docker build --no-cache -t masker-server .\server</code>.</li>
+        <li><strong>Port already in use:</strong> run with a different host port, e.g. <code>-p 18080:8080</code>, and call <code>http://localhost:18080</code> instead.</li>
+        <li><strong>Blank output with a CORS error in the console:</strong> confirm both <code>/mask</code> handlers set <code>Access-Control-Allow-Origin</code> before responding.</li>
+      </ul>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>5. Expected Files Changed</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Action</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><code>server/server.js</code></td><td>Added</td><td>Express API with health, GET, and POST masking routes</td></tr>
+          <tr><td><code>server/package.json</code></td><td>Added</td><td>Declares the express dependency and start script</td></tr>
+          <tr><td><code>server/Dockerfile</code></td><td>Added</td><td>Builds the API into a runnable Node image</td></tr>
+          <tr><td><code>client/index.html</code></td><td>Added</td><td>Static page with input, button, and output area</td></tr>
+          <tr><td><code>client/app.js</code></td><td>Added</td><td>Client-side fetch call to the POST /mask route</td></tr>
+          <tr><td><code>client/Dockerfile</code></td><td>Added</td><td>Serves the static client through Nginx</td></tr>
+          <tr><td><code>sessions/session-16/index.html</code></td><td>Added</td><td>This session document</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>6. Commit Checkpoint</h2>
+    <pre><code>git add server/server.js server/package.json server/Dockerfile client/index.html client/app.js client/Dockerfile sessions/session-16/index.html
+git commit -m "session-16: build and containerize the Text Masker client/server app"</code></pre>
+
+    <h2>7. Code Review Checklist</h2>
+    <div class="card">
+      <div class="checklist-item"><input type="checkbox" id="c1"/><label for="c1">server.js registers express.json() before any route that reads req.body</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c2"/><label for="c2">Both the GET and POST /mask handlers set Access-Control-Allow-Origin</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c3"/><label for="c3">The client's fetch call uses method: "POST" with a JSON-stringified body, not a query string</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c4"/><label for="c4">server/Dockerfile copies package*.json and installs dependencies before copying the rest of the source</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c5"/><label for="c5">Both containers build, run, and the browser smoke test returns masked output with no console errors</label></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>8. Post-Coding Quiz</h2>
+    <div id="post-quiz" data-pass-post="Proceed to Session 17 (Capstone: CI Pipeline) after ≥ 80%.">
+      <div class="quiz-question" data-question="0" data-answer="b">
+        <div class="question-num">Question 1 of 5</div>
+        <p>A client requests <code>{ text: "hi", versions: 5 }</code>. What should the response's <code>outputs</code> array contain?</p>
+        <label class="quiz-option" data-val="a">A single masked string, repeated 5 times</label>
+        <label class="quiz-option" data-val="b">5 independently randomized masked versions of "hi"</label>
+        <label class="quiz-option" data-val="c">The original text "hi" unchanged, 5 times</label>
+        <label class="quiz-option" data-val="d">An error, since versions must equal 1</label>
+        <div class="explanation">maskText is called once per requested version, and maskLetter picks randomly each time, so each entry in the outputs array can look different even for identical input.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="d">
+        <div class="question-num">Question 2 of 5</div>
+        <p>In the input string <code>"\\a\\b c"</code>, what does the backslash-escape mode do to the space and the letter "c"?</p>
+        <label class="quiz-option" data-val="a">Masks the space but leaves "c" untouched</label>
+        <label class="quiz-option" data-val="b">Throws a parsing error on the unescaped space</label>
+        <label class="quiz-option" data-val="c">Masks everything regardless of backslashes</label>
+        <label class="quiz-option" data-val="d">Leaves the space and "c" untouched — only characters preceded by a backslash get masked</label>
+        <div class="explanation">maskText only masks a character when the character immediately before it is a backslash; anything without a preceding backslash, including the space and the trailing "c" here, passes through as-is.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="a">
+        <div class="question-num">Question 3 of 5</div>
+        <p>If the server's Access-Control-Allow-Origin header were removed entirely, what would happen?</p>
+        <label class="quiz-option" data-val="a">The request still reaches the server, but the browser blocks the client's JS from reading the response</label>
+        <label class="quiz-option" data-val="b">The server would refuse to start</label>
+        <label class="quiz-option" data-val="c">Nothing — CORS only matters for images and fonts</label>
+        <label class="quiz-option" data-val="d">The client's Docker container would fail to build</label>
+        <div class="explanation">CORS is enforced by the browser after the response arrives, not by the server refusing the request — the server still processes it, but the fetch call in the client's JavaScript throws instead of returning data.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="c">
+        <div class="question-num">Question 4 of 5</div>
+        <p>Why does the server's Dockerfile copy <code>package*.json</code> and run <code>npm install</code> before copying the rest of the source code?</p>
+        <label class="quiz-option" data-val="a">Docker requires package.json to be the very first file in any image</label>
+        <label class="quiz-option" data-val="b">npm install fails if other files are present in the build context</label>
+        <label class="quiz-option" data-val="c">It lets Docker reuse the cached install layer on later builds when only source code changed</label>
+        <label class="quiz-option" data-val="d">It reduces the final image size by half</label>
+        <div class="explanation">Docker caches each build instruction as a layer; if the package files are unchanged since the last build, Docker skips re-running npm install and reuses the cached layer, speeding up rebuilds.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="d">
+        <div class="question-num">Question 5 of 5</div>
+        <p>Session 17 will focus on:</p>
+        <label class="quiz-option" data-val="a">Migrating the server to a different language</label>
+        <label class="quiz-option" data-val="b">Adding a database to store masked text</label>
+        <label class="quiz-option" data-val="c">Deploying the app to a Kubernetes cluster</label>
+        <label class="quiz-option" data-val="d">Automating today's build-and-run steps with a GitHub Actions CI pipeline</label>
+        <div class="explanation">Session 17 wires the exact manual build steps performed in today's lab into a CI workflow that runs automatically on every push.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Post-Quiz</button>
+      <div class="quiz-result" id="post-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>9. Reflection Questions</h2>
+    <div class="card">
+      <ol>
+        <li>Before curling <code>/health</code>, did you correctly predict the exact shape of the response? What made you confident, or unsure?</li>
+        <li>Why does it make sense to keep the masking logic entirely on the server instead of duplicating it in the client's JavaScript?</li>
+        <li>If the client and server had to run on the same port instead of two different ones, would CORS still matter? Why or why not?</li>
+      </ol>
+    </div>
+
+    <h2>10. What Breaks If This Knowledge Is Missing?</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Skipping the CORS header:</strong> the app looks completely broken from the browser's perspective — the server logs show successful requests, but the client's fetch call throws and nothing ever renders, which is confusing to debug without understanding CORS.</li>
+        <li><strong>Using GET with a query string instead of POST with JSON:</strong> any text containing a backslash, space, or other special character gets mangled by URL-encoding, silently producing wrong results instead of an obvious error.</li>
+        <li><strong>Not understanding Docker layer caching:</strong> every single build re-downloads all dependencies from scratch, turning a two-second rebuild into a multi-minute one and making local iteration painfully slow.</li>
+      </ul>
+    </div>
+
+    <h2>11. What We Learned</h2>
+    <div class="card" style="border-color:var(--green);">
+      <p><strong>Today you learned: Express routes match a request's method and path to a handler, app.listen keeps the server process alive, POST with a JSON body is the right choice for sending text data, CORS is required whenever client and server run on different origins, and a Dockerfile is a repeatable recipe that builds a runnable image without a local language runtime installed.</strong></p>
+      <p><strong>Next:</strong> <a href="../session-17/index.html">Session 17 — Capstone: CI Pipeline with GitHub Actions</a>.</p>
+    </div>
+
+    <p style="margin-top:24px;"><a href="../session-15/index.html">← Session 15</a> · <a href="../../syllabus/index.html">Syllabus</a> · <a href="../session-17/index.html">Session 17 →</a></p>
+
+  </div>
+</main>
+
+<script src="../../quiz.js" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    setupQuiz('pre');
+    setupQuiz('post');
+
+    document.querySelectorAll('.concept-explanation-toggle').forEach(function (button) {
+      button.addEventListener('click', function () {
+        const card = button.closest('.concept-card');
+        const isRevealed = card.classList.toggle('explanation-revealed');
+        button.setAttribute('aria-expanded', String(isRevealed));
+        button.querySelector('.concept-explanation-hint').textContent = isRevealed
+          ? 'Click to blur'
+          : 'Click to reveal';
+      });
+    });
+  });
+</script>
+<script src="../../notes-widget.js" defer></script>
+<script src="../../bookmark-widget.js" defer></script>
+
+</body>
+</html>

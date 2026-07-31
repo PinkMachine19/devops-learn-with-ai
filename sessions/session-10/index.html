@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Session 10 — TLS with cert-manager</title>
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="stylesheet" href="../../notes-widget.css" />
+  <link rel="stylesheet" href="../../bookmark-widget.css" />
+  <link rel="stylesheet" href="../../quiz-explain-modal.css" />
+  <style>
+    .quiz-option{display:block;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:8px;cursor:pointer;font-size:14px;transition:border-color .15s,background .15s;user-select:none;}
+    .quiz-option:hover{border-color:var(--accent);background:var(--surface);}
+    .quiz-option.selected{border-color:var(--accent);background:rgba(255,92,168,.1);}
+    .quiz-option.correct{border-color:var(--green);background:rgba(63,185,80,.1);}
+    .quiz-option.wrong{border-color:var(--red);background:rgba(248,81,73,.1);}
+    .quiz-question{margin-bottom:28px;}
+    .quiz-question p{font-weight:600;margin-bottom:10px;font-size:15px;}
+    .question-num{color:var(--text-muted);font-size:12px;font-weight:400;margin-bottom:4px;}
+    .quiz-result{display:none;padding:16px 20px;border-radius:var(--radius);margin-top:16px;font-size:15px;font-weight:600;}
+    .quiz-result.pass{background:rgba(63,185,80,.12);border:1px solid var(--green);color:var(--green);}
+    .quiz-result.fail{background:rgba(248,81,73,.12);border:1px solid var(--red);color:var(--red);}
+    .explanation{display:none;font-size:13px;color:var(--text-muted);margin-top:6px;padding:8px 12px;background:var(--surface-2);border-radius:var(--radius);border-left:2px solid var(--border);}
+    .submit-btn{background:var(--accent);color:#0d1117;border:none;border-radius:var(--radius);padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;}
+    .submit-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .step{display:flex;gap:16px;margin-bottom:20px;}
+    .step-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#0d1117;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:2px;}
+    .step-body{flex:1;}
+    .step-body p{margin-bottom:6px;}
+    .section-divider{border:none;border-top:2px solid var(--border);margin:40px 0;}
+    .checklist-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;}
+    .checklist-item input[type="checkbox"]{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;}
+
+    /* Comic-panel concept grid — image teaches first, caption only reinforces */
+    .concept-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0;}
+    @media (max-width:760px){.concept-grid{grid-template-columns:repeat(2,1fr);}}
+    .concept-card{background:#111111;border:1px solid #2a2a2a;border-radius:8px;padding:8px 8px 10px;}
+    .concept-card svg{display:block;width:100%;height:auto;}
+    .concept-card figcaption{margin-top:6px;font-family:monospace;font-size:10.5px;line-height:1.3;color:#c9c9c9;text-align:center;}
+    .concept-card figcaption b{color:#ff5ca8;}
+    .concept-explanation-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin-top:10px;padding:7px 8px;border:1px solid #3a3a3a;border-radius:5px;background:#1a1a1a;color:#ff5ca8;font-family:monospace;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;}
+    .concept-explanation-toggle:hover,.concept-explanation-toggle:focus-visible{border-color:#ff5ca8;outline:none;}
+    .concept-explanation-hint{color:#8b949e;font-size:8px;font-weight:400;letter-spacing:0;text-transform:none;}
+    .concept-explanation-text{margin:7px 2px 0;font-size:11px;line-height:1.45;color:#d8d8d8;filter:blur(4px);user-select:none;transition:filter .2s ease;}
+    .concept-card.explanation-revealed .concept-explanation-text{filter:none;user-select:text;}
+    .concept-card.explanation-revealed .concept-explanation-hint{color:#3fb950;}
+    .anchor{color:#ff5ca8;font-weight:700;}
+    .objectives-list{list-style:none;padding-left:0;}
+    .objectives-list li{display:flex;gap:12px;align-items:baseline;margin-bottom:12px;font-size:15px;}
+    .obj-num{flex-shrink:0;min-width:34px;color:#ff5ca8;font-family:monospace;font-weight:700;font-size:12px;background:rgba(255,92,168,.1);border:1px solid rgba(255,92,168,.4);border-radius:10px;padding:2px 6px;text-align:center;}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="../../index.html" class="brand">⚙ DevOps Learning</a>
+    <a href="../../syllabus/index.html">Syllabus</a>
+    <a href="../../sessions/index.html" class="active">Sessions</a>
+    <a href="../../quizzes/index.html">Quizzes</a>
+    <a href="../../labs/index.html">Labs</a>
+  </div>
+</nav>
+
+<main>
+  <div class="container">
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+      <span class="badge badge-layer">Layer 4</span>
+      <span class="badge badge-current">Session 10</span>
+      <span style="color:var(--text-muted);font-size:13px;">Ingress &amp; TLS</span>
+    </div>
+    <h1>TLS with cert-manager</h1>
+    <p class="subtitle">
+      Session 09 got <code>diner.local</code> (or an sslip.io hostname) routing
+      to the app over plain HTTP. That's fine for a lab, but every production
+      Ingress needs HTTPS. Today the same hostname gets a certificate two ways:
+      first a manually generated, self-signed certificate wired in by hand, then
+      a trusted, auto-renewing certificate issued by Let's Encrypt through
+      cert-manager — with no manual renewal step ever again.
+    </p>
+    <div class="alert alert-info">Estimated time: 50–60 minutes &nbsp;·&nbsp; Flow: Pre-quiz → Concept → Lab → Commit → Post-quiz</div>
+
+    <!-- Comic-panel concept grid: image teaches first, caption only reinforces -->
+    <div class="concept-grid">
+
+      <!-- 1. TLS termination at the Ingress -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <g transform="translate(20,60)">
+            <circle cx="0" cy="0" r="9" fill="none" stroke="white" stroke-width="1.8"/>
+            <line x1="0" y1="9" x2="0" y2="28" stroke="white" stroke-width="1.8"/>
+            <line x1="0" y1="14" x2="-8" y2="20" stroke="white" stroke-width="1.8"/>
+            <line x1="0" y1="14" x2="8" y2="20" stroke="white" stroke-width="1.8"/>
+          </g>
+          <text x="20" y="102" fill="white" font-family="monospace" font-size="7" text-anchor="middle">client</text>
+          <path d="M34,60 H62" stroke="#3fb950" stroke-width="2.5" marker-end="url(#b1)"/>
+          <defs><marker id="b1" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker></defs>
+          <text x="48" y="52" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">https</text>
+          <rect x="66" y="40" width="40" height="40" rx="5" fill="none" stroke="#ff5ca8" stroke-width="2.2"/>
+          <path d="M78,58 v-6 a8,8 0 0 1 16,0 v6" fill="none" stroke="#ff5ca8" stroke-width="1.8"/>
+          <rect x="76" y="58" width="20" height="14" rx="2" fill="none" stroke="#ff5ca8" stroke-width="1.8"/>
+          <text x="86" y="34" fill="#ff5ca8" font-family="monospace" font-size="6.5" text-anchor="middle">Ingress</text>
+          <path d="M106,60 H134" stroke="#666" stroke-width="2.2" marker-end="url(#b2)"/>
+          <defs><marker id="b2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#666"/></marker></defs>
+          <text x="120" y="52" fill="#666" font-family="monospace" font-size="7" text-anchor="middle">http</text>
+          <rect x="136" y="46" width="18" height="28" rx="3" fill="none" stroke="white" stroke-width="1.8"/>
+          <text x="80" y="126" fill="white" font-family="monospace" font-size="9" text-anchor="middle">encrypted in, plain</text>
+          <text x="80" y="138" fill="white" font-family="monospace" font-size="9" text-anchor="middle">http to the pod</text>
+        </svg>
+        <figcaption>TLS <b>terminates</b> at Ingress</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">The Ingress controller decrypts HTTPS traffic from the client and forwards it to the backend Pod as plain HTTP over the cluster's internal network. The certificate and private key live on the Ingress, not on the app itself.</p>
+      </figure>
+
+      <!-- 2. Self-signed vs CA-signed -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="20" width="60" height="46" rx="4" fill="none" stroke="#f85149" stroke-width="2"/>
+          <text x="40" y="38" fill="#f85149" font-family="monospace" font-size="7" text-anchor="middle">self-signed</text>
+          <line x1="20" y1="50" x2="60" y2="50" stroke="#f85149" stroke-width="1.4"/>
+          <line x1="20" y1="58" x2="50" y2="58" stroke="#f85149" stroke-width="1.4"/>
+          <text x="40" y="78" fill="#f85149" font-family="monospace" font-size="12" text-anchor="middle">⚠</text>
+          <rect x="90" y="20" width="60" height="46" rx="4" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <text x="120" y="38" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">CA-signed</text>
+          <line x1="100" y1="50" x2="140" y2="50" stroke="#3fb950" stroke-width="1.4"/>
+          <line x1="100" y1="58" x2="130" y2="58" stroke="#3fb950" stroke-width="1.4"/>
+          <path d="M112,72 l5,6 11,-12" fill="none" stroke="#3fb950" stroke-width="2.4" stroke-linecap="round"/>
+          <text x="80" y="112" fill="white" font-family="monospace" font-size="9" text-anchor="middle">browser flags one,</text>
+          <text x="80" y="124" fill="white" font-family="monospace" font-size="9" text-anchor="middle">trusts the other</text>
+        </svg>
+        <figcaption>self-signed vs <b>trusted CA</b></figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A self-signed certificate is issued by you, for you — it encrypts traffic but browsers show a warning because no trusted authority vouches for it. A CA-signed certificate, like one from Let's Encrypt, is trusted automatically.</p>
+      </figure>
+
+      <!-- 3. cert-manager talking to Let's Encrypt -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="30" width="56" height="30" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="38" y="49" fill="#ff5ca8" font-family="monospace" font-size="6.5" text-anchor="middle">cert-manager</text>
+          <path d="M66,40 H96" stroke="#3fb950" stroke-width="2" marker-end="url(#b3)"/>
+          <defs><marker id="b3" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker></defs>
+          <path d="M96,52 H66" stroke="#666" stroke-width="2" marker-end="url(#b4)"/>
+          <defs><marker id="b4" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#666"/></marker></defs>
+          <rect x="98" y="26" width="52" height="36" rx="4" fill="none" stroke="white" stroke-width="2"/>
+          <text x="124" y="42" fill="white" font-family="monospace" font-size="6" text-anchor="middle">Let's</text>
+          <text x="124" y="52" fill="white" font-family="monospace" font-size="6" text-anchor="middle">Encrypt</text>
+          <text x="80" y="86" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="middle">ACME challenge → cert issued</text>
+          <text x="80" y="126" fill="white" font-family="monospace" font-size="9" text-anchor="middle">fully automated,</text>
+          <text x="80" y="138" fill="white" font-family="monospace" font-size="9" text-anchor="middle">no human clicks "issue"</text>
+        </svg>
+        <figcaption>cert-manager ↔ <b>Let's Encrypt</b></figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">cert-manager is a Kubernetes controller that automates the ACME protocol conversation with Let's Encrypt: proving domain ownership, requesting a certificate, and storing the result as a Kubernetes Secret — no manual OpenSSL commands.</p>
+      </figure>
+
+      <!-- 4. ClusterIssuer as the reusable template -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="30" y="16" width="100" height="30" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="80" y="35" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle" font-weight="bold">ClusterIssuer</text>
+          <path d="M55,46 V64" stroke="#3fb950" stroke-width="2" marker-end="url(#b5)"/>
+          <path d="M80,46 V64" stroke="#3fb950" stroke-width="2" marker-end="url(#b5)"/>
+          <path d="M105,46 V64" stroke="#3fb950" stroke-width="2" marker-end="url(#b5)"/>
+          <defs><marker id="b5" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker></defs>
+          <rect x="38" y="68" width="34" height="20" rx="3" fill="none" stroke="white" stroke-width="1.6"/>
+          <text x="55" y="81" fill="white" font-family="monospace" font-size="6" text-anchor="middle">diner-a</text>
+          <rect x="63" y="68" width="34" height="20" rx="3" fill="none" stroke="white" stroke-width="1.6"/>
+          <text x="80" y="81" fill="white" font-family="monospace" font-size="6" text-anchor="middle">app-b</text>
+          <rect x="88" y="68" width="34" height="20" rx="3" fill="none" stroke="white" stroke-width="1.6"/>
+          <text x="105" y="81" fill="white" font-family="monospace" font-size="6" text-anchor="middle">app-c</text>
+          <text x="80" y="114" fill="white" font-family="monospace" font-size="9" text-anchor="middle">one Issuer, reused</text>
+          <text x="80" y="126" fill="white" font-family="monospace" font-size="9" text-anchor="middle">by every Certificate</text>
+        </svg>
+        <figcaption><b>ClusterIssuer</b> is cluster-wide</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">A ClusterIssuer configures how to talk to a CA once — account details, ACME server URL, solver method — and any Certificate resource in any namespace can reference it, instead of repeating that configuration per app.</p>
+      </figure>
+
+      <!-- 5. HTTP-01 challenge -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="20" width="52" height="26" rx="4" fill="none" stroke="white" stroke-width="1.8"/>
+          <text x="34" y="37" fill="white" font-family="monospace" font-size="6" text-anchor="middle">Let's Encrypt</text>
+          <path d="M60,32 H100" stroke="#ff5ca8" stroke-width="2" marker-end="url(#b6)"/>
+          <defs><marker id="b6" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <text x="80" y="26" fill="#ff5ca8" font-family="monospace" font-size="6" text-anchor="middle">GET /.well-known/acme-challenge/xyz</text>
+          <rect x="100" y="20" width="52" height="26" rx="4" fill="none" stroke="#3fb950" stroke-width="1.8"/>
+          <text x="126" y="37" fill="#3fb950" font-family="monospace" font-size="6.5" text-anchor="middle">Ingress</text>
+          <path d="M100,44 H60" stroke="#3fb950" stroke-width="2" marker-end="url(#b7)"/>
+          <defs><marker id="b7" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker></defs>
+          <text x="80" y="58" fill="#3fb950" font-family="monospace" font-size="6" text-anchor="middle">correct token → proves ownership</text>
+          <text x="80" y="112" fill="white" font-family="monospace" font-size="9" text-anchor="middle">proof you control</text>
+          <text x="80" y="124" fill="white" font-family="monospace" font-size="9" text-anchor="middle">the hostname</text>
+        </svg>
+        <figcaption>HTTP-01 <b>domain proof</b></figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Before issuing a certificate, Let's Encrypt requests a specific URL under the domain and checks for a token cert-manager placed there through the Ingress. Answering correctly proves control of the hostname without any manual step.</p>
+      </figure>
+
+      <!-- 6. TLS Secret referenced by Ingress -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="16" y="20" width="60" height="40" rx="4" fill="none" stroke="white" stroke-width="1.8"/>
+          <text x="46" y="36" fill="white" font-family="monospace" font-size="6.5" text-anchor="middle">Secret</text>
+          <text x="46" y="46" fill="white" font-family="monospace" font-size="6" text-anchor="middle">tls.crt</text>
+          <text x="46" y="55" fill="white" font-family="monospace" font-size="6" text-anchor="middle">tls.key</text>
+          <path d="M46,60 V80" stroke="#ff5ca8" stroke-width="2.2" marker-end="url(#b8)"/>
+          <defs><marker id="b8" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#ff5ca8"/></marker></defs>
+          <rect x="16" y="84" width="60" height="30" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2"/>
+          <text x="46" y="98" fill="#ff5ca8" font-family="monospace" font-size="6.5" text-anchor="middle">spec.tls</text>
+          <text x="46" y="108" fill="#ff5ca8" font-family="monospace" font-size="5.5" text-anchor="middle">secretName: diner-tls</text>
+          <text x="80" y="128" fill="white" font-family="monospace" font-size="9" text-anchor="middle">Ingress reads the Secret</text>
+        </svg>
+        <figcaption><b>Secret</b> holds crt + key</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Whether created manually with kubectl or automatically by cert-manager, the certificate and private key end up stored as a Kubernetes Secret of type kubernetes.io/tls, which the Ingress references by name under spec.tls.</p>
+      </figure>
+
+      <!-- 7. force-ssl-redirect -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <text x="20" y="30" fill="#f85149" font-family="monospace" font-size="9">http://</text>
+          <path d="M20,38 H60" stroke="#f85149" stroke-width="2" marker-end="url(#b9)"/>
+          <defs><marker id="b9" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#f85149"/></marker></defs>
+          <rect x="64" y="20" width="40" height="30" rx="4" fill="none" stroke="white" stroke-width="1.8"/>
+          <text x="84" y="38" fill="white" font-family="monospace" font-size="6.5" text-anchor="middle">Ingress</text>
+          <path d="M104,35 H140" stroke="#3fb950" stroke-width="2.2" marker-end="url(#b10)"/>
+          <defs><marker id="b10" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#3fb950"/></marker></defs>
+          <text x="122" y="30" fill="#3fb950" font-family="monospace" font-size="7">301</text>
+          <text x="80" y="70" fill="#3fb950" font-family="monospace" font-size="9" text-anchor="middle">https://</text>
+          <rect x="30" y="80" width="100" height="18" rx="3" fill="none" stroke="#666" stroke-width="1.4"/>
+          <text x="80" y="93" fill="#666" font-family="monospace" font-size="6" text-anchor="middle">force-ssl-redirect: "true"</text>
+          <text x="80" y="122" fill="white" font-family="monospace" font-size="9" text-anchor="middle">plain HTTP never served</text>
+        </svg>
+        <figcaption>force redirect to <b>HTTPS</b></figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">The nginx.ingress.kubernetes.io/force-ssl-redirect annotation makes the controller answer every plain HTTP request with a redirect to the HTTPS version, so the app is never actually reachable unencrypted.</p>
+      </figure>
+
+      <!-- 8. Next session -->
+      <figure class="concept-card">
+        <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="58" width="46" height="34" rx="4" fill="none" stroke="#666" stroke-width="1.8" transform="rotate(-2,37,75)"/>
+          <text x="37" y="79" fill="#666" font-family="monospace" font-size="10" text-anchor="middle">10</text>
+          <path d="M64,75 H108" stroke="#ff5ca8" stroke-width="2.5" stroke-dasharray="5,4" marker-end="url(#b11)"/>
+          <defs><marker id="b11" markerWidth="9" markerHeight="9" refX="4" refY="4" orient="auto"><polygon points="0,0 9,4 0,9" fill="#ff5ca8"/></marker></defs>
+          <rect x="112" y="52" width="42" height="46" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2" transform="rotate(2,133,75)"/>
+          <text x="133" y="80" fill="#ff5ca8" font-family="monospace" font-size="14" text-anchor="middle" font-weight="bold">11</text>
+          <rect x="118" y="106" width="14" height="12" fill="none" stroke="#3fb950" stroke-width="1.4"/>
+          <rect x="140" y="106" width="14" height="12" fill="none" stroke="#666" stroke-width="1.4"/>
+          <text x="80" y="132" fill="white" font-family="monospace" font-size="9" text-anchor="middle">two live versions,</text>
+          <text x="80" y="144" fill="white" font-family="monospace" font-size="9" text-anchor="middle">one traffic switch</text>
+        </svg>
+        <figcaption>next: blue-green deployments</figcaption>
+        <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
+        <p class="concept-explanation-text">Session 11 moves from securing traffic to a single version of the app to safely shipping a new version, by running two versions side by side and switching traffic between them.</p>
+      </figure>
+
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>1. Learning Objectives</h2>
+    <div class="card">
+      <ol class="objectives-list">
+        <li><span class="obj-num">1/6</span><span>Explain <span class="anchor">TLS termination</span>: the Ingress decrypts HTTPS and forwards plain HTTP to the Pod</span></li>
+        <li><span class="obj-num">2/6</span><span>Generate a <span class="anchor">self-signed certificate</span> with OpenSSL and wire it into an Ingress manually as a <code>kubernetes.io/tls</code> Secret</span></li>
+        <li><span class="obj-num">3/6</span><span>Install <span class="anchor">cert-manager</span> and create a <span class="anchor">ClusterIssuer</span> for Let's Encrypt</span></li>
+        <li><span class="obj-num">4/6</span><span>Request a <span class="anchor">Certificate</span> resource and confirm it reaches the <span class="anchor">Ready</span> state</span></li>
+        <li><span class="obj-num">5/6</span><span>Explain the <span class="anchor">HTTP-01 challenge</span> cert-manager uses to prove domain ownership to Let's Encrypt</span></li>
+        <li><span class="obj-num">6/6</span><span>Force all traffic to HTTPS using the <span class="anchor">force-ssl-redirect</span> annotation</span></li>
+      </ol>
+    </div>
+
+    <h2>2. Pre-Coding Quiz</h2>
+    <p>Answer before reading the concept. Need 4/5 to proceed.</p>
+
+    <div id="pre-quiz">
+      <div class="quiz-question" data-question="0" data-answer="b">
+        <div class="question-num">Question 1 of 5</div>
+        <p>When TLS terminates at the Ingress, what protocol does traffic use between the Ingress controller and the backend Pod?</p>
+        <label class="quiz-option" data-val="a">HTTPS, re-encrypted with a second certificate</label>
+        <label class="quiz-option" data-val="b">Plain HTTP, inside the cluster network</label>
+        <label class="quiz-option" data-val="c">Raw TCP with no protocol at all</label>
+        <label class="quiz-option" data-val="d">gRPC regardless of what the app speaks</label>
+        <div class="explanation">Termination means the Ingress does the decrypting. Unless the setup explicitly re-encrypts (end-to-end TLS), the hop from Ingress to Pod is ordinary HTTP.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="c">
+        <div class="question-num">Question 2 of 5</div>
+        <p>Why does a browser show a warning for a self-signed certificate but not for one from Let's Encrypt?</p>
+        <label class="quiz-option" data-val="a">Self-signed certificates use weaker encryption</label>
+        <label class="quiz-option" data-val="b">Let's Encrypt certificates never expire</label>
+        <label class="quiz-option" data-val="c">No trusted authority vouches for a self-signed certificate</label>
+        <label class="quiz-option" data-val="d">Self-signed certificates are illegal to use</label>
+        <div class="explanation">Both types encrypt traffic equally well. The warning is about trust: browsers ship a list of trusted CAs, and Let's Encrypt is on it — a self-signed cert has no such backing.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="a">
+        <div class="question-num">Question 3 of 5</div>
+        <p>What is a ClusterIssuer for?</p>
+        <label class="quiz-option" data-val="a">Cluster-wide configuration for how cert-manager talks to a CA, reusable by any Certificate</label>
+        <label class="quiz-option" data-val="b">A single certificate for a single app</label>
+        <label class="quiz-option" data-val="c">A replacement for the Ingress controller</label>
+        <label class="quiz-option" data-val="d">A DNS record pointing at the cluster</label>
+        <div class="explanation">A ClusterIssuer holds the account and ACME server details once; any namespace's Certificate resource can reference it instead of repeating that setup per app.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="d">
+        <div class="question-num">Question 4 of 5</div>
+        <p>How does the HTTP-01 challenge prove domain ownership to Let's Encrypt?</p>
+        <label class="quiz-option" data-val="a">By emailing a confirmation link to the domain owner</label>
+        <label class="quiz-option" data-val="b">By checking a DNS TXT record only</label>
+        <label class="quiz-option" data-val="c">By requiring a credit card on file</label>
+        <label class="quiz-option" data-val="d">By requesting a specific URL under the domain and checking for a token only the domain's owner could place there</label>
+        <div class="explanation">cert-manager places a token at a well-known path via the Ingress. Let's Encrypt fetches that path over the actual domain — if the correct token comes back, ownership is proven.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="b">
+        <div class="question-num">Question 5 of 5</div>
+        <p>Both the manual and cert-manager approaches ultimately store the certificate as what kind of object?</p>
+        <label class="quiz-option" data-val="a">A ConfigMap</label>
+        <label class="quiz-option" data-val="b">A Kubernetes Secret of type kubernetes.io/tls</label>
+        <label class="quiz-option" data-val="c">An environment variable on the Pod</label>
+        <label class="quiz-option" data-val="d">A file baked into the container image</label>
+        <div class="explanation">Whether created by hand with kubectl create secret tls or automatically by cert-manager, the cert and key end up as a standard TLS Secret the Ingress references by name.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Pre-Quiz</button>
+      <div class="quiz-result" id="pre-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>3. The Concept — From Plain HTTP to Automated HTTPS</h2>
+
+    <h3>TLS termination: where encryption actually ends</h3>
+    <p>
+      "TLS termination" means the Ingress controller is the component that
+      decrypts incoming HTTPS traffic. It holds the certificate and private
+      key, performs the TLS handshake with the client, and then forwards the
+      now-decrypted request to the backend Pod as plain HTTP over the
+      cluster's internal network. This is why only the Ingress needs a
+      certificate at all — the app itself never has to know TLS exists.
+    </p>
+
+    <h3>Stage 1: a manual, self-signed certificate</h3>
+    <p>
+      Before reaching for automation, it helps to see every piece TLS on
+      Ingress actually requires, by doing it by hand once.
+    </p>
+    <pre><code>openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout cert.key -out cert.crt \
+  -subj "/CN=diner.127.0.0.1.sslip.io"</code></pre>
+    <p>
+      This produces a certificate and private key that are cryptographically
+      valid but signed only by themselves — no browser trusts them by
+      default. Store them as a Kubernetes Secret:
+    </p>
+    <pre><code>kubectl create secret tls diner-tls \
+  --cert=cert.crt --key=cert.key \
+  -n diner-lab</code></pre>
+    <p>Then reference that Secret from the Ingress's <code>spec.tls</code>:</p>
+    <pre><code>apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: diner-ingress
+  namespace: diner-lab
+  annotations:
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - diner.127.0.0.1.sslip.io
+      secretName: diner-tls
+  rules:
+    - host: diner.127.0.0.1.sslip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: diner-a-svc
+                port: { number: 80 }</code></pre>
+    <p>
+      <code>spec.tls</code> is the piece that turns on HTTPS for this
+      Ingress: it lists which hostnames the certificate covers and which
+      Secret holds the certificate and key. Test it with:
+    </p>
+    <pre><code>curl -vk https://diner.127.0.0.1.sslip.io</code></pre>
+    <p>
+      The <code>-k</code> flag tells curl to skip certificate trust
+      verification — necessary here specifically because the certificate is
+      self-signed. The handshake still succeeds and the response still comes
+      back encrypted; only the trust chain is missing.
+    </p>
+
+    <h3>The manual approach doesn't scale</h3>
+    <p>
+      This certificate expires in 365 days and nothing renews it
+      automatically. A production system with dozens of hostnames, each
+      needing its own trusted certificate renewed before expiry, cannot rely
+      on someone remembering to re-run OpenSSL. That's the gap cert-manager
+      closes.
+    </p>
+
+    <h3>Stage 2: cert-manager and Let's Encrypt</h3>
+    <p>Install cert-manager the same way any other controller gets installed — via Helm:</p>
+    <pre><code>helm repo add jetstack https://charts.jetstack.io
+helm repo update
+
+helm install cert-manager jetstack/cert-manager \
+  --namespace cert-manager --create-namespace \
+  --set installCRDs=true</code></pre>
+    <p>
+      <code>installCRDs=true</code> matters: cert-manager defines new
+      Kubernetes object types — <code>ClusterIssuer</code> and
+      <code>Certificate</code> — and those types have to exist before you can
+      create instances of them.
+    </p>
+
+    <h3>ClusterIssuer: configuring the CA once</h3>
+    <pre><code>apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: you@example.com
+    privateKeySecretRef:
+      name: letsencrypt-prod-key
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: nginx</code></pre>
+    <p>
+      <code>solvers.http01</code> tells cert-manager to prove domain
+      ownership using the HTTP-01 challenge: it will temporarily configure
+      the Ingress to serve a token at a well-known path, and Let's Encrypt
+      will fetch that path to confirm control of the hostname before issuing
+      anything.
+    </p>
+
+    <h3>Requesting the certificate</h3>
+    <pre><code>apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: diner-cert
+  namespace: diner-lab
+spec:
+  secretName: diner-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - diner.127.0.0.1.sslip.io</code></pre>
+    <p>
+      Once applied, cert-manager runs the entire ACME conversation
+      automatically: request, challenge, verification, issuance — and
+      writes the result into the <code>diner-tls</code> Secret, the exact
+      same kind of object created manually in Stage 1.
+    </p>
+    <pre><code>kubectl describe certificate diner-cert -n diner-lab</code></pre>
+    <p>
+      A <code>Ready: True</code> condition in the output means the
+      certificate was issued successfully and cert-manager will also handle
+      renewal automatically, well before the certificate's expiry date.
+    </p>
+
+    <h3>Forcing HTTPS-only traffic</h3>
+    <pre><code>metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"</code></pre>
+    <p>
+      With this annotation, any request that arrives over plain HTTP gets a
+      redirect response pointing at the HTTPS version of the same URL
+      instead of being served directly — the app becomes unreachable over
+      unencrypted HTTP entirely.
+    </p>
+
+    <div class="alert alert-warning">
+      <strong>sslip.io note:</strong> Let's Encrypt's HTTP-01 challenge needs
+      to reach your Ingress over the public internet on port 80. This works
+      cleanly when the cluster has a real externally reachable IP; on a
+      fully local cluster, the manual self-signed approach from Stage 1 is
+      what you can actually complete end-to-end, while the cert-manager
+      steps in Stage 2 should be understood and configured correctly even if
+      the final ACME handshake can't complete from a private network.
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>4. Lab</h2>
+    <div class="alert alert-success">
+      <strong>Lab objective:</strong> Serve the diner app over HTTPS first
+      with a manually generated self-signed certificate, then install
+      cert-manager, configure a ClusterIssuer, and request a real certificate
+      for the same hostname.
+    </div>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <p><strong>Generate a self-signed certificate</strong></p>
+        <pre><code>openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout cert.key -out cert.crt \
+  -subj "/CN=diner.127.0.0.1.sslip.io"</code></pre>
+        <p><strong>Predict before running:</strong> will a browser trust this certificate without any warning? Confirm your answer once you test in step 3.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <p><strong>Create the TLS Secret and wire it into the Ingress</strong></p>
+        <pre><code>kubectl create secret tls diner-tls \
+  --cert=cert.crt --key=cert.key -n diner-lab</code></pre>
+        <p>Update <code>ingress.yaml</code> from Session 09 to add the <code>spec.tls</code> block and the <code>force-ssl-redirect</code> annotation shown in the Concept section, then apply it:</p>
+        <pre><code>kubectl apply -f ingress.yaml -n diner-lab</code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <p><strong>Test HTTPS locally</strong></p>
+        <pre><code>curl -vk https://diner.127.0.0.1.sslip.io</code></pre>
+        <p>Confirm the TLS handshake succeeds and the app's response comes back. Then try a plain HTTP request and confirm it redirects instead of serving content directly, proving <code>force-ssl-redirect</code> is active.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <p><strong>Install cert-manager</strong></p>
+        <pre><code>helm repo add jetstack https://charts.jetstack.io
+helm repo update
+helm install cert-manager jetstack/cert-manager \
+  --namespace cert-manager --create-namespace \
+  --set installCRDs=true
+
+kubectl get pods -n cert-manager</code></pre>
+        <p>Confirm all three cert-manager pods (controller, webhook, cainjector) reach <code>Running</code> before continuing.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <p><strong>Create a ClusterIssuer and request a certificate</strong></p>
+        <p>Apply the <code>ClusterIssuer</code> and <code>Certificate</code> manifests from the Concept section, substituting your own contact email.</p>
+        <pre><code>kubectl apply -f cluster-issuer.yaml
+kubectl apply -f certificate.yaml
+
+kubectl describe certificate diner-cert -n diner-lab</code></pre>
+        <p><strong>Stop and think:</strong> before checking the output, predict what condition you expect to see if the ACME challenge succeeds versus if it can't reach your cluster from the public internet. Read the <code>Events</code> section of the describe output either way — it explains exactly what cert-manager attempted.</p>
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>5. Expected Files Changed</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Action</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><code>cert.crt</code>, <code>cert.key</code></td><td>Added</td><td>Self-signed certificate and key for Stage 1</td></tr>
+          <tr><td><code>ingress.yaml</code></td><td>Updated</td><td>Added spec.tls and force-ssl-redirect annotation</td></tr>
+          <tr><td><code>cluster-issuer.yaml</code></td><td>Added</td><td>ClusterIssuer configuring cert-manager's connection to Let's Encrypt</td></tr>
+          <tr><td><code>certificate.yaml</code></td><td>Added</td><td>Certificate resource requesting a cert for the diner hostname</td></tr>
+          <tr><td><code>sessions/session-10/index.html</code></td><td>Added</td><td>This session document</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>6. Commit Checkpoint</h2>
+    <pre><code>git add ingress.yaml cluster-issuer.yaml certificate.yaml sessions/session-10/index.html
+git commit -m "session-10: add TLS to the Ingress via a manual secret and cert-manager"</code></pre>
+    <p>
+      <code>cert.crt</code> and <code>cert.key</code> are local dev artifacts
+      — do not commit private keys to version control, even self-signed
+      development ones. Keep them out of the commit above.
+    </p>
+
+    <h2>7. Code Review Checklist</h2>
+    <div class="card">
+      <div class="checklist-item"><input type="checkbox" id="c1"/><label for="c1">The Ingress's spec.tls hosts list matches the hostname in spec.rules exactly</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c2"/><label for="c2">force-ssl-redirect is set so plain HTTP requests are redirected, not served</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c3"/><label for="c3">cert-manager's CRDs were installed (installCRDs=true) before applying any ClusterIssuer or Certificate</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c4"/><label for="c4">The ClusterIssuer's solver is http01 with the correct ingressClassName</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c5"/><label for="c5">The Certificate's secretName matches what the Ingress references under spec.tls</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c6"/><label for="c6">No private key or certificate file was committed to version control</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c7"/><label for="c7">I can explain why TLS termination means the backend Pod never sees HTTPS directly</label></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>8. Post-Coding Quiz</h2>
+    <div id="post-quiz" data-pass-post="Proceed to Session 11 (Blue-Green Deployments) after ≥ 80%.">
+      <div class="quiz-question" data-question="0" data-answer="c">
+        <div class="question-num">Question 1 of 5</div>
+        <p>Why did testing the self-signed certificate require curl's -k flag?</p>
+        <label class="quiz-option" data-val="a">Because the certificate used weak encryption</label>
+        <label class="quiz-option" data-val="b">Because the Ingress controller was misconfigured</label>
+        <label class="quiz-option" data-val="c">Because curl, like a browser, doesn't trust a certificate with no CA behind it</label>
+        <label class="quiz-option" data-val="d">Because HTTP-01 challenges require it</label>
+        <div class="explanation">-k skips certificate verification. The handshake and encryption work fine; only the chain of trust back to a recognized CA is missing for a self-signed cert.</div>
+      </div>
+      <div class="quiz-question" data-question="1" data-answer="a">
+        <div class="question-num">Question 2 of 5</div>
+        <p>What does cert-manager write to a Kubernetes Secret once a Certificate becomes Ready?</p>
+        <label class="quiz-option" data-val="a">The issued TLS certificate and its private key</label>
+        <label class="quiz-option" data-val="b">Only a reference URL to Let's Encrypt's servers</label>
+        <label class="quiz-option" data-val="c">A log of the ACME challenge attempts</label>
+        <label class="quiz-option" data-val="d">The ClusterIssuer's configuration, copied</label>
+        <div class="explanation">The Secret named in spec.secretName ends up holding tls.crt and tls.key, in the exact same shape a manually created kubernetes.io/tls Secret would have.</div>
+      </div>
+      <div class="quiz-question" data-question="2" data-answer="d">
+        <div class="question-num">Question 3 of 5</div>
+        <p>What specifically does the HTTP-01 solver require to succeed?</p>
+        <label class="quiz-option" data-val="a">A paid Let's Encrypt account</label>
+        <label class="quiz-option" data-val="b">A wildcard DNS record only</label>
+        <label class="quiz-option" data-val="c">Manual approval from a cluster administrator</label>
+        <label class="quiz-option" data-val="d">Let's Encrypt's servers being able to reach the Ingress over the public internet on port 80</label>
+        <div class="explanation">The HTTP-01 challenge is only satisfied if Let's Encrypt can actually fetch the challenge token from the domain over the public internet — a private-only cluster cannot complete it.</div>
+      </div>
+      <div class="quiz-question" data-question="3" data-answer="b">
+        <div class="question-num">Question 4 of 5</div>
+        <p>Why is a ClusterIssuer defined once and referenced by many Certificate resources, instead of repeating the ACME configuration in each Certificate?</p>
+        <label class="quiz-option" data-val="a">Kubernetes requires exactly one Certificate per cluster</label>
+        <label class="quiz-option" data-val="b">It avoids duplicating account and CA connection details across every app</label>
+        <label class="quiz-option" data-val="c">Certificates cannot contain any configuration at all</label>
+        <label class="quiz-option" data-val="d">It removes the need for an Ingress controller</label>
+        <div class="explanation">The ClusterIssuer centralizes the "how to talk to this CA" configuration once, cluster-wide, so each Certificate only needs to say what hostname it wants and which issuer to use.</div>
+      </div>
+      <div class="quiz-question" data-question="4" data-answer="c">
+        <div class="question-num">Question 5 of 5</div>
+        <p>Session 11 will focus on:</p>
+        <label class="quiz-option" data-val="a">Adding a service mesh for mutual TLS between Pods</label>
+        <label class="quiz-option" data-val="b">Replacing cert-manager with a manual renewal script</label>
+        <label class="quiz-option" data-val="c">Running two versions of the app and switching traffic between them</label>
+        <label class="quiz-option" data-val="d">Migrating the cluster to a managed cloud provider</label>
+        <div class="explanation">Session 11 introduces blue-green deployments: two live versions of the app running side by side, with traffic switched from one to the other as a deployment strategy.</div>
+      </div>
+      <button class="submit-btn" disabled>Submit Post-Quiz</button>
+      <div class="quiz-result" id="post-result"></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>9. Reflection Questions</h2>
+    <div class="card">
+      <ol>
+        <li>Before running the ClusterIssuer and Certificate manifests, did you correctly predict whether the HTTP-01 challenge could complete from your specific network setup? What determined the answer?</li>
+        <li>What operational burden does cert-manager remove that the manual self-signed approach from Stage 1 leaves entirely on a human?</li>
+        <li>If force-ssl-redirect had been left off, what would a user typing the plain http:// URL actually experience?</li>
+      </ol>
+    </div>
+
+    <h2>10. What Breaks If This Knowledge Is Missing?</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Skipping force-ssl-redirect:</strong> the app remains reachable over unencrypted HTTP even after TLS is configured, silently defeating the purpose of adding a certificate at all.</li>
+        <li><strong>Never automating renewal:</strong> a manually issued certificate expiring unnoticed causes an outage — every client suddenly sees a broken TLS handshake with no code change involved.</li>
+        <li><strong>Mismatched secretName between spec.tls and the Certificate resource:</strong> cert-manager issues a valid certificate into a Secret the Ingress never actually reads, so HTTPS still fails despite everything appearing to succeed individually.</li>
+      </ul>
+    </div>
+
+    <h2>11. What We Learned</h2>
+    <div class="card" style="border-color:var(--green);">
+      <p><strong>Today you learned: TLS terminates at the Ingress, a self-signed certificate proves the mechanics but isn't trusted by browsers, cert-manager automates the entire request-challenge-issue-renew cycle with Let's Encrypt through a ClusterIssuer and Certificate resource, and force-ssl-redirect ensures HTTP is never actually served.</strong></p>
+      <p><strong>Next:</strong> <a href="../session-11/index.html">Session 11 — Blue-Green Deployments</a>.</p>
+    </div>
+
+    <p style="margin-top:24px;"><a href="../session-09/index.html">← Session 09</a> · <a href="../../syllabus/index.html">Syllabus</a> · <a href="../session-11/index.html">Session 11 →</a></p>
+
+  </div>
+</main>
+
+<script src="../../quiz.js" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    setupQuiz('pre');
+    setupQuiz('post');
+
+    document.querySelectorAll('.concept-explanation-toggle').forEach(function (button) {
+      button.addEventListener('click', function () {
+        const card = button.closest('.concept-card');
+        const isRevealed = card.classList.toggle('explanation-revealed');
+        button.setAttribute('aria-expanded', String(isRevealed));
+        button.querySelector('.concept-explanation-hint').textContent = isRevealed
+          ? 'Click to blur'
+          : 'Click to reveal';
+      });
+    });
+  });
+</script>
+<script src="../../notes-widget.js" defer></script>
+<script src="../../bookmark-widget.js" defer></script>
+
+</body>
+</html>
