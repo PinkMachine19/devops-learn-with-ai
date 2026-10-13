@@ -341,7 +341,8 @@
       - db
 
 volumes:
-  mysql-data:</code></pre>
+  mysql-data:
+    external: true   # reuse Session 01's volume</code></pre>
     <p>
       This single file declares everything Session 01 did by hand: an
       image for each service (or a <code>build</code> context, for the Node
@@ -373,8 +374,8 @@ CMD ["node", "index.js"]</code></pre>
     <h3>Service discovery: names, not IPs</h3>
     <pre><code>const db = await mysql.createConnection({
   host: process.env.DB_HOST,   // "db" in docker-compose.yml
-  user: "labuser",
-  password: "labpass",
+  user: "root",
+  password: "changeme",
   database: "labdb",
 });</code></pre>
     <p>
@@ -532,8 +533,9 @@ CMD ["node", "index.js"]</code></pre>
       - db
 
 volumes:
-  mysql-data:</code></pre>
-        <p>Notice <code>DB_HOST: db</code> in this file. It points the app at the service name <code>db</code> instead of <code>mysql-lab</code>, so the code needs no edit.</p>
+  mysql-data:
+    external: true   # reuse Session 01's volume</code></pre>
+        <p>Notice <code>external: true</code> under <code>volumes:</code>. Without it, Compose would create a brand new volume named <code>lab_mysql-data</code> and ignore the <code>mysql-data</code> volume that holds your Session 01 row. Notice also <code>DB_HOST: db</code> in this file. It points the app at the service name <code>db</code> instead of <code>mysql-lab</code>, so the code needs no edit.</p>
       </div>
     </div>
 
