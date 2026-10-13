@@ -221,7 +221,7 @@
           <rect x="8" y="50" width="40" height="34" rx="4" fill="none" stroke="#3fb950" stroke-width="2.2"/>
           <text x="28" y="70" fill="#3fb950" font-family="monospace" font-size="7" text-anchor="middle">mysql-lab</text>
           <rect x="112" y="50" width="40" height="34" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2"/>
-          <text x="132" y="70" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">php-lab</text>
+          <text x="132" y="70" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">node-lab</text>
           <ellipse cx="80" cy="67" rx="30" ry="14" fill="none" stroke="#888" stroke-width="1.6" stroke-dasharray="4,3"/>
           <text x="80" y="30" fill="#888" font-family="monospace" font-size="8" text-anchor="middle">lab-net</text>
           <path d="M48,67 H50" stroke="#888"/>
@@ -230,7 +230,7 @@
         </svg>
         <figcaption><b>network</b> gives containers DNS</figcaption>
         <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
-        <p class="concept-explanation-text">A user-defined network gives every attached container automatic DNS resolution by its --name. php-lab can connect to a host literally called mysql-lab instead of hunting for an IP address, and nothing on that network is exposed to the outside world unless you publish a port.</p>
+        <p class="concept-explanation-text">A user-defined network gives every attached container automatic DNS resolution by its --name. node-lab can connect to a host literally called mysql-lab instead of hunting for an IP address, and nothing on that network is exposed to the outside world unless you publish a port.</p>
       </figure>
 
       <!-- 8. Next session teaser: single containers -> compose file connecting them -->
@@ -559,7 +559,7 @@ docker run -d --name mysql-lab --network lab-net \
   -e MYSQL_ROOT_PASSWORD=changeme \
   -v mysql-data:/var/lib/mysql \
   mysql:8</code></pre>
-        <p>This MySQL container now exposes no port to your host at all — it doesn't need to, since Session 02's PHP container will reach it by name over <code>lab-net</code> instead.</p>
+        <p>This MySQL container now exposes no port to your host at all — it doesn't need to, since Session 02's Node container will reach it by name over <code>lab-net</code> instead.</p>
       </div>
     </div>
 
@@ -572,7 +572,7 @@ docker run -d --name mysql-lab --network lab-net \
         <tbody>
           <tr><td><code>data/index.html</code></td><td>Created</td><td>Bind-mounted static page served by the second NGINX container</td></tr>
           <tr><td>Docker volume <code>mysql-data</code></td><td>Created</td><td>Persistent storage for MySQL, independent of any one container</td></tr>
-          <tr><td>Docker network <code>lab-net</code></td><td>Created</td><td>Lets MySQL and next session's PHP container resolve each other by name</td></tr>
+          <tr><td>Docker network <code>lab-net</code></td><td>Created</td><td>Lets MySQL and next session's Node container resolve each other by name</td></tr>
           <tr><td><code>sessions/session-01/index.html</code></td><td>Created</td><td>This session document</td></tr>
         </tbody>
       </table>
@@ -615,11 +615,11 @@ git commit -m "session-01: bind-mounted static page, persistent MySQL volume, la
       </div>
       <div class="quiz-question" data-question="2" data-answer="c">
         <div class="question-num">Question 3 of 5</div>
-        <p>After running <code>docker network create lab-net</code> and attaching both mysql-lab and a future php-lab container to it with <code>--network lab-net</code>, how does php-lab reach MySQL?</p>
+        <p>After running <code>docker network create lab-net</code> and attaching both mysql-lab and a future node-lab container to it with <code>--network lab-net</code>, how does node-lab reach MySQL?</p>
         <label class="quiz-option" data-val="a">Through a port published to the host, like localhost:3306</label>
         <label class="quiz-option" data-val="b">It cannot — MySQL must always publish a port to be reachable</label>
         <label class="quiz-option" data-val="c">By connecting to the hostname mysql-lab, resolved automatically by the network's DNS</label>
-        <label class="quiz-option" data-val="d">Only after manually editing /etc/hosts inside php-lab</label>
+        <label class="quiz-option" data-val="d">Only after manually editing /etc/hosts inside node-lab</label>
         <div class="explanation">Containers on the same user-defined network get automatic DNS resolution by container name — no port publishing or manual host file edits required.</div>
       </div>
       <div class="quiz-question" data-question="3" data-answer="b">

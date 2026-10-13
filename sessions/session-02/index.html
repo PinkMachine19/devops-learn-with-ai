@@ -13,7 +13,7 @@
 
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Session 02 — Multi-Container Apps with Docker Compose (PHP + MySQL)</title>
+  <title>Session 02 — Multi-Container Apps with Docker Compose (Node + MySQL)</title>
   <link rel="stylesheet" href="../../styles.css" />
   <link rel="stylesheet" href="../../notes-widget.css" />
   <link rel="stylesheet" href="../../bookmark-widget.css" />
@@ -80,13 +80,13 @@
       <span class="badge badge-current">Session 02</span>
       <span style="color:var(--text-muted);font-size:13px;">Docker Foundations — Gate</span>
     </div>
-    <h1>Multi-Container Apps with Docker Compose (PHP + MySQL)</h1>
+    <h1>Multi-Container Apps with Docker Compose (Node + MySQL)</h1>
     <p class="subtitle">
       Session 01 ran one container at a time by hand — a manual
       <code>docker network create</code>, a manual <code>-v</code>, a manual
       <code>--network</code> flag repeated on every command. That already
       got tedious with just two containers. Today you build a real
-      two-service application, a PHP page backed by a MySQL database, first
+      two-service application, a Node web app backed by a MySQL database, first
       by wiring it up manually to feel the pain, then by collapsing the
       entire setup into one <code>docker-compose.yml</code> file and a single
       command. This session is the gate for Layer 1: everything from here on
@@ -103,7 +103,7 @@
           <rect x="10" y="20" width="90" height="70" rx="3" fill="#1a1a1a" stroke="white" stroke-width="2"/>
           <text x="16" y="34" fill="#f85149" font-family="monospace" font-size="7">$ docker run --name mysql-lab</text>
           <text x="16" y="46" fill="#f85149" font-family="monospace" font-size="7">--network lab-net -v ...</text>
-          <text x="16" y="60" fill="#f85149" font-family="monospace" font-size="7">$ docker run --name php-lab</text>
+          <text x="16" y="60" fill="#f85149" font-family="monospace" font-size="7">$ docker run --name node-lab</text>
           <text x="16" y="72" fill="#f85149" font-family="monospace" font-size="7">--network lab-net -p ...</text>
           <text x="16" y="84" fill="#666" font-family="monospace" font-size="7">... repeat every time</text>
           <text x="80" y="112" fill="white" font-family="monospace" font-size="9" text-anchor="middle">two commands, easy to</text>
@@ -165,21 +165,21 @@
         <p class="concept-explanation-text">Compose creates a project-scoped network automatically and joins every service to it. The service name from the YAML file — db, web, whatever you called it — becomes the hostname other services use to reach it, no manual docker network create required.</p>
       </figure>
 
-      <!-- 5. PHP -> MySQL via PDO -->
+      <!-- 5. Node -> MySQL via mysql2 -->
       <figure class="concept-card">
         <svg viewBox="0 0 160 150" xmlns="http://www.w3.org/2000/svg">
           <rect x="10" y="40" width="50" height="40" rx="4" fill="none" stroke="#ff5ca8" stroke-width="2.2"/>
-          <text x="35" y="64" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle" font-weight="bold">PHP</text>
+          <text x="35" y="64" fill="#ff5ca8" font-family="monospace" font-size="8" text-anchor="middle" font-weight="bold">Node</text>
           <path d="M62,60 H98" stroke="white" stroke-width="2.2" marker-end="url(#arrC5)"/>
           <defs><marker id="arrC5" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="white"/></marker></defs>
-          <text x="80" y="52" fill="white" font-family="monospace" font-size="7" text-anchor="middle">PDO</text>
+          <text x="80" y="52" fill="white" font-family="monospace" font-size="7" text-anchor="middle">mysql2</text>
           <rect x="102" y="40" width="48" height="40" rx="4" fill="none" stroke="#3fb950" stroke-width="2.2"/>
           <text x="126" y="64" fill="#3fb950" font-family="monospace" font-size="8" text-anchor="middle" font-weight="bold">MySQL</text>
           <text x="80" y="112" fill="white" font-family="monospace" font-size="9" text-anchor="middle">SELECT message FROM notes</text>
         </svg>
-        <figcaption>PDO is the driver that connects them</figcaption>
+        <figcaption>mysql2 is the driver that connects them</figcaption>
         <button type="button" class="concept-explanation-toggle" aria-expanded="false"><span>Explanation</span><span class="concept-explanation-hint">Click to reveal</span></button>
-        <p class="concept-explanation-text">PHP's default Apache image does not ship with a MySQL driver. The php:apache image needs the pdo_mysql extension installed via a Dockerfile before index.php can open a database connection at all.</p>
+        <p class="concept-explanation-text">The base node image does not include a MySQL driver. A Dockerfile has to run npm install to add the mysql2 package before index.js can open a database connection at all.</p>
       </figure>
 
       <!-- 6. Env vars for config -->
@@ -204,7 +204,7 @@
           <text x="28" y="33" fill="white" font-family="monospace" font-size="7" text-anchor="middle">browser</text>
           <path d="M28,42 V60" stroke="#888" stroke-width="1.6" marker-end="url(#arrC7a)"/>
           <rect x="8" y="64" width="40" height="26" rx="4" fill="none" stroke="#ff5ca8" stroke-width="1.8"/>
-          <text x="28" y="81" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">php</text>
+          <text x="28" y="81" fill="#ff5ca8" font-family="monospace" font-size="7" text-anchor="middle">node</text>
           <path d="M48,77 H100" stroke="#888" stroke-width="1.6" marker-end="url(#arrC7b)"/>
           <defs>
             <marker id="arrC7a" markerWidth="7" markerHeight="7" refX="3" refY="3" orient="auto"><polygon points="0,0 7,3 0,7" fill="#888"/></marker>
@@ -245,10 +245,10 @@
     <div class="card">
       <ol class="objectives-list">
         <li><span class="obj-num">1/5</span><span>Explain why manually running multiple related containers is <span class="anchor">error-prone</span> and hard to reproduce</span></li>
-        <li><span class="obj-num">2/5</span><span>Write a <span class="anchor">docker-compose.yml</span> describing a PHP service and a MySQL service, with volumes and environment variables</span></li>
-        <li><span class="obj-num">3/5</span><span>Build a custom PHP image with the <span class="anchor">pdo_mysql</span> driver so it can talk to MySQL</span></li>
+        <li><span class="obj-num">2/5</span><span>Write a <span class="anchor">docker-compose.yml</span> describing a Node service and a MySQL service, with volumes and environment variables</span></li>
+        <li><span class="obj-num">3/5</span><span>Build a custom Node image that installs the <span class="anchor">mysql2</span> driver so it can talk to MySQL</span></li>
         <li><span class="obj-num">4/5</span><span>Bring up the whole stack with <span class="anchor">docker compose up</span> and understand the network Compose creates automatically</span></li>
-        <li><span class="obj-num">5/5</span><span>Verify a full request path end to end: browser → PHP → MySQL → back to the browser</span></li>
+        <li><span class="obj-num">5/5</span><span>Verify a full request path end to end: browser → Node → MySQL → back to the browser</span></li>
       </ol>
     </div>
 
@@ -276,12 +276,12 @@
       </div>
       <div class="quiz-question" data-question="2" data-answer="a">
         <div class="question-num">Question 3 of 5</div>
-        <p>Why does a plain php:apache image fail to connect to MySQL out of the box?</p>
-        <label class="quiz-option" data-val="a">It is missing the pdo_mysql extension needed to speak to a MySQL server</label>
-        <label class="quiz-option" data-val="b">PHP cannot run inside Docker containers at all</label>
-        <label class="quiz-option" data-val="c">Apache blocks all outbound network connections by default</label>
+        <p>Why does the Node app need a Dockerfile that runs npm install before it can talk to MySQL?</p>
+        <label class="quiz-option" data-val="a">The MySQL driver is missing from the base image</label>
+        <label class="quiz-option" data-val="b">Node cannot run inside Docker containers at all</label>
+        <label class="quiz-option" data-val="c">The node image blocks every outbound network connection</label>
         <label class="quiz-option" data-val="d">MySQL only accepts connections from Python clients</label>
-        <div class="explanation">The base php:apache image doesn't include MySQL drivers. A Dockerfile has to install pdo_mysql before index.php's PDO connection can succeed.</div>
+        <div class="explanation">The base node image doesn't include a MySQL driver. The Dockerfile has to run npm install so the mysql2 package is present before index.js can connect.</div>
       </div>
       <div class="quiz-question" data-question="3" data-answer="d">
         <div class="question-num">Question 4 of 5</div>
@@ -297,9 +297,9 @@
         <p>Every container in your stack shows "Up" in <code>docker compose ps</code>. Is the application definitely working correctly?</p>
         <label class="quiz-option" data-val="a">Yes, "Up" status guarantees the application logic is correct</label>
         <label class="quiz-option" data-val="b">Not necessarily — you still need to verify the actual request path end to end in the browser</label>
-        <label class="quiz-option" data-val="c">Only MySQL's status matters; PHP's status is irrelevant</label>
+        <label class="quiz-option" data-val="c">Only MySQL's status matters; Node's status is irrelevant</label>
         <label class="quiz-option" data-val="d">Only if docker compose ps also prints "OK"</label>
-        <div class="explanation">A container being "Up" just means its process hasn't exited. It doesn't confirm PHP can actually query MySQL and render a correct page — that requires an end-to-end check.</div>
+        <div class="explanation">A container being "Up" just means its process hasn't exited. It doesn't confirm Node can actually query MySQL and render a correct page — that requires an end-to-end check.</div>
       </div>
       <button class="submit-btn" disabled>Submit Pre-Quiz</button>
       <div class="quiz-result" id="pre-result"></div>
@@ -313,7 +313,7 @@
     <p>
       Session 01 ended with two commands: create a network, then start MySQL
       attached to it with a volume and an environment variable. Add a second
-      service — a PHP application that needs its own image build, its own
+      service — a Node application that needs its own image build, its own
       port mapping, and the same network — and the number of flags to get
       right, in the right order, every single time, grows fast. Typos and
       forgotten flags are the normal failure mode here, not the exception.
@@ -332,11 +332,11 @@
       - mysql-data:/var/lib/mysql
 
   web:
-    build: ./php
+    build: ./node
     ports:
-      - "8082:80"
-    volumes:
-      - ./php:/var/www/html
+      - "8082:3000"
+    environment:
+      DB_HOST: db
     depends_on:
       - db
 
@@ -344,7 +344,7 @@ volumes:
   mysql-data:</code></pre>
     <p>
       This single file declares everything Session 01 did by hand: an
-      image for each service (or a <code>build</code> context, for the PHP
+      image for each service (or a <code>build</code> context, for the Node
       service that needs a custom Dockerfile), the volumes each one needs,
       the port mapping for the service that should be reachable from the
       host, and <code>depends_on</code> to hint at startup order. Compose
@@ -353,27 +353,34 @@ volumes:
       required.
     </p>
 
-    <h3>Building a PHP image that can talk to MySQL</h3>
-    <pre><code># php/Dockerfile
-FROM php:8.2-apache
-RUN docker-php-ext-install pdo pdo_mysql</code></pre>
+    <h3>Building a Node image that can talk to MySQL</h3>
+    <pre><code># node/Dockerfile
+FROM node:20-alpine
+WORKDIR /app
+COPY package.json .
+RUN npm install
+COPY index.js .
+CMD ["node", "index.js"]</code></pre>
     <p>
-      The stock <code>php:apache</code> image runs PHP and Apache, but it
-      has no MySQL driver installed. <code>docker-php-ext-install
-      pdo pdo_mysql</code> adds the PDO extension and its MySQL driver at
-      build time, which is what makes a <code>new PDO(...)</code> call in
-      <code>index.php</code> actually able to reach a MySQL server.
+      The stock <code>node</code> image runs Node, but it has no MySQL
+      driver installed. <code>npm install</code> reads
+      <code>package.json</code> and adds the <code>mysql2</code> package at
+      build time, which is what makes
+      <code>mysql.createConnection(...)</code> in <code>index.js</code>
+      actually able to reach a MySQL server.
     </p>
 
     <h3>Service discovery: names, not IPs</h3>
-    <pre><code>$pdo = new PDO(
-  "mysql:host=db;dbname=labdb",
-  "labuser",
-  "labpass"
-);</code></pre>
+    <pre><code>const db = await mysql.createConnection({
+  host: process.env.DB_HOST,   // "db" in docker-compose.yml
+  user: "labuser",
+  password: "labpass",
+  database: "labdb",
+});</code></pre>
     <p>
-      Notice the host is literally the string <code>db</code> — the service
-      name from <code>docker-compose.yml</code>, not an IP address. This is
+      Notice the host comes from <code>DB_HOST</code>, which the compose file
+      sets to the string <code>db</code> — the service name from
+      <code>docker-compose.yml</code>, not an IP address. This is
       the exact same name-based resolution from Session 01's
       <code>lab-net</code>, except Compose sets up the network and the DNS
       for you automatically, keyed off whatever you named each service.
@@ -412,7 +419,7 @@ RUN docker-php-ext-install pdo pdo_mysql</code></pre>
       <strong>depends_on controls start order, not readiness.</strong>
       Compose will start the <code>db</code> container before <code>web</code>,
       but MySQL can take a few seconds to finish initializing after its
-      process starts. A PHP request that arrives too early can still fail to
+      process starts. A Node request that arrives too early can still fail to
       connect — production setups typically add a retry loop or a proper
       healthcheck, which is outside the scope of today's lab but worth
       knowing about.
@@ -422,7 +429,7 @@ RUN docker-php-ext-install pdo pdo_mysql</code></pre>
 
     <h2>4. Lab</h2>
     <div class="alert alert-success">
-      <strong>Lab objective:</strong> Build a custom PHP image with the MySQL
+      <strong>Lab objective:</strong> Build a custom Node image with the MySQL
       driver, connect it to MySQL manually first, then replace the manual
       setup with a single docker-compose.yml and verify the full stack in a
       browser.
@@ -431,11 +438,44 @@ RUN docker-php-ext-install pdo pdo_mysql</code></pre>
     <div class="step">
       <div class="step-num">1</div>
       <div class="step-body">
-        <p><strong>Build a PHP + Apache image with the MySQL driver</strong></p>
-        <pre><code># php/Dockerfile
-FROM php:8.2-apache
-RUN docker-php-ext-install pdo pdo_mysql</code></pre>
-        <pre><code>docker build -t php-with-mysql ./php</code></pre>
+        <p><strong>Write the Node app and build an image with the MySQL driver</strong></p>
+        <p>Create a <code>node</code> folder with three files.</p>
+        <pre><code># node/package.json
+{
+  "name": "compose-lab",
+  "version": "1.0.0",
+  "dependencies": { "mysql2": "^3.9.0" }
+}</code></pre>
+        <pre><code># node/index.js
+const http = require("http");
+const mysql = require("mysql2/promise");
+
+const esc = (s) =&gt; String(s).replace(/&amp;/g, "&amp;amp;").replace(/&lt;/g, "&amp;lt;");
+
+http.createServer(async (req, res) =&gt; {
+  try {
+    const db = await mysql.createConnection({
+      host: process.env.DB_HOST || "mysql-lab",
+      user: "root",
+      password: "changeme",
+      database: "labdb",
+    });
+    const [rows] = await db.query("SELECT msg FROM notes LIMIT 1");
+    await db.end();
+    res.end("&lt;h1&gt;" + esc(rows[0].msg) + "&lt;/h1&gt;");
+  } catch (err) {
+    res.statusCode = 500;
+    res.end("Database error: " + esc(err.message));
+  }
+}).listen(3000);</code></pre>
+        <pre><code># node/Dockerfile
+FROM node:20-alpine
+WORKDIR /app
+COPY package.json .
+RUN npm install
+COPY index.js .
+CMD ["node", "index.js"]</code></pre>
+        <pre><code>docker build -t node-with-mysql ./node</code></pre>
         <p>Before running it: predict whether this container alone, with no network flag, will be able to reach the mysql-lab container from Session 01. Confirm your prediction once you get to step 2.</p>
       </div>
     </div>
@@ -443,28 +483,18 @@ RUN docker-php-ext-install pdo pdo_mysql</code></pre>
     <div class="step">
       <div class="step-num">2</div>
       <div class="step-body">
-        <p><strong>Run the PHP container connected to MySQL manually</strong></p>
-        <pre><code>docker run -d --name php-lab --network lab-net -p 8082:80 \
-  -v "$(pwd)/php":/var/www/html \
-  php-with-mysql</code></pre>
-        <p>This reuses the <code>lab-net</code> network and <code>mysql-lab</code> container from Session 01. Without <code>--network lab-net</code>, php-lab would have no way to resolve the hostname <code>mysql-lab</code> at all — confirm this matches what you predicted in step 1.</p>
+        <p><strong>Run the Node container connected to MySQL manually</strong></p>
+        <pre><code>docker run -d --name node-lab --network lab-net -p 8082:3000 \
+  node-with-mysql</code></pre>
+        <p>This reuses the <code>lab-net</code> network and <code>mysql-lab</code> container from Session 01. Without <code>--network lab-net</code>, node-lab would have no way to resolve the hostname <code>mysql-lab</code> at all — confirm this matches what you predicted in step 1.</p>
       </div>
     </div>
 
     <div class="step">
       <div class="step-num">3</div>
       <div class="step-body">
-        <p><strong>Write the final index.php</strong></p>
-        <pre><code>&lt;?php
-$pdo = new PDO(
-  "mysql:host=mysql-lab;dbname=labdb",
-  "root",
-  "changeme"
-);
-$stmt = $pdo-&gt;query("SELECT msg FROM notes LIMIT 1");
-$row = $stmt-&gt;fetch();
-echo "&lt;h1&gt;" . htmlspecialchars($row['msg']) . "&lt;/h1&gt;";</code></pre>
-        <p>Save this as <code>php/index.php</code>, then visit <code>http://localhost:8082</code>. You should see the row you inserted back in Session 01's persistence experiment.</p>
+        <p><strong>Check the page in the browser</strong></p>
+        <p>The <code>index.js</code> you wrote reads its database host from <code>DB_HOST</code> and falls back to <code>mysql-lab</code>, the container name from Session 01. Visit <code>http://localhost:8082</code>. You should see the row you inserted back in Session 01's persistence experiment.</p>
       </div>
     </div>
 
@@ -472,7 +502,7 @@ echo "&lt;h1&gt;" . htmlspecialchars($row['msg']) . "&lt;/h1&gt;";</code></pre>
       <div class="step-num">4</div>
       <div class="step-body">
         <p><strong>Tear down the manual containers</strong></p>
-        <pre><code>docker rm -f php-lab mysql-lab</code></pre>
+        <pre><code>docker rm -f node-lab mysql-lab</code></pre>
         <p>The volume and network stay — only the containers are removed. This sets up the next step: proving Compose reproduces the same working application from a clean slate.</p>
       </div>
     </div>
@@ -493,17 +523,17 @@ echo "&lt;h1&gt;" . htmlspecialchars($row['msg']) . "&lt;/h1&gt;";</code></pre>
       - mysql-data:/var/lib/mysql
 
   web:
-    build: ./php
+    build: ./node
     ports:
-      - "8082:80"
-    volumes:
-      - ./php:/var/www/html
+      - "8082:3000"
+    environment:
+      DB_HOST: db
     depends_on:
       - db
 
 volumes:
   mysql-data:</code></pre>
-        <p>Update <code>php/index.php</code>'s host from <code>mysql-lab</code> to <code>db</code>, matching the service name in this file, before continuing.</p>
+        <p>Notice <code>DB_HOST: db</code> in this file. It points the app at the service name <code>db</code> instead of <code>mysql-lab</code>, so the code needs no edit.</p>
       </div>
     </div>
 
@@ -543,8 +573,9 @@ docker volume prune</code></pre>
       <table>
         <thead><tr><th>File</th><th>Action</th><th>Why</th></tr></thead>
         <tbody>
-          <tr><td><code>php/Dockerfile</code></td><td>Created</td><td>Builds php:apache with the pdo_mysql driver installed</td></tr>
-          <tr><td><code>php/index.php</code></td><td>Created</td><td>Queries MySQL over PDO and renders the result</td></tr>
+          <tr><td><code>node/Dockerfile</code></td><td>Created</td><td>Builds the Node image and runs npm install for the mysql2 driver</td></tr>
+          <tr><td><code>node/package.json</code></td><td>Created</td><td>Declares the mysql2 dependency</td></tr>
+          <tr><td><code>node/index.js</code></td><td>Created</td><td>Queries MySQL with mysql2 and renders the result</td></tr>
           <tr><td><code>docker-compose.yml</code></td><td>Created</td><td>Declares the db and web services, the shared volume, and startup order</td></tr>
           <tr><td><code>sessions/session-02/index.html</code></td><td>Created</td><td>This session document</td></tr>
         </tbody>
@@ -552,14 +583,14 @@ docker volume prune</code></pre>
     </div>
 
     <h2>6. Commit Checkpoint</h2>
-    <pre><code>git add php/Dockerfile php/index.php docker-compose.yml
-git commit -m "session-02: multi-container PHP+MySQL app defined with Docker Compose"</code></pre>
+    <pre><code>git add node/Dockerfile node/package.json node/index.js docker-compose.yml
+git commit -m "session-02: multi-container Node+MySQL app defined with Docker Compose"</code></pre>
 
     <h2>7. Code Review Checklist</h2>
     <div class="card">
-      <div class="checklist-item"><input type="checkbox" id="c1"/><label for="c1">php/Dockerfile installs pdo and pdo_mysql before index.php is expected to connect</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c1"/><label for="c1">node/Dockerfile runs npm install for mysql2 before index.js is expected to connect</label></div>
       <div class="checklist-item"><input type="checkbox" id="c2"/><label for="c2">docker-compose.yml declares both services, the shared volume, and depends_on</label></div>
-      <div class="checklist-item"><input type="checkbox" id="c3"/><label for="c3">index.php connects using the service name (db), not a container name or IP</label></div>
+      <div class="checklist-item"><input type="checkbox" id="c3"/><label for="c3">index.js connects using the service name (db, via DB_HOST), not a container name or IP</label></div>
       <div class="checklist-item"><input type="checkbox" id="c4"/><label for="c4">docker compose up -d brings up the full stack from a clean docker compose down state</label></div>
       <div class="checklist-item"><input type="checkbox" id="c5"/><label for="c5">I verified the database row actually renders in the browser, not just that both containers show "Up"</label></div>
     </div>
@@ -570,10 +601,10 @@ git commit -m "session-02: multi-container PHP+MySQL app defined with Docker Com
     <div id="post-quiz" data-pass-post="Proceed to Session 03 (Deployments, Services, Scaling) after ≥ 80%.">
       <div class="quiz-question" data-question="0" data-answer="c">
         <div class="question-num">Question 1 of 5</div>
-        <p>In docker-compose.yml, the web service has <code>build: ./php</code> instead of <code>image: ...</code>. What does this mean?</p>
-        <label class="quiz-option" data-val="a">Compose downloads a prebuilt image called php from Docker Hub</label>
+        <p>In docker-compose.yml, the web service has <code>build: ./node</code> instead of <code>image: ...</code>. What does this mean?</p>
+        <label class="quiz-option" data-val="a">Compose downloads a prebuilt image called node from Docker Hub</label>
         <label class="quiz-option" data-val="b">The service will not start until manually built with a separate command</label>
-        <label class="quiz-option" data-val="c">Compose builds the image from the Dockerfile found in the ./php directory</label>
+        <label class="quiz-option" data-val="c">Compose builds the image from the Dockerfile found in the ./node directory</label>
         <label class="quiz-option" data-val="d">It is a syntax error; build and image cannot both exist in a compose file</label>
         <div class="explanation">build tells Compose to construct the image itself from a Dockerfile in the given directory, rather than pulling an existing image by name.</div>
       </div>
@@ -588,7 +619,7 @@ git commit -m "session-02: multi-container PHP+MySQL app defined with Docker Com
       </div>
       <div class="quiz-question" data-question="2" data-answer="d">
         <div class="question-num">Question 3 of 5</div>
-        <p>Why does index.php connect to host "db" instead of "mysql-lab" once the stack is defined in Compose?</p>
+        <p>Why does the app connect to host "db" instead of "mysql-lab" once the stack is defined in Compose?</p>
         <label class="quiz-option" data-val="a">"db" is a hardcoded IP address Compose always assigns</label>
         <label class="quiz-option" data-val="b">MySQL images always rename themselves to db internally</label>
         <label class="quiz-option" data-val="c">"mysql-lab" stopped working after Session 01 ended</label>
@@ -608,7 +639,7 @@ git commit -m "session-02: multi-container PHP+MySQL app defined with Docker Com
         <div class="question-num">Question 5 of 5</div>
         <p>Session 03 will focus on:</p>
         <label class="quiz-option" data-val="a">Deployments, Services, scaling replicas, rolling updates, and rollback</label>
-        <label class="quiz-option" data-val="b">Writing unit tests for the PHP application built today</label>
+        <label class="quiz-option" data-val="b">Writing unit tests for the Node application built today</label>
         <label class="quiz-option" data-val="c">Migrating MySQL to a managed cloud database</label>
         <label class="quiz-option" data-val="d">Setting up a reverse proxy in front of NGINX</label>
         <div class="explanation">Session 03 moves the multi-container thinking from today into orchestrating containers across a cluster with Deployments and Services.</div>
@@ -631,7 +662,7 @@ git commit -m "session-02: multi-container PHP+MySQL app defined with Docker Com
     <h2>10. What Breaks If This Knowledge Is Missing?</h2>
     <div class="card">
       <ul>
-        <li><strong>Skip building a custom PHP image:</strong> index.php's PDO connection fails immediately with a "driver not found" error, because the stock php:apache image has no MySQL support at all.</li>
+        <li><strong>Skip npm install in the Node image:</strong> index.js fails immediately with a "Cannot find module 'mysql2'" error, because the stock node image has no MySQL driver at all.</li>
         <li><strong>Hardcode "mysql-lab" as the host instead of the Compose service name:</strong> The connection silently fails once the app moves off Session 01's manual containers, since Compose's network only resolves the names declared in docker-compose.yml.</li>
         <li><strong>Assume depends_on means "ready", not just "started":</strong> Intermittent connection failures appear right after docker compose up, especially on a fresh volume where MySQL needs longer to initialize — a flaky bug that looks random but has a specific, well-understood cause.</li>
       </ul>
